@@ -238,15 +238,32 @@ body>*:not(.print-area){display:none!important}
   <div class="auth-card">
     <div class="payvand-logo-lg" role="img" aria-label="پیوند"></div>
     <!-- این عبارت در لوگو موجود است، نیازی به تکرار نیست -->
+    <!-- تب‌ها -->
+    <div style="display:flex;gap:5px;margin-bottom:18px;background:var(--light);border-radius:6px;padding:4px">
+      <button type="button" id="tab_login" style="flex:1;background:#fff;border:0;padding:10px;cursor:pointer;font-weight:bold;color:var(--accent);border-radius:4px">ورود</button>
+      <button type="button" id="tab_signup" style="flex:1;background:transparent;border:0;padding:10px;cursor:pointer;font-weight:bold;color:var(--secondary);border-radius:4px">ثبت‌نام</button>
+    </div>
+    
     <div id="auth_error" class="auth-error"></div>
+    
+    <!-- فرم ورود -->
     <form id="login_form">
-      <div class="form-group"><label>کد پرسنلی:</label><input type="text" id="login_email" required placeholder="مثلاً ۱۲۳۴۵" autocomplete="off"></div>
+      <div class="form-group"><label>کد پرسنلی:</label><input type="text" id="login_email" required placeholder="مثلاً 88652" autocomplete="off"></div>
       <div class="form-group"><label>رمز عبور:</label><input type="password" id="login_password" required></div>
       <button type="submit" class="btn btn-success" id="login_btn" style="width:100%;padding:12px;font-size:15px">ورود به سیستم</button>
     </form>
+    
+    <!-- فرم ثبت‌نام — فقط با کد پرسنلی، بدون ایمیل -->
+    <form id="signup_form" class="hidden">
+      <div class="form-group"><label>کد پرسنلی (الزامی — باید در لیست دعوت‌شدگان باشد):</label><input type="text" id="signup_email" required placeholder="مثلاً 88652" autocomplete="off"></div>
+      <div class="form-group"><label>رمز عبور (حداقل ۶ کاراکتر):</label><input type="password" id="signup_password" required minlength="6"></div>
+      <div class="form-group"><label>تکرار رمز عبور:</label><input type="password" id="signup_password2" required minlength="6"></div>
+      <button type="submit" class="btn btn-success" id="signup_btn" style="width:100%;padding:12px;font-size:15px">ثبت‌نام</button>
+    </form>
+    
     <p style="text-align:center;margin-top:14px;font-size:12px;color:var(--secondary)">
-      🔒 ورود با کد پرسنلی و رمز عبور.<br>
-      ثبت‌نام تنها با دعوت‌نامه از طرف ادمین ممکن است.
+      🔒 ورود و ثبت‌نام با کد پرسنلی.<br>
+      ثبت‌نام تنها برای کدهای دارای دعوت‌نامه ممکن است.
     </p>
   </div>
 </div>
@@ -792,6 +809,55 @@ async function loadProgramActivitiesForDate(userId,dateStr){
 
 /* ═════ Auth ═════ */
 function showAuthError(msg){var e=$('auth_error');e.textContent=msg;e.style.display=msg?'block':'none';}
+
+// تب ورود/ثبت‌نام
+function switchAuthTab(tab){
+  var loginTab=$('tab_login'),signupTab=$('tab_signup');
+  if(tab==='login'){
+    loginTab.style.background='#fff';loginTab.style.color='var(--accent)';
+    signupTab.style.background='transparent';signupTab.style.color='var(--secondary)';
+    $('login_form').classList.remove('hidden');
+    $('signup_form').classList.add('hidden');
+  }else{
+    signupTab.style.background='#fff';signupTab.style.color='var(--accent)';
+    loginTab.style.background='transparent';loginTab.style.color='var(--secondary)';
+    $('signup_form').classList.remove('hidden');
+    $('login_form').classList.add('hidden');
+  }
+  showAuthError('');
+}
+
+// ثبت‌نام — فقط با کد پرسنلی (ایمیل از invitations پیدا می‌شود)
+async function handleSignup(e){
+  e.preventDefault();showAuthError('');
+  var personnelId=val('signup_email');
+  var p1=val('signup_password'),p2=val('signup_password2');
+  if(p1!==p2){showAuthError('رمزها یکسان نیستند.');return;}
+  if(p1.length<6){showAuthError('رمز باید حداقل ۶ کاراکتر باشد.');return;}
+  var btn=$('signup_btn');btn.disabled=true;btn.innerHTML='در حال ثبت‌نام...<span class="auth-loading"></span>';
+  try{
+    // جستجوی ایمیل از invitations با کد پرسنلی
+    var email=null;
+    const{data:invData,error:invError}=await sb.from('invitations').select('email,used').eq('personnel_id',personnelId).eq('used',false).order('created_at',{ascending:false}).limit(1);
+    if(invError||!invData||!invData.length){showAuthError('🚫 کد پرسنلی در لیست دعوت‌شدگان نیست یا قبلاً استفاده شده.');btn.disabled=false;btn.textContent='ثبت‌نام';return;}
+    email=invData[0].email;
+    if(!email){showAuthError('🚫 ایمیل برای این کد ثبت نشده. با ادمین تماس بگیرید.');btn.disabled=false;btn.textContent='ثبت‌نام';return;}
+    // ثبت‌نام با ایمیل (کاربر نمی‌بیند) + رمز
+    const{data,error}=await sb.auth.signUp({email:email,password:p1});
+    if(error){
+      if(error.message&&error.message.indexOf('already')!==-1)showAuthError('این کد پرسنلی قبلاً ثبت‌نام کرده. وارد شوید.');
+      else if(error.message&&error.message.indexOf('INVITATION')!==-1)showAuthError('🚫 کد پرسنلی در لیست دعوت‌شدگان نیست.');
+      else showAuthError('خطا: '+error.message);
+      btn.disabled=false;btn.textContent='ثبت‌نام';return;
+    }
+    if(data.user){
+      if(data.session){/* onAuthStateChange ادامه می‌دهد */}
+      else{showAuthError('✅ ثبت‌نام موفق! با کد پرسنلی و رمز وارد شوید.');switchAuthTab('login');$('login_email').value=personnelId;$('signup_form').reset();}
+    }
+  }catch(err){showAuthError('خطا: '+(err.message||'نامشخص'));}
+  btn.disabled=false;btn.textContent='ثبت‌نام';
+}
+
 async function handleLogin(e){
   e.preventDefault();showAuthError('');
   var btn=$('login_btn');btn.disabled=true;btn.innerHTML='در حال ورود...<span class="auth-loading"></span>';
@@ -2841,6 +2907,13 @@ function init(){
   window.onerror=function(msg,src,line){showAlert('خطای اسکریپت: '+msg+' (خط: '+line+')');return true;};
   document.addEventListener('click',closePopups);
   $('login_form').addEventListener('submit',handleLogin);
+  // تب ورود/ثبت‌نام + فرم ثبت‌نام
+  var tabSignup=$('tab_signup');
+  if(tabSignup){
+    $('signup_form').addEventListener('submit',handleSignup);
+    $('tab_login').addEventListener('click',function(){switchAuthTab('login');});
+    $('tab_signup').addEventListener('click',function(){switchAuthTab('signup');});
+  }
   if(!SUPABASE_CONFIGURED||!sb){showAuthError('تنظیمات Supabase تکمیل نشده است. مقدار SUPABASE_URL و SUPABASE_ANON_KEY را در ابتدای فایل وارد کنید؛ فقط کلید anon مجاز است.');return;}
   sb.auth.onAuthStateChange(function(event,session){handleAuthState(session);});
   sb.auth.getSession().then(function(res){if(res.data&&res.data.session)handleAuthState(res.data.session);});
