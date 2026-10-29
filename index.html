@@ -638,6 +638,19 @@ body>*:not(.print-area){display:none!important}
 <div id="section-settings" class="card hidden">
   <h2>تنظیمات</h2>
   
+  <!-- بنر کد بازیابی (فقط سوپرادمین) -->
+  <div id="recovery_code_banner" class="hidden" style="background:linear-gradient(135deg,#fef3c7 0%,#fde68a 100%);padding:16px;border-radius:8px;margin-bottom:20px;border-right:4px solid var(--warning)">
+    <div id="recovery_code_not_set" class="hidden">
+      <h3 style="margin:0 0 6px;color:#92400e">⚠️ کد بازیابی تنظیم نشده</h3>
+      <p style="margin:0 0 12px;font-size:13px;color:#78350f">برای امنیت حساب سوپرادمین، یک کد بازیابی ۱۲ رقمی تولید کنید. این کد تنها راه بازیابی رمز در صورت فراموشی است.</p>
+      <button class="btn btn-warning" id="btn_generate_recovery_code">🔑 تولید کد بازیابی</button>
+    </div>
+    <div id="recovery_code_is_set" class="hidden">
+      <h3 style="margin:0 0 4px;color:#065f46">✅ کد بازیابی تنظیم شده</h3>
+      <p style="margin:0;font-size:13px;color:#047857">کد بازیابی فعال است. در صورت فراموشی رمز، از صفحه ورود → «فراموشی رمز سوپرادمین» استفاده کنید.</p>
+    </div>
+  </div>
+  
   <h3>تغییر رمز عبور</h3>
   <div id="change_pwd_super_admin_fields" class="hidden">
     <div style="background:#fef3c7;padding:10px;border-radius:6px;margin-bottom:12px;border-right:4px solid var(--warning);font-size:13px">
@@ -1269,6 +1282,9 @@ function showSection(id){
     var isSA=currentRole==='super_admin';
     var saFields=$('change_pwd_super_admin_fields');if(saFields)saFields.classList.toggle('hidden',!isSA);
     var recWrap=$('cp_recovery_wrap');if(recWrap)recWrap.style.display=isSA?'block':'none';
+    var banner=$('recovery_code_banner');if(banner)banner.classList.toggle('hidden',!isSA);
+    // بررسی وضعیت کد بازیابی
+    if(isSA)checkRecoveryCodeStatus();
   }
   if(id==='users')renderUsers();
   if(id==='audit_log')renderAuditLog();
@@ -3308,6 +3324,66 @@ function downloadRecoveryCode(code){
   document.body.appendChild(a);a.click();a.remove();
   setTimeout(function(){URL.revokeObjectURL(url);},2000);
 }
+
+// ═══ بررسی و تولید کد بازیابی اولیه برای سوپرادمین ═══
+async function checkRecoveryCodeStatus(){
+  if(currentRole!=='super_admin')return;
+  var banner=$('recovery_code_banner');if(!banner)return;
+  try{
+    const{data,error}=await sb.rpc('rpc_has_recovery_code',{p_user_id:currentUser.id});
+    if(error){console.warn('rpc_has_recovery_code:',error);return;}
+    var hasCode=!!data;
+    banner.classList.remove('hidden');
+    $('recovery_code_not_set').classList.toggle('hidden',hasCode);
+    $('recovery_code_is_set').classList.toggle('hidden',!hasCode);
+    // اگر کد تنظیم نشده، فیلد کد بازیابی در تغییر رمز را مخفی کن
+    // (چون هنوز کدی وجود ندارد — اول باید تولید شود)
+    var recWrap=$('cp_recovery_wrap');
+    if(recWrap)recWrap.style.display=hasCode?'block':'none';
+  }catch(e){console.warn('checkRecoveryCodeStatus:',e);}
+}
+async function generateInitialRecoveryCode(){
+  if(currentRole!=='super_admin'){showAlert('فقط سوپرادمین.');return;}
+  if(!confirm('کد بازیابی تولید شود؟ این کد را ذخیره کنید — تنها راه بازیابی رمز است.'))return;
+  showLoading('تولید کد بازیابی...');
+  try{
+    const{data,error}=await sb.rpc('rpc_generate_initial_recovery_code',{p_user_id:currentUser.id});
+    if(error)throw error;
+    if(data&&data.error)throw new Error(data.error);
+    if(data&&data.success&&data.code){
+      showRecoveryCodeModal(data.code);
+      await checkRecoveryCodeStatus();
+    }
+  }catch(e){showAlert('خطا: '+e.message);}
+  finally{hideLoading();}
+}
+function showRecoveryCodeModal(code){
+  var overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML='<div style="background:#fff;border-radius:12px;padding:28px;max-width:500px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.3)">'+
+    '<h2 style="text-align:center;color:var(--success);margin-bottom:8px">✅ کد بازیابی تولید شد</h2>'+
+    '<p style="text-align:center;color:var(--secondary);font-size:13px;margin-bottom:16px">این کد را در جای امن ذخیره کنید. این کد <b>تنها راه بازیابی رمز سوپرادمین</b> است.</p>'+
+    '<div style="background:#1e293b;color:#fff;padding:24px;border-radius:8px;text-align:center;font-family:monospace;font-size:26px;letter-spacing:4px;margin-bottom:18px" dir="ltr">'+code+'</div>'+
+    '<div style="display:flex;gap:8px;margin-bottom:14px">'+
+      '<button class="btn btn-sm" style="flex:1" onclick="navigator.clipboard.writeText(\''+code+'\').then(function(){showAlert(\'کپی شد\',\'success\')})">📋 کپی</button>'+
+      '<button class="btn btn-sm" style="flex:1" onclick="downloadRecoveryCode(\''+code+'\')">⬇ دانلود فایل</button>'+
+      '<button class="btn btn-sm" style="flex:1" onclick="printRecoveryCode(\''+code+'\')">🖨 چاپ</button>'+
+    '</div>'+
+    '<p style="background:#fee2e2;padding:10px;border-radius:6px;font-size:12px;border-right:4px solid var(--danger);margin-bottom:16px;color:#991b1b">⚠️ این کد فقط یک بار نمایش داده می‌شود. اگر آن را گم کنید، باید از Supabase Dashboard کد جدید تولید کنید.</p>'+
+    '<label style="display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:14px;cursor:pointer"><input type="checkbox" id="rec_saved_confirm"> کد را ذخیره کردم</label>'+
+    '<button class="btn btn-success" id="rec_close_btn" style="width:100%" disabled onclick="this.closest(\'div[style*=fixed]\').remove()">متوجه شدم</button>'+
+  '</div>';
+  document.body.appendChild(overlay);
+  var cb=overlay.querySelector('#rec_saved_confirm');
+  var btn=overlay.querySelector('#rec_close_btn');
+  cb.onchange=function(){btn.disabled=!cb.checked;};
+}
+function printRecoveryCode(code){
+  var w=window.open('','_blank');
+  if(!w){showAlert('پاپ‌آپ مسدود شد','error');return;}
+  w.document.write('<html dir="rtl"><head><title>کد بازیابی</title><style>body{font-family:Tahoma,sans-serif;padding:40px;text-align:center}h1{margin-bottom:8px}.code{font-family:monospace;font-size:36px;letter-spacing:6px;background:#1e293b;color:#fff;padding:24px;border-radius:12px;margin:24px 0}.warn{margin-top:24px;color:#991b1b;font-size:13px}</style></head><body><h1>کد بازیابی سوپرادمین — پیوند</h1><div class="code" dir="ltr">'+code+'</div><div class="warn">این کد را در جای امن نگهداری کنید. تنها راه بازیابی رمز سوپرادمین است.</div></body></html>');
+  w.document.close();setTimeout(function(){w.print();},500);
+}
 async function exportJSON(){
   showLoading('تهیه پشتیبان کامل...');
   try{
@@ -3378,6 +3454,7 @@ function init(){
   on('btn_save_scoring','click',saveScoringRules);
   on('btn_create_invitation','click',createInvitation);
   on('btn_change_password','click',changePassword);
+  on('btn_generate_recovery_code','click',generateInitialRecoveryCode);
   on('btn_export','click',exportJSON);
   // Announcements
   on('btn_save_ann','click',saveAnnouncement);
