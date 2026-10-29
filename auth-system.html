@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>سامانه احراز هویت</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --primary:#4f46e5;--primary-dark:#4338ca;--primary-light:#eef2ff;
+  --bg:#f1f5f9;--card:#ffffff;--text:#1e293b;--muted:#64748b;
+  --border:#e2e8f0;--success:#10b981;--warning:#f59e0b;--danger:#ef4444;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+  --shadow-lg:0 10px 25px rgba(0,0,0,.1),0 4px 6px rgba(0,0,0,.05);
+}
+body{
+  font-family:'Vazirmatn','Segoe UI',Tahoma,sans-serif;
+  background:var(--bg);color:var(--text);min-height:100vh;line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;cursor:pointer;border:none;border-radius:8px;padding:10px 16px;font-size:14px;transition:.2s}
+input,select{font-family:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;width:100%;background:#fff;color:var(--text)}
+input:focus,select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(79,70,229,.1)}
+label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--text)}
+.btn{background:var(--primary);color:#fff;padding:10px 18px;font-weight:600}
+.btn:hover:not(:disabled){background:var(--primary-dark)}
+.btn:disabled{background:#cbd5e1;cursor:not-allowed}
+.btn-secondary{background:#fff;color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover:not(:disabled){background:#f8fafc}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-danger:hover:not(:disabled){background:#dc2626}
+.btn-success{background:var(--success);color:#fff}
+.btn-ghost{background:transparent;color:var(--muted);padding:8px}
+.btn-ghost:hover{background:#f1f5f9}
+.btn-sm{padding:6px 10px;font-size:12px}
+.card{background:var(--card);border-radius:12px;box-shadow:var(--shadow);padding:24px}
+.auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)}
+.auth-card{background:#fff;border-radius:16px;box-shadow:var(--shadow-lg);padding:36px;width:100%;max-width:440px}
+.auth-logo{width:64px;height:64px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;background:var(--primary-light);border-radius:16px}
+.auth-logo svg{width:36px;height:36px}
+.auth-title{text-align:center;font-size:22px;font-weight:700;margin-bottom:6px}
+.auth-sub{text-align:center;color:var(--muted);font-size:14px;margin-bottom:24px}
+.field{margin-bottom:16px}
+.field-hint{font-size:11px;color:var(--muted);margin-top:4px}
+.strength{height:6px;border-radius:3px;background:#e2e8f0;margin-top:8px;overflow:hidden}
+.strength-bar{height:100%;transition:width .3s,background .3s}
+.strength-label{font-size:11px;margin-top:4px;font-weight:600}
+.form-error{background:#fef2f2;color:var(--danger);padding:10px 12px;border-radius:8px;font-size:13px;margin-bottom:16px;border:1px solid #fecaca}
+.form-success{background:#ecfdf5;color:var(--success);padding:10px 12px;border-radius:8px;font-size:13px;margin-bottom:16px;border:1px solid #a7f3d0}
+.link-btn{background:none;border:none;color:var(--primary);font-size:12px;padding:4px;cursor:pointer;text-decoration:underline}
+.link-btn:hover{color:var(--primary-dark)}
+.wizard-steps{display:flex;gap:8px;margin-bottom:28px}
+.wstep{flex:1;text-align:center;font-size:12px;color:var(--muted);padding:8px;border-bottom:2px solid var(--border)}
+.wstep.active{color:var(--primary);border-color:var(--primary);font-weight:600}
+.wstep.done{color:var(--success);border-color:var(--success)}
+.recovery-code{background:#1e293b;color:#fff;padding:24px;border-radius:12px;text-align:center;font-family:monospace;font-size:28px;letter-spacing:4px;margin:16px 0;font-weight:700}
+.recovery-actions{display:flex;gap:8px;justify-content:center;margin:16px 0;flex-wrap:wrap}
+.checkbox-row{display:flex;align-items:center;gap:8px;margin:16px 0;font-size:14px;cursor:pointer}
+.checkbox-row input{width:auto}
+/* Dashboard */
+.dash{display:flex;min-height:100vh}
+.sidebar{width:240px;background:#1e293b;color:#cbd5e1;padding:0;flex-shrink:0;display:flex;flex-direction:column}
+.sidebar-brand{padding:20px;border-bottom:1px solid #334155;display:flex;align-items:center;gap:10px}
+.sidebar-brand svg{width:28px;height:28px}
+.sidebar-brand span{color:#fff;font-weight:700;font-size:16px}
+.sidebar-user{padding:14px 20px;border-bottom:1px solid #334155;font-size:12px}
+.sidebar-user .uname{color:#fff;font-weight:600;font-size:14px;margin-bottom:2px}
+.sidebar-user .urole{display:inline-block;background:var(--primary);color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;margin-top:4px}
+.sidebar-nav{flex:1;padding:12px 0;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;color:#cbd5e1;font-size:14px;cursor:pointer;transition:.15s;border-right:3px solid transparent}
+.nav-item:hover{background:#334155;color:#fff}
+.nav-item.active{background:var(--primary);color:#fff;border-color:#818cf8}
+.nav-item .ico{font-size:18px;width:22px;text-align:center}
+.sidebar-foot{padding:12px 20px;border-top:1px solid #334155}
+.main{flex:1;display:flex;flex-direction:column;background:var(--bg);min-width:0}
+.topbar{background:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow)}
+.topbar h1{font-size:18px;font-weight:700}
+.topbar-right{display:flex;gap:8px;align-items:center}
+.content{padding:24px;flex:1;overflow-y:auto}
+.user-badge{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+/* Table */
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+th{background:#f8fafc;padding:12px;text-align:right;font-size:13px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--border)}
+td{padding:12px;border-bottom:1px solid var(--border);font-size:14px}
+tr:last-child td{border-bottom:none}
+tr:hover{background:#f8fafc}
+.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600}
+.badge-super{background:#fef3c7;color:#92400e}
+.badge-admin{background:#dbeafe;color:#1e40af}
+.badge-user{background:#e0e7ff;color:#3730a3}
+.badge-active{background:#d1fae5;color:#065f46}
+.badge-inactive{background:#fee2e2;color:#991b1b}
+.badge-delegated{background:#dcfce7;color:#166534}
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}
+.modal{background:#fff;border-radius:12px;box-shadow:var(--shadow-lg);width:100%;max-width:500px;max-height:90vh;overflow-y:auto}
+.modal-head{padding:18px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.modal-head h3{font-size:17px;font-weight:700}
+.modal-body{padding:24px}
+.modal-foot{padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+/* Toast */
+#toasts{position:fixed;top:20px;left:20px;z-index:2000;display:flex;flex-direction:column;gap:8px}
+.toast{background:#1e293b;color:#fff;padding:12px 18px;border-radius:8px;font-size:14px;box-shadow:var(--shadow-lg);animation:slideIn .25s;min-width:240px;border-right:4px solid var(--primary)}
+.toast.success{border-color:var(--success)}
+.toast.error{border-color:var(--danger)}
+.toast.warning{border-color:var(--warning)}
+@keyframes slideIn{from{transform:translateX(-20px);opacity:0}to{transform:translateX(0);opacity:1}}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.row>*{flex:1;min-width:0}
+.menus-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:8px}
+.menu-chip{display:flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer}
+.menu-chip input{width:auto}
+.menu-chip.checked{background:var(--primary-light);border-color:var(--primary)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:20px}
+.stat{background:#fff;padding:20px;border-radius:12px;box-shadow:var(--shadow)}
+.stat .num{font-size:28px;font-weight:700;color:var(--primary)}
+.stat .lbl{color:var(--muted);font-size:13px;margin-top:4px}
+.placeholder-view{background:#fff;border-radius:12px;padding:60px 20px;text-align:center;box-shadow:var(--shadow)}
+.placeholder-view .ico{font-size:48px;margin-bottom:12px}
+.placeholder-view h2{font-size:18px;margin-bottom:8px}
+.placeholder-view p{color:var(--muted);font-size:14px}
+.empty{text-align:center;padding:40px;color:var(--muted)}
+.loading{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.actions-cell{white-space:nowrap}
+.actions-cell button{margin-left:4px}
+.sec-title{font-size:16px;font-weight:700;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid var(--border)}
+@media(max-width:768px){
+  .sidebar{width:60px}.sidebar-brand span,.sidebar-user,.nav-item span:not(.ico){display:none}
+  .nav-item{justify-content:center}.content{padding:14px}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toasts"></div>
+<script>
+"use strict";
+/* ============================================================
+   SHA-256 (synchronous, pure JS, UTF-8 safe)
+   ============================================================ */
+var sha256=(function(){
+  var K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+    0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+    0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+    0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+    0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+    0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+    0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  function rotr(n,x){return (x>>>n)|(x<<(32-n));}
+  return function(msg){
+    msg=String(msg);
+    var bytes=[];
+    for(var i=0;i<msg.length;i++){
+      var c=msg.charCodeAt(i);
+      if(c<0x80)bytes.push(c);
+      else if(c<0x800){bytes.push(0xc0|(c>>6),0x80|(c&0x3f));}
+      else if(c<0xd800||c>=0xe000){bytes.push(0xe0|(c>>12),0x80|((c>>6)&0x3f),0x80|(c&0x3f));}
+      else{i++;c=0x10000+(((c&0x3ff)<<10)|(msg.charCodeAt(i)&0x3ff));bytes.push(0xf0|(c>>18),0x80|((c>>12)&0x3f),0x80|((c>>6)&0x3f),0x80|(c&0x3f));}
+    }
+    var bitLen=bytes.length*8;
+    bytes.push(0x80);
+    while(bytes.length%64!==56)bytes.push(0);
+    // 64-bit big-endian length (split into two 32-bit halves because JS >>> masks shift to 5 bits)
+    var bitLenHigh=Math.floor(bitLen/0x100000000)|0;
+    var bitLenLow=bitLen&0xffffffff;
+    bytes.push((bitLenHigh>>>24)&0xff,(bitLenHigh>>>16)&0xff,(bitLenHigh>>>8)&0xff,bitLenHigh&0xff);
+    bytes.push((bitLenLow>>>24)&0xff,(bitLenLow>>>16)&0xff,(bitLenLow>>>8)&0xff,bitLenLow&0xff);
+    var H=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+    for(var off=0;off<bytes.length;off+=64){
+      var W=new Array(64);
+      for(var i=0;i<16;i++){W[i]=(bytes[off+i*4]<<24)|(bytes[off+i*4+1]<<16)|(bytes[off+i*4+2]<<8)|bytes[off+i*4+3];W[i]>>>=0;}
+      for(var i=16;i<64;i++){
+        var s0=rotr(7,W[i-15])^rotr(18,W[i-15])^(W[i-15]>>>3);
+        var s1=rotr(17,W[i-2])^rotr(19,W[i-2])^(W[i-2]>>>10);
+        W[i]=(W[i-16]+s0+W[i-7]+s1)>>>0;
+      }
+      var a=H[0],b=H[1],c=H[2],d=H[3],e=H[4],f=H[5],g=H[6],h=H[7];
+      for(var i=0;i<64;i++){
+        var S1=rotr(6,e)^rotr(11,e)^rotr(25,e);
+        var ch=(e&f)^(~e&g);
+        var t1=(h+S1+ch+K[i]+W[i])>>>0;
+        var S0=rotr(2,a)^rotr(13,a)^rotr(22,a);
+        var maj=(a&b)^(a&c)^(b&c);
+        var t2=(S0+maj)>>>0;
+        h=g;g=f;f=e;e=(d+t1)>>>0;d=c;c=b;b=a;a=(t1+t2)>>>0;
+      }
+      H[0]=(H[0]+a)>>>0;H[1]=(H[1]+b)>>>0;H[2]=(H[2]+c)>>>0;H[3]=(H[3]+d)>>>0;
+      H[4]=(H[4]+e)>>>0;H[5]=(H[5]+f)>>>0;H[6]=(H[6]+g)>>>0;H[7]=(H[7]+h)>>>0;
+    }
+    var hex='';
+    for(var i=0;i<8;i++)hex+=H[i].toString(16).padStart(8,'0');
+    return hex;
+  };
+})();
+
+/* ============================================================
+   Crypto helpers
+   ============================================================ */
+function genSalt(){
+  var arr=new Uint8Array(16);
+  crypto.getRandomValues(arr);
+  return Array.from(arr).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+}
+function genRecoveryCode(){
+  var chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  var arr=new Uint8Array(12);
+  crypto.getRandomValues(arr);
+  var out='';
+  for(var j=0;j<12;j++){
+    if(j>0&&j%4===0)out+='-';
+    out+=chars[arr[j]%chars.length];
+  }
+  return out;
+}
+function hashSecret(secret,salt){
+  var h=sha256(salt+'::'+secret);
+  for(var i=0;i<5000;i++)h=sha256(h);
+  return h;
+}
+
+/* ============================================================
+   Persian/Arabic digit conversion
+   ============================================================ */
+function toEnglishDigits(str){
+  if(str===null||str===undefined)return '';
+  str=String(str);
+  var persian='۰۱۲۳۴۵۶۷۸۹',arabic='٠١٢٣٤٥٦٧٨٩';
+  for(var i=0;i<10;i++){str=str.replace(new RegExp(persian[i],'g'),i);str=str.replace(new RegExp(arabic[i],'g'),i);}
+  return str;
+}
+
+/* ============================================================
+   Password strength
+   ============================================================ */
+function passwordStrength(pwd){
+  pwd=pwd||'';
+  if(pwd.length<8)return {score:0,label:'ضعیف',color:'#ef4444',percent:20};
+  var s=0;
+  if(pwd.length>=8)s++;
+  if(pwd.length>=12)s++;
+  if(/[a-z]/.test(pwd)&&/[A-Z]/.test(pwd))s++;
+  if(/\d/.test(pwd))s++;
+  if(/[^a-zA-Z0-9]/.test(pwd))s++;
+  if(s<3)return {score:1,label:'ضعیف',color:'#ef4444',percent:40};
+  if(s<4)return {score:2,label:'متوسط',color:'#f59e0b',percent:70};
+  return {score:3,label:'قوی',color:'#10b981',percent:100};
+}
+function isPasswordStrong(pwd){
+  return passwordStrength(pwd).score>=2;
+}
+
+/* ============================================================
+   Database (localStorage)
+   ============================================================ */
+var DB_KEY='auth_system_users_v1';
+var SESSION_KEY='auth_system_session_v1';
+var NEXT_ID_KEY='auth_system_next_id_v1';
+
+function loadUsers(){try{return JSON.parse(localStorage.getItem(DB_KEY)||'[]');}catch(e){return [];}}
+function saveUsers(u){localStorage.setItem(DB_KEY,JSON.stringify(u));}
+function nextId(){
+  var id=parseInt(localStorage.getItem(NEXT_ID_KEY)||'1',10);
+  localStorage.setItem(NEXT_ID_KEY,String(id+1));
+  return id;
+}
+function findUser(username){
+  username=String(username||'').trim().toLowerCase();
+  return loadUsers().find(function(u){return u.username.toLowerCase()===username;});
+}
+function findUserById(id){return loadUsers().find(function(u){return u.id===id;});}
+function findSuperAdmin(){return loadUsers().find(function(u){return u.role==='super_admin';});}
+function updateUser(id,updates){
+  var users=loadUsers();
+  var i=users.findIndex(function(u){return u.id===id;});
+  if(i<0)return null;
+  users[i]=Object.assign({},users[i],updates);
+  saveUsers(users);
+  return users[i];
+}
+function addUser(user){
+  var users=loadUsers();
+  users.push(user);
+  saveUsers(users);
+  return user;
+}
+function deleteUser(id){
+  saveUsers(loadUsers().filter(function(u){return u.id!==id;}));
+}
+function isUsernameTaken(username,excludeId){
+  username=String(username||'').trim().toLowerCase();
+  return loadUsers().some(function(u){return u.username.toLowerCase()===username&&u.id!==excludeId;});
+}
+
+/* ============================================================
+   Session
+   ============================================================ */
+var SESSION_TTL=8*60*60*1000;
+var _sessionTimer=null,_activityThrottle=0;
+
+function createSession(userId){
+  var s={userId:userId,createdAt:Date.now(),lastActivity:Date.now(),expiresAfter:SESSION_TTL};
+  localStorage.setItem(SESSION_KEY,JSON.stringify(s));
+  startSessionMonitor();
+  return s;
+}
+function getSession(){try{return JSON.parse(localStorage.getItem(SESSION_KEY)||'null');}catch(e){return null;}}
+function clearSession(){localStorage.removeItem(SESSION_KEY);if(_sessionTimer){clearInterval(_sessionTimer);_sessionTimer=null;}}
+function bumpActivity(){
+  var now=Date.now();
+  if(now-_activityThrottle<5000)return;
+  _activityThrottle=now;
+  var s=getSession();
+  if(s){s.lastActivity=now;localStorage.setItem(SESSION_KEY,JSON.stringify(s));}
+}
+function checkSession(){
+  var s=getSession();
+  if(!s)return null;
+  if(Date.now()-s.lastActivity>s.expiresAfter){clearSession();return null;}
+  var u=findUserById(s.userId);
+  if(!u||!u.active){clearSession();return null;}
+  return u;
+}
+function startSessionMonitor(){
+  if(_sessionTimer)clearInterval(_sessionTimer);
+  _sessionTimer=setInterval(function(){
+    if(!checkSession()){
+      toast('نشست شما منقضی شد. لطفاً دوباره وارد شوید.','warning');
+      render();
+    }
+  },60000);
+  document.removeEventListener('click',bumpActivity);
+  document.removeEventListener('keydown',bumpActivity);
+  document.addEventListener('click',bumpActivity);
+  document.addEventListener('keydown',bumpActivity);
+}
+
+/* ============================================================
+   Menus & Access Control
+   ============================================================ */
+var MENUS=[
+  {id:'dashboard',label:'داشبورد',ico:'🏠',minRole:'user'},
+  {id:'halls',label:'سالن‌ها',ico:'🏛',minRole:'admin'},
+  {id:'sessions',label:'سانس‌ها',ico:'⏰',minRole:'admin'},
+  {id:'equipment',label:'تجهیزات',ico:'📦',minRole:'admin'},
+  {id:'data',label:'مدیریت داده',ico:'💾',minRole:'admin'},
+  {id:'users',label:'کاربران',ico:'👥',minRole:'admin',special:'users'},
+  {id:'settings',label:'تنظیمات',ico:'⚙',minRole:'super_admin'}
+];
+
+function canAccess(user,menuId){
+  if(!user)return false;
+  var m=MENUS.find(function(x){return x.id===menuId;});
+  if(!m)return false;
+  if(user.role==='super_admin')return true;
+  if(user.role==='admin'){
+    if(m.id==='users')return user.canManageUsers===true;
+    if(m.minRole==='super_admin')return false; // settings
+    return true; // admin sees all admin-level menus
+  }
+  // user role: only via allowedMenus, but NEVER users/settings
+  if(m.id==='users'||m.id==='settings')return false;
+  return user.allowedMenus&&user.allowedMenus.indexOf(menuId)>=0;
+}
+function firstAccessibleMenu(user){
+  for(var i=0;i<MENUS.length;i++)if(canAccess(user,MENUS[i].id))return MENUS[i].id;
+  return null;
+}
+function visibleMenus(user){
+  return MENUS.filter(function(m){return canAccess(user,m.id);});
+}
+
+/* ============================================================
+   Validation helpers
+   ============================================================ */
+var USERNAME_RE=/^[a-zA-Z0-9._]{3,}$/;
+function validateUsername(u){
+  u=String(u||'').trim();
+  if(u.length<3)return 'نام کاربری باید حداقل ۳ کاراکتر باشد';
+  if(!USERNAME_RE.test(u))return 'فقط حروف انگلیسی، عدد، نقطه و زیرخط مجاز است';
+  return null;
+}
+
+/* ============================================================
+   State
+   ============================================================ */
+var state={
+  view:'dashboard',
+  wizardStep:1,
+  wizardData:{},
+  recoveryCodeShown:'',
+  showRecoveryLogin:false,
+  modal:null,
+  authError:'',
+  authSuccess:''
+};
+
+/* ============================================================
+   Toast
+   ============================================================ */
+function toast(msg,type){
+  var t=document.createElement('div');
+  t.className='toast '+(type||'');
+  t.textContent=msg;
+  document.getElementById('toasts').appendChild(t);
+  setTimeout(function(){
+    t.style.opacity='0';t.style.transform='translateX(-20px)';
+    setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);},250);
+  },3000);
+}
+
+/* ============================================================
+   Logo SVG
+   ============================================================ */
+function logoSVG(size){
+  size=size||36;
+  return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>';
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function render(){
+  var app=document.getElementById('app');
+  var users=loadUsers();
+  var sess=checkSession();
+  
+  if(users.length===0){
+    app.innerHTML=renderWizard();
+    attachWizard();
+    return;
+  }
+  if(!sess){
+    if(state.showRecoveryLogin){
+      app.innerHTML=renderRecoveryLogin();
+      attachRecoveryLogin();
+    }else{
+      app.innerHTML=renderLogin();
+      attachLogin();
+    }
+    return;
+  }
+  // Authenticated
+  if(!canAccess(sess,state.view)){
+    state.view=firstAccessibleMenu(sess)||'dashboard';
+  }
+  app.innerHTML=renderShell(sess);
+  attachShell(sess);
+}
+
+/* ============================================================
+   WIZARD (3 steps)
+   ============================================================ */
+function renderWizard(){
+  var step=state.wizardStep;
+  var stepHtml='<div class="wizard-steps">'+
+    '<div class="wstep '+(step>=1?'active':'')+(step>1?' done':'')+'">۱. خوش‌آمدگویی</div>'+
+    '<div class="wstep '+(step===2?'active':'')+(step>2?' done':'')+(step<2?'':'')+'">۲. ساخت مدیر ارشد</div>'+
+    '<div class="wstep '+(step===3?'active':'')+'">۳. کد بازیابی</div>'+
+    '</div>';
+  
+  var body='';
+  if(step===1){
+    body='<div style="text-align:center">'+
+      '<div class="auth-logo" style="margin:0 auto 16px;width:80px;height:80px;border-radius:20px">'+logoSVG(48)+'</div>'+
+      '<h2 style="font-size:24px;margin-bottom:10px">به سامانه خوش آمدید</h2>'+
+      '<p style="color:var(--muted);margin-bottom:24px">برای شروع استفاده از سامانه، نیاز به ساخت اولین مدیر ارشد دارید. این کاربر دسترسی کامل به همه بخش‌ها خواهد داشت.</p>'+
+      '<button class="btn" id="wz-next" style="width:100%">شروع</button>'+
+    '</div>';
+  }else if(step===2){
+    var d=state.wizardData;
+    var st=passwordStrength(d.password||'');
+    body='<div>'+
+      '<h2 style="font-size:18px;margin-bottom:6px">ساخت مدیر ارشد</h2>'+
+      '<p style="color:var(--muted);font-size:13px;margin-bottom:18px">این کاربر دسترسی کامل به سامانه دارد.</p>'+
+      (state.authError?'<div class="form-error">'+state.authError+'</div>':'')+
+      '<div class="field"><label>نام و نام خانوادگی *</label><input id="wz-name" value="'+esc(d.name||'')+'" placeholder="مثلاً: علی رضایی"></div>'+
+      '<div class="field"><label>ایمیل (اختیاری)</label><input id="wz-email" value="'+esc(d.email||'')+'" placeholder="example@mail.com" dir="ltr"></div>'+
+      '<div class="field"><label>نام کاربری *</label><input id="wz-username" value="'+esc(d.username||'')+'" placeholder="حداقل ۳ کاراکتر، انگلیسی" dir="ltr"><div class="field-hint">فقط حروف انگلیسی، عدد، نقطه و زیرخط</div></div>'+
+      '<div class="field"><label>رمز عبور *</label><input id="wz-password" type="password" value="'+esc(d.password||'')+'" placeholder="حداقل ۸ کاراکتر" dir="ltr">'+
+        '<div class="strength"><div class="strength-bar" id="wz-strengthbar" style="width:'+st.percent+'%;background:'+st.color+'"></div></div>'+
+        '<div class="strength-label" id="wz-strengthlabel" style="color:'+st.color+'">'+st.label+'</div>'+
+      '</div>'+
+      '<button class="btn" id="wz-continue" style="width:100%" '+(st.score<2?'disabled':'')+'>'+((st.score<2)?'رمز ضعیف است':'ادامه')+'</button>'+
+    '</div>';
+  }else if(step===3){
+    var code=state.recoveryCodeShown;
+    body='<div style="text-align:center">'+
+      '<h2 style="font-size:18px;margin-bottom:6px">کد بازیابی اضطراری</h2>'+
+      '<p style="color:var(--muted);font-size:13px;margin-bottom:8px">این کد برای بازیابی رمز مدیر ارشد استفاده می‌شود. آن را در جای امن ذخیره کنید.</p>'+
+      '<div class="recovery-code" dir="ltr">'+code+'</div>'+
+      '<div class="recovery-actions">'+
+        '<button class="btn-secondary btn-sm" id="wz-copy">📋 کپی</button>'+
+        '<button class="btn-secondary btn-sm" id="wz-download">⬇ دانلود</button>'+
+        '<button class="btn-secondary btn-sm" id="wz-print">🖨 چاپ</button>'+
+      '</div>'+
+      '<label class="checkbox-row" style="justify-content:center"><input type="checkbox" id="wz-saved"> کد را ذخیره کردم</label>'+
+      '<button class="btn" id="wz-finish" style="width:100%" disabled>ورود به داشبورد</button>'+
+    '</div>';
+  }
+  
+  return '<div class="auth-wrap"><div class="auth-card">'+stepHtml+body+'</div></div>';
+}
+function attachWizard(){
+  if(state.wizardStep===1){
+    document.getElementById('wz-next').onclick=function(){state.wizardStep=2;state.authError='';render();};
+  }else if(state.wizardStep===2){
+    var pwd=document.getElementById('wz-password');
+    if(pwd){
+      pwd.oninput=function(){
+        var st=passwordStrength(pwd.value);
+        document.getElementById('wz-strengthbar').style.width=st.percent+'%';
+        document.getElementById('wz-strengthbar').style.background=st.color;
+        var lbl=document.getElementById('wz-strengthlabel');
+        lbl.textContent=st.label;lbl.style.color=st.color;
+        var btn=document.getElementById('wz-continue');
+        btn.disabled=st.score<2;
+        btn.textContent=st.score<2?'رمز ضعیف است':'ادامه';
+      };
+    }
+    document.getElementById('wz-continue').onclick=function(){
+      var name=document.getElementById('wz-name').value.trim();
+      var email=document.getElementById('wz-email').value.trim();
+      var username=toEnglishDigits(document.getElementById('wz-username').value.trim());
+      var password=toEnglishDigits(document.getElementById('wz-password').value);
+      var err=null;
+      if(!name)err='نام را وارد کنید';
+      else if(validateUsername(username))err=validateUsername(username);
+      else if(isUsernameTaken(username))err='این نام کاربری قبلاً استفاده شده';
+      else if(password.length<8)err='رمز باید حداقل ۸ کاراکتر باشد';
+      else if(!isPasswordStrong(password))err='رمز ضعیف است. از حروف بزرگ/کوچک و عدد استفاده کنید';
+      if(err){state.authError=err;render();return;}
+      state.wizardData={name:name,email:email,username:username,password:password};
+      state.recoveryCodeShown=genRecoveryCode();
+      state.wizardStep=3;state.authError='';
+      render();
+    };
+  }else if(state.wizardStep===3){
+    var code=state.recoveryCodeShown;
+    document.getElementById('wz-copy').onclick=function(){
+      navigator.clipboard.writeText(code).then(function(){toast('کپی شد','success');},function(){toast('کپی ناموفق','error');});
+    };
+    document.getElementById('wz-download').onclick=function(){downloadRecovery(state.wizardData,code);};
+    document.getElementById('wz-print').onclick=function(){printRecovery(state.wizardData,code);};
+    var cb=document.getElementById('wz-saved');
+    var fin=document.getElementById('wz-finish');
+    cb.onchange=function(){fin.disabled=!cb.checked;};
+    fin.onclick=function(){
+      // Create super_admin
+      var d=state.wizardData;
+      var salt=genSalt();
+      var hash=hashSecret(d.password,salt);
+      var rsalt=genSalt();
+      var rhash=hashSecret(code,rsalt);
+      addUser({
+        id:nextId(),name:d.name,email:d.email,username:d.username,role:'super_admin',active:true,
+        passwordSalt:salt,passwordHash:hash,recoverySalt:rsalt,recoveryHash:rhash,
+        failedAttempts:0,lockedUntil:null,allowedMenus:[],canManageUsers:false,
+        createdAt:new Date().toISOString(),lastLoginAt:null
+      });
+      var u=findUser(d.username);
+      createSession(u.id);
+      state.wizardStep=1;state.wizardData={};state.recoveryCodeShown='';
+      state.view='dashboard';
+      toast('مدیر ارشد با موفقیت ساخته شد','success');
+      render();
+    };
+  }
+}
+
+/* ============================================================
+   LOGIN
+   ============================================================ */
+function renderLogin(){
+  return '<div class="auth-wrap"><div class="auth-card">'+
+    '<div class="auth-logo">'+logoSVG(36)+'</div>'+
+    '<div class="auth-title">ورود به سامانه</div>'+
+    '<div class="auth-sub">برای ادامه وارد حساب خود شوید</div>'+
+    (state.authError?'<div class="form-error">'+state.authError+'</div>':'')+
+    (state.authSuccess?'<div class="form-success">'+state.authSuccess+'</div>':'')+
+    '<div class="field"><label>نام کاربری</label><input id="lg-username" placeholder="نام کاربری" dir="ltr" autofocus></div>'+
+    '<div class="field"><label>رمز عبور</label><input id="lg-password" type="password" placeholder="رمز عبور" dir="ltr"></div>'+
+    '<button class="btn" id="lg-submit" style="width:100%"><span id="lg-label">ورود</span></button>'+
+    '<div style="text-align:center;margin-top:14px">'+
+      '<button class="link-btn" id="lg-recovery">فراموشی رمز سوپر ادمین</button>'+
+    '</div>'+
+  '</div></div>';
+}
+function attachLogin(){
+  var btn=document.getElementById('lg-submit');
+  var lbl=document.getElementById('lg-label');
+  function doLogin(){
+    var username=toEnglishDigits(document.getElementById('lg-username').value.trim());
+    var password=toEnglishDigits(document.getElementById('lg-password').value);
+    if(!username||!password){state.authError='نام کاربری و رمز را وارد کنید';state.authSuccess='';render();return;}
+    btn.disabled=true;lbl.innerHTML='<span class="loading"></span> ورود...';
+    setTimeout(function(){
+      var err=performLogin(username,password);
+      if(err){
+        state.authError=err;state.authSuccess='';
+        btn.disabled=false;lbl.textContent='ورود';
+        render();
+      }else{
+        state.authError='';state.authSuccess='';
+        render();
+      }
+    },200);
+  }
+  btn.onclick=doLogin;
+  document.getElementById('lg-password').onkeydown=function(e){if(e.key==='Enter')doLogin();};
+  document.getElementById('lg-username').onkeydown=function(e){if(e.key==='Enter')document.getElementById('lg-password').focus();};
+  document.getElementById('lg-recovery').onclick=function(){
+    state.showRecoveryLogin=true;state.authError='';state.authSuccess='';render();
+  };
+}
+function performLogin(username,password){
+  // 1. Find user
+  var u=findUser(username);
+  if(!u)return 'نام کاربری یا رمز عبور اشتباه است';
+  // 2. Active?
+  if(!u.active)return 'حساب شما غیرفعال شده است. با مدیر سیستم تماس بگیرید';
+  // 3. Locked?
+  if(u.lockedUntil&&new Date(u.lockedUntil).getTime()>Date.now()){
+    var mins=Math.ceil((new Date(u.lockedUntil).getTime()-Date.now())/60000);
+    return 'تعداد تلاش‌ها بیش از حد مجاز. '+mins+' دقیقه دیگر تلاش کنید';
+  }
+  // 4. Password check
+  var hash=hashSecret(password,u.passwordSalt);
+  if(hash!==u.passwordHash){
+    var attempts=(u.failedAttempts||0)+1;
+    if(attempts>=5){
+      var lockUntil=new Date(Date.now()+15*60*1000).toISOString();
+      updateUser(u.id,{failedAttempts:0,lockedUntil:lockUntil});
+      return 'تعداد تلاش‌ها بیش از حد مجاز. ۱۵ دقیقه دیگر تلاش کنید';
+    }
+    updateUser(u.id,{failedAttempts:attempts});
+    return 'نام کاربری یا رمز عبور اشتباه است';
+  }
+  // 5. Success
+  updateUser(u.id,{failedAttempts:0,lockedUntil:null,lastLoginAt:new Date().toISOString()});
+  createSession(u.id);
+  state.view=firstAccessibleMenu(u)||'dashboard';
+  return null;
+}
+
+/* ============================================================
+   RECOVERY LOGIN (super_admin password reset)
+   ============================================================ */
+function renderRecoveryLogin(){
+  return '<div class="auth-wrap"><div class="auth-card">'+
+    '<div class="auth-logo">'+logoSVG(36)+'</div>'+
+    '<div class="auth-title">بازیابی رمز مدیر ارشد</div>'+
+    '<div class="auth-sub">کد بازیابی ۱۲ رقمی خود را وارد کنید</div>'+
+    (state.authError?'<div class="form-error">'+state.authError+'</div>':'')+
+    (state.authSuccess?'<div class="form-success">'+state.authSuccess+'</div>':'')+
+    '<div class="field"><label>کد بازیابی</label><input id="rc-code" placeholder="XXXX-XXXX-XXXX" dir="ltr" style="font-family:monospace;letter-spacing:2px"></div>'+
+    '<div class="field"><label>رمز جدید</label><input id="rc-pwd" type="password" placeholder="حداقل ۸ کاراکتر" dir="ltr">'+
+      '<div class="strength"><div class="strength-bar" id="rc-strengthbar" style="width:0%"></div></div>'+
+      '<div class="strength-label" id="rc-strengthlabel"></div>'+
+    '</div>'+
+    '<button class="btn" id="rc-submit" style="width:100%" disabled>تغییر رمز</button>'+
+    '<div style="text-align:center;margin-top:14px">'+
+      '<button class="link-btn" id="rc-back">بازگشت به ورود</button>'+
+    '</div>'+
+  '</div></div>';
+}
+function attachRecoveryLogin(){
+  var pwd=document.getElementById('rc-pwd');
+  pwd.oninput=function(){
+    var st=passwordStrength(pwd.value);
+    document.getElementById('rc-strengthbar').style.width=st.percent+'%';
+    document.getElementById('rc-strengthbar').style.background=st.color;
+    var lbl=document.getElementById('rc-strengthlabel');
+    lbl.textContent=st.label;lbl.style.color=st.color;
+    document.getElementById('rc-submit').disabled=st.score<2;
+  };
+  document.getElementById('rc-submit').onclick=function(){
+    var code=document.getElementById('rc-code').value.trim().toUpperCase();
+    var newPwd=toEnglishDigits(pwd.value);
+    var sa=findSuperAdmin();
+    if(!sa){state.authError='مدیر ارشد یافت نشد';state.authSuccess='';render();return;}
+    var hash=hashSecret(code,sa.recoverySalt);
+    if(hash!==sa.recoveryHash){state.authError='کد بازیابی اشتباه است';state.authSuccess='';render();return;}
+    if(!isPasswordStrong(newPwd)){state.authError='رمز جدید ضعیف است';state.authSuccess='';render();return;}
+    var salt=genSalt();
+    var newHash=hashSecret(newPwd,salt);
+    var rsalt=genSalt(),rhash=hashSecret(code,rsalt);
+    updateUser(sa.id,{passwordSalt:salt,passwordHash:newHash,recoverySalt:rsalt,recoveryHash:rhash,failedAttempts:0,lockedUntil:null});
+    state.authError='';state.authSuccess='رمز تغییر کرد. اکنون می‌توانید وارد شوید';
+    state.showRecoveryLogin=false;
+    render();
+  };
+  document.getElementById('rc-back').onclick=function(){
+    state.showRecoveryLogin=false;state.authError='';state.authSuccess='';render();
+  };
+}
+
+/* ============================================================
+   DASHBOARD SHELL
+   ============================================================ */
+function renderShell(user){
+  var menus=visibleMenus(user);
+  var navHtml=menus.map(function(m){
+    return '<div class="nav-item '+(state.view===m.id?'active':'')+'" data-go="'+m.id+'"><span class="ico">'+m.ico+'</span><span>'+m.label+'</span></div>';
+  }).join('');
+  var currentMenu=MENUS.find(function(m){return m.id===state.view;})||MENUS[0];
+  var initials=(user.name||'؟').trim().charAt(0);
+  var roleLabel={super_admin:'مدیر ارشد',admin:'مدیر',user:'کاربر'}[user.role];
+  
+  var body='';
+  if(state.view==='dashboard')body=renderDashboardHome(user);
+  else if(state.view==='users')body=renderUserManagement(user);
+  else if(state.view==='settings')body=renderSettings(user);
+  else body=renderPlaceholder(currentMenu);
+  
+  return '<div class="dash">'+
+    '<div class="sidebar">'+
+      '<div class="sidebar-brand">'+logoSVG(28)+'<span>سامانه</span></div>'+
+      '<div class="sidebar-user"><div class="uname">'+esc(user.name)+'</div><div>نام کاربری: <span dir="ltr">'+esc(user.username)+'</span></div><div class="urole">'+roleLabel+(user.canManageUsers?' • تفویض‌شده':'')+'</div></div>'+
+      '<div class="sidebar-nav">'+navHtml+'</div>'+
+      '<div class="sidebar-foot"><button class="btn-secondary btn-sm" id="logout-btn" style="width:100%">خروج</button></div>'+
+    '</div>'+
+    '<div class="main">'+
+      '<div class="topbar"><h1>'+currentMenu.ico+' '+currentMenu.label+'</h1>'+
+        '<div class="topbar-right"><div class="user-badge"><div class="avatar">'+initials+'</div><span>'+esc(user.name)+'</span></div></div>'+
+      '</div>'+
+      '<div class="content">'+body+'</div>'+
+    '</div>'+
+  '</div>'+
+  (state.modal?renderModal():'');
+}
+function attachShell(user){
+  var items=document.querySelectorAll('.nav-item[data-go]');
+  for(var i=0;i<items.length;i++){
+    items[i].onclick=function(){
+      var view=this.getAttribute('data-go');
+      go(view);
+    };
+  }
+  document.getElementById('logout-btn').onclick=function(){
+    clearSession();
+    state.view='dashboard';
+    toast('خروج موفقیت‌آمیز بود','success');
+    render();
+  };
+  if(state.view==='users')attachUserManagement(user);
+  else if(state.view==='settings')attachSettings(user);
+  if(state.modal)attachModal(user);
+}
+function go(view){
+  var user=checkSession();
+  if(!user){render();return;}
+  if(!canAccess(user,view)){
+    toast('شما به این بخش دسترسی ندارید','warning');
+    return;
+  }
+  state.view=view;
+  state.modal=null;
+  render();
+}
+
+/* ============================================================
+   Placeholder views (halls/sessions/equipment/data)
+   ============================================================ */
+function renderPlaceholder(menu){
+  return '<div class="placeholder-view">'+
+    '<div class="ico">'+menu.ico+'</div>'+
+    '<h2>'+menu.label+'</h2>'+
+    '<p>این بخش آماده پیاده‌سازی منطق کسب‌وکار است. ساختار احراز هویت و کنترل دسترسی فعال است.</p>'+
+  '</div>';
+}
+
+/* ============================================================
+   Dashboard home
+   ============================================================ */
+function renderDashboardHome(user){
+  var users=loadUsers();
+  var activeCount=users.filter(function(u){return u.active;}).length;
+  var adminCount=users.filter(function(u){return u.role==='admin';}).length;
+  var userCount=users.filter(function(u){return u.role==='user';}).length;
+  var lastLogin=user.lastLoginAt?formatDate(user.lastLoginAt):'—';
+  
+  return '<div class="stats">'+
+    '<div class="stat"><div class="num">'+users.length+'</div><div class="lbl">کل کاربران</div></div>'+
+    '<div class="stat"><div class="num">'+activeCount+'</div><div class="lbl">کاربران فعال</div></div>'+
+    '<div class="stat"><div class="num">'+adminCount+'</div><div class="lbl">مدیران</div></div>'+
+    '<div class="stat"><div class="num">'+userCount+'</div><div class="lbl">کاربران عادی</div></div>'+
+  '</div>'+
+  '<div class="card">'+
+    '<div class="sec-title">خلاصه حساب</div>'+
+    '<table>'+
+      '<tr><td style="width:40%">نام</td><td>'+esc(user.name)+'</td></tr>'+
+      '<tr><td>نقش</td><td>'+roleBadge(user.role)+'</td></tr>'+
+      '<tr><td>نام کاربری</td><td dir="ltr">'+esc(user.username)+'</td></tr>'+
+      '<tr><td>آخرین ورود</td><td>'+lastLogin+'</td></tr>'+
+      '<tr><td>تاریخ ساخت</td><td>'+formatDate(user.createdAt)+'</td></tr>'+
+      (user.canManageUsers?'<tr><td>تفویض</td><td><span class="badge badge-delegated">مدیریت کاربران تفویض شده</span></td></tr>':'')+
+    '</table>'+
+  '</div>';
+}
+
+/* ============================================================
+   USER MANAGEMENT
+   ============================================================ */
+function renderUserManagement(user){
+  var users=loadUsers();
+  // Filter based on role
+  var visible;
+  if(user.role==='super_admin'){
+    visible=users;
+  }else if(user.role==='admin'&&user.canManageUsers){
+    visible=users.filter(function(u){return u.role==='user';});
+  }else{
+    return '<div class="empty">دسترسی غیرمجاز</div>';
+  }
+  
+  var rows=visible.map(function(u){
+    var isSelf=(u.id===user.id);
+    var canEdit=user.role==='super_admin'||(user.role==='admin'&&u.role==='user');
+    var canDelete=canEdit&&!isSelf&&!(user.role==='admin'&&u.role!=='user');
+    var canReset=canEdit&&!isSelf;
+    var canDelegate=user.role==='super_admin'&&u.role==='admin';
+    
+    var actions='';
+    actions+='<button class="btn-secondary btn-sm" data-edit="'+u.id+'" title="ویرایش">✏️</button>';
+    if(canReset)actions+='<button class="btn-secondary btn-sm" data-reset="'+u.id+'" title="بازنشانی رمز">🔑</button>';
+    if(canDelegate)actions+='<button class="btn-secondary btn-sm" data-delegate="'+u.id+'" title="'+(u.canManageUsers?'سلب اختیار':'تفویض اختیار')+'">'+(u.canManageUsers?'🎫✓':'🎫')+'</button>';
+    if(canDelete)actions+='<button class="btn-danger btn-sm" data-delete="'+u.id+'" title="حذف">🗑</button>';
+    
+    return '<tr>'+
+      '<td>'+u.id+'</td>'+
+      '<td>'+esc(u.name)+(isSelf?' <span style="color:var(--muted);font-size:11px">(شما)</span>':'')+'</td>'+
+      '<td dir="ltr">'+esc(u.username)+'</td>'+
+      '<td>'+roleBadge(u.role)+'</td>'+
+      '<td>'+(u.active?'<span class="badge badge-active">فعال</span>':'<span class="badge badge-inactive">غیرفعال</span>')+'</td>'+
+      '<td>'+(u.canManageUsers?'<span class="badge badge-delegated">بله</span>':'—')+'</td>'+
+      '<td>'+(u.lastLoginAt?formatDate(u.lastLoginAt):'—')+'</td>'+
+      '<td class="actions-cell">'+actions+'</td>'+
+    '</tr>';
+  }).join('');
+  
+  var addBtn='';
+  if(user.role==='super_admin'||(user.role==='admin'&&user.canManageUsers)){
+    addBtn='<button class="btn btn-sm" id="um-add">➕ افزودن کاربر</button>';
+  }
+  
+  return '<div class="card">'+
+    '<div class="sec-title">مدیریت کاربران '+addBtn+'</div>'+
+    (visible.length===0?'<div class="empty">کاربری یافت نشد</div>':
+    '<table>'+
+      '<thead><tr><th>#</th><th>نام</th><th>نام کاربری</th><th>نقش</th><th>وضعیت</th><th>تفویض</th><th>آخرین ورود</th><th>عملیات</th></tr></thead>'+
+      '<tbody>'+rows+'</tbody>'+
+    '</table>')+
+  '</div>';
+}
+function attachUserManagement(user){
+  var addBtn=document.getElementById('um-add');
+  if(addBtn){
+    addBtn.onclick=function(){
+      state.modal={type:'addUser'};
+      render();
+    };
+  }
+  var editBtns=document.querySelectorAll('[data-edit]');
+  for(var i=0;i<editBtns.length;i++){
+    editBtns[i].onclick=function(){
+      var id=parseInt(this.getAttribute('data-edit'),10);
+      state.modal={type:'editUser',userId:id};
+      render();
+    };
+  }
+  var resetBtns=document.querySelectorAll('[data-reset]');
+  for(var i=0;i<resetBtns.length;i++){
+    resetBtns[i].onclick=function(){
+      var id=parseInt(this.getAttribute('data-reset'),10);
+      state.modal={type:'resetPwd',userId:id};
+      render();
+    };
+  }
+  var delBtns=document.querySelectorAll('[data-delete]');
+  for(var i=0;i<delBtns.length;i++){
+    delBtns[i].onclick=function(){
+      var id=parseInt(this.getAttribute('data-delete'),10);
+      state.modal={type:'deleteUser',userId:id};
+      render();
+    };
+  }
+  var dlgBtns=document.querySelectorAll('[data-delegate]');
+  for(var i=0;i<dlgBtns.length;i++){
+    dlgBtns[i].onclick=function(){
+      var id=parseInt(this.getAttribute('data-delegate'),10);
+      state.modal={type:'delegate',userId:id};
+      render();
+    };
+  }
+}
+
+/* ============================================================
+   MODAL
+   ============================================================ */
+function renderModal(){
+  var m=state.modal;
+  var title='',body='',foot='';
+  
+  if(m.type==='addUser'){
+    title='افزودن کاربر';
+    body=userFormHtml(m.data||{},false);
+    foot='<button class="btn-secondary" id="md-cancel">انصراف</button><button class="btn" id="md-save">ذخیره</button>';
+  }else if(m.type==='editUser'){
+    title='ویرایش کاربر';
+    var u=findUserById(m.userId);
+    body=userFormHtml(u,true);
+    foot='<button class="btn-secondary" id="md-cancel">انصراف</button><button class="btn" id="md-save">ذخیره تغییرات</button>';
+  }else if(m.type==='resetPwd'){
+    title='بازنشانی رمز';
+    var u=findUserById(m.userId);
+    body='<p>برای کاربر <b>'+esc(u.name)+'</b> رمز جدید تعیین کنید.</p>'+
+      '<div class="field" style="margin-top:14px"><label>رمز جدید</label><input id="md-pwd" type="password" placeholder="حداقل ۸ کاراکتر" dir="ltr">'+
+      '<div class="strength"><div class="strength-bar" id="md-strengthbar" style="width:0%"></div></div>'+
+      '<div class="strength-label" id="md-strengthlabel"></div></div>';
+    foot='<button class="btn-secondary" id="md-cancel">انصراف</button><button class="btn" id="md-confirm" disabled>بازنشانی</button>';
+  }else if(m.type==='deleteUser'){
+    title='حذف کاربر';
+    var u=findUserById(m.userId);
+    body='<p>آیا از حذف کاربر <b>'+esc(u.name)+'</b> (نام کاربری: <span dir="ltr">'+esc(u.username)+'</span>) مطمئن هستید؟ این عمل قابل بازگشت نیست.</p>';
+    foot='<button class="btn-secondary" id="md-cancel">انصراف</button><button class="btn-danger" id="md-confirm">حذف</button>';
+  }else if(m.type==='delegate'){
+    title='تفویض / سلب اختیار';
+    var u=findUserById(m.userId);
+    var action=u.canManageUsers?'سلب اختیار از':'تفویض اختیار به';
+    body='<p>آیا از '+action+' کاربر <b>'+esc(u.name)+'</b> مطمئن هستید؟</p>'+
+      (u.canManageUsers?'<p style="color:var(--muted);font-size:13px;margin-top:8px">پس از سلب، این کاربر به مدیریت کاربران دسترسی نخواهد داشت.</p>':'<p style="color:var(--muted);font-size:13px;margin-top:8px">پس از تفویض، این مدیر می‌تواند کاربران عادی را مدیریت کند.</p>');
+    foot='<button class="btn-secondary" id="md-cancel">انصراف</button><button class="btn" id="md-confirm">تأیید</button>';
+  }else if(m.type==='newRecovery'){
+    title='کد بازیابی جدید';
+    body='<p>رمز تغییر کرد. کد بازیابی جدید تولید شده است. کد قبلی باطل شد.</p>'+
+      '<div class="recovery-code" dir="ltr">'+m.code+'</div>'+
+      '<div class="recovery-actions">'+
+        '<button class="btn-secondary btn-sm" id="md-copy">📋 کپی</button>'+
+        '<button class="btn-secondary btn-sm" id="md-download">⬇ دانلود</button>'+
+        '<button class="btn-secondary btn-sm" id="md-print">🖨 چاپ</button>'+
+      '</div>'+
+      '<label class="checkbox-row"><input type="checkbox" id="md-saved"> کد را ذخیره کردم</label>';
+    foot='<button class="btn" id="md-close" disabled>بستن</button>';
+  }
+  
+  return '<div class="modal-overlay"><div class="modal">'+
+    '<div class="modal-head"><h3>'+title+'</h3><button class="btn-ghost" id="md-x">✕</button></div>'+
+    '<div class="modal-body">'+body+'</div>'+
+    '<div class="modal-foot">'+foot+'</div>'+
+  '</div></div>';
+}
+function attachModal(user){
+  function close(){state.modal=null;render();}
+  document.getElementById('md-cancel').onclick=close;
+  document.getElementById('md-x').onclick=close;
+  
+  var m=state.modal;
+  if(m.type==='addUser'||m.type==='editUser'){
+    var isEdit=(m.type==='editUser');
+    var pwdInput=document.getElementById('uf-password');
+    if(pwdInput&&!isEdit){
+      pwdInput.oninput=function(){
+        var st=passwordStrength(pwdInput.value);
+        var bar=document.getElementById('uf-strengthbar');
+        var lbl=document.getElementById('uf-strengthlabel');
+        if(bar){bar.style.width=st.percent+'%';bar.style.background=st.color;}
+        if(lbl){lbl.textContent=st.label;lbl.style.color=st.color;}
+      };
+    }
+    document.getElementById('md-save').onclick=function(){
+      saveUserForm(user,isEdit,m.userId);
+    };
+  }else if(m.type==='resetPwd'){
+    var pwd=document.getElementById('md-pwd');
+    pwd.oninput=function(){
+      var st=passwordStrength(pwd.value);
+      document.getElementById('md-strengthbar').style.width=st.percent+'%';
+      document.getElementById('md-strengthbar').style.background=st.color;
+      document.getElementById('md-strengthlabel').textContent=st.label;
+      document.getElementById('md-strengthlabel').style.color=st.color;
+      document.getElementById('md-confirm').disabled=st.score<2;
+    };
+    document.getElementById('md-confirm').onclick=function(){
+      var newPwd=toEnglishDigits(pwd.value);
+      if(!isPasswordStrong(newPwd)){toast('رمز ضعیف است','error');return;}
+      var u=findUserById(m.userId);
+      var salt=genSalt(),hash=hashSecret(newPwd,salt);
+      updateUser(u.id,{passwordSalt:salt,passwordHash:hash,failedAttempts:0,lockedUntil:null});
+      toast('رمز بازنشانی شد','success');
+      close();
+    };
+  }else if(m.type==='deleteUser'){
+    document.getElementById('md-confirm').onclick=function(){
+      deleteUser(m.userId);
+      toast('کاربر حذف شد','success');
+      close();
+    };
+  }else if(m.type==='delegate'){
+    document.getElementById('md-confirm').onclick=function(){
+      var u=findUserById(m.userId);
+      updateUser(u.id,{canManageUsers:!u.canManageUsers});
+      toast(u.canManageUsers?'اختیار سلب شد':'اختیار تفویض شد','success');
+      close();
+    };
+  }else if(m.type==='newRecovery'){
+    document.getElementById('md-copy').onclick=function(){
+      navigator.clipboard.writeText(m.code).then(function(){toast('کپی شد','success');},function(){toast('کپی ناموفق','error');});
+    };
+    document.getElementById('md-download').onclick=function(){downloadRecovery({name:user.name,username:user.username},m.code);};
+    document.getElementById('md-print').onclick=function(){printRecovery({name:user.name,username:user.username},m.code);};
+    var cb=document.getElementById('md-saved');
+    var cls=document.getElementById('md-close');
+    cb.onchange=function(){cls.disabled=!cb.checked;};
+    document.getElementById('md-close').onclick=close;
+  }
+}
+
+/* ============================================================
+   User form
+   ============================================================ */
+function userFormHtml(u,isEdit){
+  var isAdmin=u.role==='admin';
+  var superAdminOptions='';
+  // Role select: super_admin can create admin/user; admin can create only user
+  var roleOptions='<option value="user" '+(u.role==='user'?'selected':'')+'>کاربر عادی</option>'+
+    '<option value="admin" '+(u.role==='admin'?'selected':'')+'>مدیر</option>';
+  
+  // Offer all menus except users/settings (those are never grantable to regular users)
+  var menusHtml=MENUS.filter(function(m){return m.id!=='users'&&m.id!=='settings';}).map(function(m){
+    var checked=u.allowedMenus&&u.allowedMenus.indexOf(m.id)>=0;
+    return '<label class="menu-chip '+(checked?'checked':'')+'"><input type="checkbox" value="'+m.id+'" '+(checked?'checked':'')+'> '+m.ico+' '+m.label+'</label>';
+  }).join('');
+  
+  return '<div class="field"><label>نام و نام خانوادگی *</label><input id="uf-name" value="'+esc(u.name||'')+'"></div>'+
+    '<div class="field"><label>ایمیل (اختیاری)</label><input id="uf-email" value="'+esc(u.email||'')+'" dir="ltr"></div>'+
+    '<div class="field"><label>نام کاربری *</label><input id="uf-username" value="'+esc(u.username||'')+'" dir="ltr" '+(isEdit?'disabled':'')+'><div class="field-hint">'+(isEdit?'قابل ویرایش نیست':'فقط انگلیسی، عدد، نقطه، زیرخط')+'</div></div>'+
+    (isEdit?'':'<div class="field"><label>رمز عبور *</label><input id="uf-password" type="password" placeholder="حداقل ۸ کاراکتر" dir="ltr"><div class="strength"><div class="strength-bar" id="uf-strengthbar" style="width:0%"></div></div><div class="strength-label" id="uf-strengthlabel"></div></div>')+
+    '<div class="field"><label>نقش *</label><select id="uf-role" '+(isEdit?'disabled':'')+'>'+roleOptions+'</select></div>'+
+    '<div class="field"><label>وضعیت</label><select id="uf-active"><option value="1" '+(u.active!==false?'selected':'')+'>فعال</option><option value="0" '+(u.active===false?'selected':'')+'>غیرفعال</option></select></div>'+
+    '<div class="field" id="uf-menus-wrap" style="display:none"><label>منوهای مجاز (کاربر عادی)</label><div class="menus-grid">'+menusHtml+'</div></div>';
+}
+function saveUserForm(currentUser,isEdit,editId){
+  var name=document.getElementById('uf-name').value.trim();
+  var email=document.getElementById('uf-email').value.trim();
+  var username=toEnglishDigits(document.getElementById('uf-username').value.trim());
+  var role=document.getElementById('uf-role').value;
+  var active=document.getElementById('uf-active').value==='1';
+  
+  if(!name){toast('نام را وارد کنید','error');return;}
+  if(!isEdit){
+    if(validateUsername(username)){toast(validateUsername(username),'error');return;}
+    if(isUsernameTaken(username)){toast('نام کاربری تکراری است','error');return;}
+    var pwd=toEnglishDigits(document.getElementById('uf-password').value);
+    if(!pwd||pwd.length<8){toast('رمز باید حداقل ۸ کاراکتر باشد','error');return;}
+    if(!isPasswordStrong(pwd)){toast('رمز ضعیف است','error');return;}
+  }
+  // Admin (not super_admin) can only create 'user'
+  if(currentUser.role==='admin'&&role!=='user'){
+    toast('شما فقط می‌توانید کاربر عادی ایجاد کنید','error');return;
+  }
+  
+  var allowedMenus=[];
+  if(role==='user'){
+    var cbs=document.querySelectorAll('#uf-menus-wrap input[type=checkbox]');
+    for(var i=0;i<cbs.length;i++)if(cbs[i].checked)allowedMenus.push(cbs[i].value);
+  }
+  
+  if(isEdit){
+    var u=findUserById(editId);
+    updateUser(editId,{name:name,email:email,role:role,active:active,allowedMenus:allowedMenus});
+    toast('تغییرات ذخیره شد','success');
+  }else{
+    var salt=genSalt(),hash=hashSecret(pwd,salt);
+    addUser({
+      id:nextId(),name:name,email:email,username:username,role:role,active:active,
+      passwordSalt:salt,passwordHash:hash,recoverySalt:null,recoveryHash:null,
+      failedAttempts:0,lockedUntil:null,allowedMenus:allowedMenus,canManageUsers:false,
+      createdAt:new Date().toISOString(),lastLoginAt:null
+    });
+    toast('کاربر ایجاد شد','success');
+  }
+  state.modal=null;
+  render();
+}
+
+/* ============================================================
+   SETTINGS (change password)
+   ============================================================ */
+function renderSettings(user){
+  if(user.role==='super_admin'){
+    return '<div class="card">'+
+      '<div class="sec-title">تغییر رمز (مدیر ارشد)</div>'+
+      '<p style="color:var(--muted);font-size:13px;margin-bottom:16px">تغییر رمز نیازمند رمز فعلی و کد بازیابی فعلی است. پس از تغییر، کد بازیابی جدید تولید می‌شود.</p>'+
+      (state.authError?'<div class="form-error">'+state.authError+'</div>':'')+
+      '<div class="field"><label>رمز فعلی *</label><input id="st-oldpwd" type="password" dir="ltr"></div>'+
+      '<div class="field"><label>کد بازیابی فعلی *</label><input id="st-reccode" placeholder="XXXX-XXXX-XXXX" dir="ltr" style="font-family:monospace;letter-spacing:2px"></div>'+
+      '<div class="field"><label>رمز جدید *</label><input id="st-newpwd" type="password" dir="ltr">'+
+        '<div class="strength"><div class="strength-bar" id="st-strengthbar" style="width:0%"></div></div>'+
+        '<div class="strength-label" id="st-strengthlabel"></div></div>'+
+      '<div class="field"><label>تکرار رمز جدید *</label><input id="st-confirmpwd" type="password" dir="ltr"></div>'+
+      '<button class="btn" id="st-save" disabled>تغییر رمز</button>'+
+    '</div>';
+  }
+  return '<div class="card">'+
+    '<div class="sec-title">تغییر رمز</div>'+
+    (state.authError?'<div class="form-error">'+state.authError+'</div>':'')+
+    '<div class="field"><label>رمز فعلی *</label><input id="st-oldpwd" type="password" dir="ltr"></div>'+
+    '<div class="field"><label>رمز جدید *</label><input id="st-newpwd" type="password" dir="ltr">'+
+      '<div class="strength"><div class="strength-bar" id="st-strengthbar" style="width:0%"></div></div>'+
+      '<div class="strength-label" id="st-strengthlabel"></div></div>'+
+    '<div class="field"><label>تکرار رمز جدید *</label><input id="st-confirmpwd" type="password" dir="ltr"></div>'+
+    '<button class="btn" id="st-save" disabled>تغییر رمز</button>'+
+  '</div>';
+}
+function attachSettings(user){
+  var newpwd=document.getElementById('st-newpwd');
+  var btn=document.getElementById('st-save');
+  function updateStrength(){
+    var st=passwordStrength(newpwd.value);
+    document.getElementById('st-strengthbar').style.width=st.percent+'%';
+    document.getElementById('st-strengthbar').style.background=st.color;
+    var lbl=document.getElementById('st-strengthlabel');
+    lbl.textContent=st.label;lbl.style.color=st.color;
+    btn.disabled=st.score<2;
+  }
+  newpwd.oninput=updateStrength;
+  btn.onclick=function(){
+    var oldpwd=toEnglishDigits(document.getElementById('st-oldpwd').value);
+    var newPwd=toEnglishDigits(newpwd.value);
+    var confirmPwd=toEnglishDigits(document.getElementById('st-confirmpwd').value);
+    if(!oldpwd){state.authError='رمز فعلی را وارد کنید';render();return;}
+    if(newPwd!==confirmPwd){state.authError='رمز جدید و تکرار آن یکسان نیستند';render();return;}
+    if(!isPasswordStrong(newPwd)){state.authError='رمز جدید ضعیف است';render();return;}
+    // Verify old password
+    var u=checkSession();
+    var oldHash=hashSecret(oldpwd,u.passwordSalt);
+    if(oldHash!==u.passwordHash){state.authError='رمز فعلی اشتباه است';render();return;}
+    
+    if(u.role==='super_admin'){
+      var reccode=document.getElementById('st-reccode').value.trim().toUpperCase();
+      var recHash=hashSecret(reccode,u.recoverySalt);
+      if(recHash!==u.recoveryHash){state.authError='کد بازیابی اشتباه است';render();return;}
+      // Generate new recovery code
+      var newCode=genRecoveryCode();
+      var salt=genSalt(),hash=hashSecret(newPwd,salt);
+      var rsalt=genSalt(),rhash=hashSecret(newCode,rsalt);
+      updateUser(u.id,{passwordSalt:salt,passwordHash:hash,recoverySalt:rsalt,recoveryHash:rhash,failedAttempts:0,lockedUntil:null});
+      state.authError='';
+      state.modal={type:'newRecovery',code:newCode};
+      render();
+    }else{
+      var salt=genSalt(),hash=hashSecret(newPwd,salt);
+      updateUser(u.id,{passwordSalt:salt,passwordHash:hash,failedAttempts:0,lockedUntil:null});
+      state.authError='';
+      toast('رمز با موفقیت تغییر کرد','success');
+      render();
+    }
+  };
+}
+
+/* ============================================================
+   Helpers
+   ============================================================ */
+function esc(s){
+  s=String(s===null||s===undefined?'':s);
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function roleBadge(role){
+  if(role==='super_admin')return '<span class="badge badge-super">مدیر ارشد</span>';
+  if(role==='admin')return '<span class="badge badge-admin">مدیر</span>';
+  return '<span class="badge badge-user">کاربر</span>';
+}
+function formatDate(iso){
+  if(!iso)return '—';
+  var d=new Date(iso);
+  if(isNaN(d))return '—';
+  var pad=function(n){return n<10?'0'+n:n;};
+  return d.getFullYear()+'/'+pad(d.getMonth()+1)+'/'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes());
+}
+function downloadRecovery(user,code){
+  var txt='سامانه احراز هویت\n'+
+    '========================\n\n'+
+    'کاربر: '+user.name+'\n'+
+    'نام کاربری: '+user.username+'\n'+
+    'تاریخ تولید: '+formatDate(new Date().toISOString())+'\n\n'+
+    'کد بازیابی اضطراری:\n\n'+
+    code+'\n\n'+
+    'هشدار: این کد را در جای امن نگهداری کنید.\n'+
+    'این کد فقط برای بازیابی رمز مدیر ارشد استفاده می‌شود.\n';
+  var blob=new Blob([txt],{type:'text/plain;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;a.download='recovery-code-'+user.username+'.txt';
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('دانلود شد','success');
+}
+function printRecovery(user,code){
+  var w=window.open('','_blank');
+  if(!w){toast('پاپ‌آپ مسدود شد','error');return;}
+  w.document.write('<html dir="rtl"><head><title>کد بازیابی</title>'+
+    '<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">'+
+    '<style>body{font-family:Vazirmatn,sans-serif;padding:40px;text-align:center}h1{margin-bottom:8px}.code{font-family:monospace;font-size:36px;letter-spacing:6px;background:#1e293b;color:#fff;padding:24px;border-radius:12px;margin:24px 0}.info{color:#666;font-size:14px;margin:4px}.warn{margin-top:24px;color:#991b1b;font-size:13px}</style>'+
+    '</head><body>'+
+    '<h1>کد بازیابی اضطراری</h1>'+
+    '<div class="info">کاربر: '+esc(user.name)+'</div>'+
+    '<div class="info">نام کاربری: '+esc(user.username)+'</div>'+
+    '<div class="info">تاریخ: '+formatDate(new Date().toISOString())+'</div>'+
+    '<div class="code" dir="ltr">'+code+'</div>'+
+    '<div class="warn">این کد را در جای امن نگهداری کنید. فقط برای بازیابی رمز مدیر ارشد.</div>'+
+    '</body></html>');
+  w.document.close();
+  setTimeout(function(){w.print();},500);
+}
+
+/* ============================================================
+   Show/hide menus based on role in user form
+   ============================================================ */
+document.addEventListener('change',function(e){
+  if(e.target&&e.target.id==='uf-role'){
+    var wrap=document.getElementById('uf-menus-wrap');
+    if(wrap)wrap.style.display=(e.target.value==='user')?'block':'none';
+  }
+  // Update chip checked style
+  if(e.target&&e.target.type==='checkbox'&&e.target.closest('.menu-chip')){
+    var chip=e.target.closest('.menu-chip');
+    if(e.target.checked)chip.classList.add('checked');else chip.classList.remove('checked');
+  }
+});
+
+/* ============================================================
+   INIT
+   ============================================================ */
+function init(){
+  // If session exists, start monitor
+  if(checkSession())startSessionMonitor();
+  render();
+}
+init();
+</script>
+</body>
+</html>
