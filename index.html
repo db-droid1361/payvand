@@ -1241,26 +1241,35 @@ button,.btn{-webkit-touch-callout:none}
     <div class="form-group"><label>عنوان (الزامی):</label><input type="text" id="rm_title" placeholder="مثلاً: گزارش ماهانه"></div>
     <div class="form-group">
       <label>تکرار:</label>
-      <select id="rm_frequency">
+      <select id="rm_frequency" onchange="toggleReminderPattern()">
         <option value="once">یک‌بار</option>
         <option value="daily">روزانه</option>
         <option value="weekly">هفتگی</option>
         <option value="monthly">ماهانه</option>
         <option value="yearly">سالانه</option>
+        <option value="custom">الگوی سفارشی</option>
       </select>
     </div>
+  </div>
+  <!-- الگوی سفارشی -->
+  <div id="rm_custom_pattern" class="form-row hidden">
+    <div class="form-group"><label>روز مشخص ماه (۱-۳۱):</label><input type="number" id="rm_custom_day" min="1" max="31" placeholder="مثلاً ۱۰"></div>
+    <div class="form-group"><label>یا هر چند روز یک‌بار:</label><input type="number" id="rm_custom_interval" min="1" placeholder="مثلاً ۱۵"></div>
   </div>
   <div class="form-row">
     <div class="form-group"><label>تاریخ شروع (شمسی):</label><input type="text" id="rm_start_date" class="date-picker" placeholder="انتخاب تاریخ" readonly></div>
     <div class="form-group"><label>تاریخ پایان (اختیاری):</label><input type="text" id="rm_end_date" class="date-picker" placeholder="خالی = دائمی" readonly></div>
   </div>
   <div class="form-group"><label>توضیحات (اختیاری):</label><textarea id="rm_description" rows="2"></textarea></div>
-  <!-- تفویض: مدیر/هماهنگ‌کننده می‌تواند برای کاربر دیگر تعریف کند -->
-  <div id="rm_delegate_box" class="form-row hidden">
-    <div class="form-group">
-      <label>برای کاربر (در صورت تفویض):</label>
-      <select id="rm_for_user"><option value="">خودم</option></select>
+  <!-- چند کاربره: یادآور برای خودم + دیگران -->
+  <div class="form-group">
+    <label>👥 گیرندگان یادآور (چند نفر):</label>
+    <div id="rm_recipients_box" style="max-height:120px;overflow-y:auto;border:1px solid var(--c-border);border-radius:8px;padding:8px"></div>
+    <div style="margin-top:6px;display:flex;gap:8px">
+      <input type="text" id="rm_user_search" placeholder="جستجوی کاربر..." oninput="searchReminderUsers()" style="flex:1">
+      <button class="btn btn-sm btn-info" onclick="addReminderRecipient()">افزودن</button>
     </div>
+    <small style="color:var(--c-text-muted);font-size:11px">خودت + کاربران انتخاب‌شده همزمان آلارم دریافت می‌کنند</small>
   </div>
   <button class="btn btn-success" id="btn_save_reminder">ثبت یادآور</button>
   
@@ -2046,9 +2055,16 @@ async function loadReminders(){
 }
 async function saveReminder(){
   var title=val('rm_title'),freq=val('rm_frequency'),startDate=val('rm_start_date'),endDate=val('rm_end_date'),desc=val('rm_description');
-  var forUser=$('rm_for_user')?$('rm_for_user').value:'';
   if(!title){showAlert('عنوان الزامی است.');return;}
   if(!isValidJalaliDate(startDate)){showAlert('تاریخ شروع نامعتبر است.');return;}
+  // الگوی سفارشی
+  var customData={};
+  if(freq==='custom'){
+    var customDay=val('rm_custom_day'),customInterval=val('rm_custom_interval');
+    if(customDay)customData.day_of_month=parseInt(customDay,10);
+    if(customInterval)customData.interval_days=parseInt(customInterval,10);
+    if(!customDay&&!customInterval){showAlert('برای الگوی سفارشی، روز ماه یا بازه را وارد کنید.');return;}
+  }
   // تبدیل تاریخ شمسی به میلادی
   var pStart=parseJalali(startDate);var gStart=jalaliToGregorian(pStart.jy,pStart.jm,pStart.jd);
   var startISO=new Date(gStart[0],gStart[1]-1,gStart[2]).toISOString().slice(0,10);
@@ -2057,29 +2073,47 @@ async function saveReminder(){
     var pEnd=parseJalali(endDate);var gEnd=jalaliToGregorian(pEnd.jy,pEnd.jm,pEnd.jd);
     endISO=new Date(gEnd[0],gEnd[1]-1,gEnd[2]).toISOString().slice(0,10);
   }
-  var targetUserId=forUser||currentUser.id;
-  if(forUser&&forUser!==currentUser.id){
-    if(!confirm('⚠️ شما در حال تعریف یادآور برای «'+getPersonName(forUser)+'» هستید.\n\nاین یادآور برای او نمایش داده می‌شود.\n\nادامه می‌دهید؟'))return;
+  // گیرندگان: خودم + کاربران انتخاب‌شده
+  var recipients=rm_recipients.slice();
+  if(recipients.length===0){
+    recipients=[{id:currentUser.id,name:'',personnel_id:''}];
   }
-  showLoading('ثبت یادآور...');
+  // هشدار اگر برای دیگران هم هست
+  if(recipients.length>1){
+    var names=recipients.slice(1).map(function(r){return r.name;}).join('، ');
+    if(!confirm('⚠️ این یادآور برای '+recipients.length+' نفر ثبت می‌شود:\n'+names+'\n\nهمه همزمان آلارم دریافت می‌کنند.\n\nادامه می‌دهید؟'))return;
+  }
+  showLoading('ثبت یادآور برای '+recipients.length+' کاربر...');
   try{
-    const{data,error}=await sb.rpc('rpc_create_reminder',{
-      p_user_id:targetUserId,
-      p_created_by:currentUser.id,
-      p_title:title,
-      p_description:desc,
-      p_frequency:freq,
-      p_frequency_data:{},
-      p_start_date:startISO,
-      p_end_date:endISO
-    });
-    if(error)throw error;
-    showAlert('✅ یادآور ثبت شد.','success');
-    $('rm_title').value='';$('rm_start_date').value='';$('rm_end_date').value='';$('rm_description').value='';
-    if($('rm_for_user'))$('rm_for_user').value='';
-    await loadReminders();
-    await generateReminderAlerts();
-    await checkActiveAlerts();
+    var errors=[];
+    for(var i=0;i<recipients.length;i++){
+      var r=recipients[i];
+      try{
+        const{data,error}=await sb.rpc('rpc_create_reminder',{
+          p_user_id:r.id,
+          p_created_by:currentUser.id,
+          p_title:title,
+          p_description:desc,
+          p_frequency:freq,
+          p_frequency_data:customData,
+          p_start_date:startISO,
+          p_end_date:endISO
+        });
+        if(error)errors.push(r.name+': '+error.message);
+      }catch(e){errors.push(r.name+': '+e.message);}
+    }
+    if(errors.length){
+      showAlert('برای برخی خطا داشت: '+errors.join('; '),'error');
+    }else{
+      showAlert('✅ یادآور برای '+recipients.length+' کاربر ثبت شد.','success');
+      $('rm_title').value='';$('rm_start_date').value='';$('rm_end_date').value='';$('rm_description').value='';
+      $('rm_custom_day').value='';$('rm_custom_interval').value='';
+      rm_recipients=[{id:currentUser.id,name:(currentUser.profile.first_name||'')+' '+currentUser.profile.last_name,personnel_id:currentUser.profile.personnel_id}];
+      renderReminderRecipients();
+      await loadReminders();
+      await generateReminderAlerts();
+      await checkActiveAlerts();
+    }
   }catch(e){showAlert('خطا: '+e.message);}
   finally{hideLoading();}
 }
@@ -2092,23 +2126,89 @@ async function deleteReminder(id){
   }catch(e){showAlert('خطا: '+e.message);}
 }
 function updateReminderDelegateBox(){
-  var box=$('rm_delegate_box');
+  // پر کردن لیست گیرندگان با کاربر فعلی اول
+  var box=$('rm_recipients_box');
   if(!box)return;
-  var canDelegate=currentRole==='admin'||currentRole==='super_admin'||
-    (currentUser.profile&&(currentUser.profile.can_approve_leaves||currentUser.profile.can_schedule_tasks));
-  box.classList.toggle('hidden',!canDelegate);
-  if(canDelegate){
-    var sel=$('rm_for_user');
-    if(sel){
-      var o='<option value="">خودم</option>';
-      cachedPersons.forEach(function(p){
-        if(p.id!==currentUser.id){
-          o+='<option value="'+p.id+'">'+esc(p.first_name+' '+p.last_name+' - '+p.personnel_id)+'</option>';
-        }
-      });
-      sel.innerHTML=o;
-    }
+  rm_recipients=[{id:currentUser.id,name:(currentUser.profile.first_name||'')+' '+currentUser.profile.last_name,personnel_id:currentUser.profile.personnel_id}];
+  renderReminderRecipients();
+}
+var rm_recipients=[];
+var rm_searchResults=[];
+function renderReminderRecipients(){
+  var box=$('rm_recipients_box');
+  if(!box)return;
+  if(!rm_recipients.length){box.innerHTML='<small style="color:var(--c-text-muted)">حداقل خودتان انتخاب شده است</small>';return;}
+  var h='';
+  rm_recipients.forEach(function(r,i){
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px;margin:2px 0;border-radius:6px;background:var(--c-primary-light);font-size:12px">'+
+      '<span>👤 '+esc(r.name)+' ('+esc(r.personnel_id)+')</span>'+
+      (i>0?'<button class="btn btn-sm btn-danger" style="padding:2px 8px" onclick="rm_recipients.splice('+i+',1);renderReminderRecipients()">×</button>':'')+
+    '</div>';
+  });
+  box.innerHTML=h;
+}
+function searchReminderUsers(){
+  var q=val('rm_user_search').toLowerCase();
+  var sel=$('rm_user_search');
+  if(!q){
+    // نمایش suggestions
+    var results=cachedPersons.filter(function(p){return rm_recipients.indexOf(function(r){return r.id===p.id;})===-1;}).slice(0,5);
+    showSearchResults(results.slice(0,10));
+    return;
   }
+  var results=cachedPersons.filter(function(p){
+    var name=(p.first_name+' '+p.last_name+' '+p.personnel_id).toLowerCase();
+    return name.indexOf(q)!==-1;
+  }).filter(function(p){return !rm_recipients.some(function(r){return r.id===p.id;});});
+  showSearchResults(results.slice(0,10));
+}
+function showSearchResults(results){
+  var existing=document.getElementById('rm_search_dropdown');
+  if(existing)existing.remove();
+  if(!results.length)return;
+  var inp=$('rm_user_search');
+  var dd=document.createElement('div');
+  dd.id='rm_search_dropdown';
+  dd.style.cssText='position:absolute;background:#fff;border:1px solid var(--c-border);border-radius:8px;box-shadow:var(--c-shadow-lg);max-height:200px;overflow-y:auto;z-index:1000;width:100%';
+  results.forEach(function(p){
+    var item=document.createElement('div');
+    item.style.cssText='padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--c-border)';
+    item.textContent=p.first_name+' '+p.last_name+' - '+p.personnel_id;
+    item.onmouseover=function(){this.style.background='var(--c-primary-light)';};
+    item.onmouseout=function(){this.style.background='';};
+    item.onclick=function(){
+      rm_recipients.push({id:p.id,name:p.first_name+' '+p.last_name,personnel_id:p.personnel_id});
+      renderReminderRecipients();
+      $('rm_user_search').value='';
+      dd.remove();
+    };
+    dd.appendChild(item);
+  });
+  inp.parentNode.style.position='relative';
+  inp.parentNode.appendChild(dd);
+}
+function addReminderRecipient(){
+  // اگر متن جستجو دقیقاً با یک کاربر مچ شود
+  var q=val('rm_user_search').toLowerCase().trim();
+  if(!q)return;
+  var match=cachedPersons.find(function(p){
+    var name=(p.first_name+' '+p.last_name+' - '+p.personnel_id).toLowerCase();
+    return name===q||(p.personnel_id+'')===q;
+  });
+  if(match){
+    if(!rm_recipients.some(function(r){return r.id===match.id;})){
+      rm_recipients.push({id:match.id,name:match.first_name+' '+match.last_name,personnel_id:match.personnel_id});
+      renderReminderRecipients();
+    }
+    $('rm_user_search').value='';
+    var dd=document.getElementById('rm_search_dropdown');
+    if(dd)dd.remove();
+  }
+}
+function toggleReminderPattern(){
+  var freq=val('rm_frequency');
+  var box=$('rm_custom_pattern');
+  if(box)box.classList.toggle('hidden',freq!=='custom');
 }
 
 /* ═════ Notifications Modal ═════ */
@@ -2449,49 +2549,52 @@ async function renderCalendar(){
           return fmtJalali(jDate[0],jDate[1],jDate[2])===ds;
         }catch(e){return false;}
       });
-      // ساخت محتوای سلول
+      // ساخت محتوای سلول با تفکیک بصری: شخصی vs کاری
       var cellBg=var_c_card||'#fff';
       var cellContent='<div style="font-weight:bold;font-size:14px;color:var(--c-text)">'+day+'</div>';
-      var hasItems=false;
-      // ۱) کارکرد (logs)
+      var hasPersonal=false,hasWork=false;
+      // ─── بخش شخصی (کارکرد + مرخصی) ───
+      var personalHtml='';
       if(dl.length){
-        hasItems=true;
+        hasPersonal=true;
         dl.forEach(function(l){
           var label=STATUS_LABEL[l.status]||l.status;
           var icon=l.status==='normal'?'✅':l.status==='overtime'?'⏰':'📋';
-          var desc=describeLog(l);
-          cellContent+='<div style="font-size:10px;margin-top:2px;padding:2px 4px;border-radius:3px;background:'+var_c_success_light+';color:'+var_c_success+';cursor:pointer" onclick="event.stopPropagation();openDailyLog(\''+ds+'\',\''+personId+'\')">'+icon+' '+esc(label)+'</div>';
+          personalHtml+='<div style="font-size:9px;margin-top:1px;padding:1px 3px;border-radius:3px;border-right:2px solid '+var_c_success+';background:'+var_c_success_light+';color:'+var_c_success+';cursor:pointer" onclick="event.stopPropagation();openDailyLog(\''+ds+'\',\''+personId+'\')">'+icon+' '+esc(label)+'</div>';
         });
       }
-      // ۲) مرخصی‌ها (leaves)
       if(dayLeaves.length){
-        hasItems=true;
+        hasPersonal=true;
         dayLeaves.forEach(function(lv){
           var used=(lv.used_days||[]).indexOf(ds)!==-1;
           var typeShort=lv.type==='daily'?'مرخصی روزانه':'مرخصی ساعتی';
           var bg=used?var_c_success_light:'#fef3c7';
           var color=used?var_c_success:'#92400e';
           var icon=used?'✓':'☐';
-          cellContent+='<div style="font-size:10px;margin-top:2px;padding:2px 4px;border-radius:3px;background:'+bg+';color:'+color+';cursor:pointer" onclick="event.stopPropagation();showSection(\'leave_req\')">'+icon+' '+esc(typeShort)+'</div>';
+          personalHtml+='<div style="font-size:9px;margin-top:1px;padding:1px 3px;border-radius:3px;border-right:2px solid '+color+';background:'+bg+';color:'+color+';cursor:pointer" onclick="event.stopPropagation();showSection(\'leave_req\')">'+icon+' '+esc(typeShort)+'</div>';
         });
       }
-      // ۳) وظایف (tasks)
+      // ─── بخش کاری (وظایف + فعالیت‌ها) ───
+      var workHtml='';
       if(dayTasks.length){
-        hasItems=true;
+        hasWork=true;
         dayTasks.forEach(function(t){
           var stIcon=t.status==='done'?'✅':t.status==='in_progress'?'🔄':'⬜';
-          cellContent+='<div style="font-size:10px;margin-top:2px;padding:2px 4px;border-radius:3px;background:'+var_c_info_light+';color:'+var_c_info+';cursor:pointer" onclick="event.stopPropagation();showSection(\'my_tasks\')">'+stIcon+' '+esc(t.title||'وظیفه').slice(0,20)+'</div>';
+          workHtml+='<div style="font-size:9px;margin-top:1px;padding:1px 3px;border-radius:3px;border-right:2px solid '+var_c_info+';background:'+var_c_info_light+';color:'+var_c_info+';cursor:pointer" onclick="event.stopPropagation();showSection(\'my_tasks\')">'+stIcon+' '+esc(t.title||'وظیفه').slice(0,15)+'</div>';
         });
       }
-      // ۴) فعالیت‌های برنامه
       if(dayActs.length){
-        hasItems=true;
+        hasWork=true;
         dayActs.forEach(function(a){
-          cellContent+='<div style="font-size:10px;margin-top:2px;padding:2px 4px;border-radius:3px;background:#fff3cd;color:#856404;cursor:pointer" onclick="event.stopPropagation();showSection(\'my_activities\')">🎯 '+esc((a.title||'فعالیت').slice(0,20))+'</div>';
+          workHtml+='<div style="font-size:9px;margin-top:1px;padding:1px 3px;border-radius:3px;border-right:2px solid var(--c-warning);background:#fff3cd;color:#856404;cursor:pointer" onclick="event.stopPropagation();showSection(\'my_activities\')">🎯 '+esc((a.title||'فعالیت').slice(0,15))+'</div>';
         });
       }
-      if(!hasItems){
-        cellContent+='<div style="font-size:10px;color:var(--c-text-muted);opacity:.5;margin-top:4px">—</div>';
+      // ترکیب با خط جداکننده
+      if(hasPersonal)cellContent+='<div style="margin-top:2px">'+personalHtml+'</div>';
+      if(hasPersonal&&hasWork)cellContent+='<div style="border-top:1px dashed var(--c-border);margin:2px 0"></div>';
+      if(hasWork)cellContent+='<div style="margin-top:2px">'+workHtml+'</div>';
+      if(!hasPersonal&&!hasWork){
+        cellContent+='<div style="font-size:9px;color:var(--c-text-muted);opacity:.4;margin-top:2px">—</div>';
       }
       var cellClass='day-cell'+(isHol?' holiday':'')+(dl.length?' has-log':'')+(dayTasks.length||dayActs.length?' has-task':'');
       var cellStyle='border:1px solid var(--c-border);height:100px;vertical-align:top;padding:4px;cursor:pointer;transition:var(--c-transition);background:'+(isHol?var_c_danger_light:var_c_card);
@@ -2506,11 +2609,10 @@ async function renderCalendar(){
     $('monthly_summary').innerHTML='<h3 style="margin-top:0;color:var(--c-text)">خلاصه ماهانه</h3>'+summaryHtml(summarize(logs));
     // راهنما
     c.innerHTML+='<p style="margin-top:10px;font-size:11px;color:var(--c-text-muted);line-height:1.8">'+
-      '<b>راهنما رنگ‌ها:</b><br>'+
-      '✅ سبز = کارکرد عادی &nbsp; ⏰ = اضافه‌کاری &nbsp; 📋 = عدم حضور<br>'+
-      '✓ سبز = مرخصی استفاده‌شده &nbsp; ☐ زرد = مرخصی استفاده‌نشده<br>'+
-      '⬜ آبی = وظیفه در انتظار &nbsp; 🔄 = در حال انجام &nbsp; ✅ = انجام‌شده<br>'+
-      '🎯 زرد = فعالیت برنامه<br>'+
+      '<b>راهنما:</b><br>'+
+      '🟢 سبز (بالا) = اطلاعات شخصی: کارکرد، مرخصی<br>'+
+      '🔵 آبی (پایین) = اطلاعات کاری: وظایف، فعالیت‌ها<br>'+
+      '<span style="border-top:1px dashed;display:inline-block;width:40px;vertical-align:middle"></span> = خط جداکننده شخصی/کاری<br>'+
       'کلیک روی هر روز = ثبت/ویرایش اظهار آن روز</p>';
   }catch(e){c.innerHTML='<p>خطا: '+esc(e.message)+'</p>';}
   hideLoading();
@@ -3190,21 +3292,122 @@ async function renderUsers(){
     c.innerHTML=h+'</table>';
   }catch(e){c.innerHTML='<p>خطا: '+esc(e.message)+'</p>';}
 }
+async function changeParent(userId,parentVal){
+  showLoading('تغییر هماهنگ‌کننده...');
+  try{
+    // ۱) کاربر قبلی هماهنگ‌کننده را پیدا کن
+    var oldParentId=null;
+    var target=cachedPersons.filter(function(p){return p.id===userId;})[0];
+    if(target&&target.parent_id)oldParentId=target.parent_id;
+    
+    // ۲) هماهنگ‌کننده جدید را ست کن
+    await updateUserProfileDB(userId,{parent_id:parentVal||null});
+    
+    // ۳) اگر هماهنگ‌کننده جدید انتخاب شده، نقش او را به admin ارتقا بده
+    var roleChanged=[];
+    if(parentVal){
+      var newCoord=cachedPersons.filter(function(p){return p.id===parentVal;})[0];
+      if(newCoord&&newCoord.role==='user'){
+        await updateUserProfileDB(parentVal,{role:'admin',can_approve_leaves:true,can_schedule_tasks:true});
+        roleChanged.push({id:parentVal,name:newCoord.first_name+' '+newCoord.last_name,from:'user',to:'admin'});
+      }
+    }
+    
+    // ۴) هماهنگ‌کننده قدیمی را بررسی کن: اگر زیرمجموعه‌ای ندارد، به user برگردان
+    if(oldParentId&&oldParentId!==parentVal){
+      await loadAllPersons();
+      var oldSubs=cachedPersons.filter(function(p){return p.parent_id===oldParentId;});
+      if(oldSubs.length===0){
+        var oldCoord=cachedPersons.filter(function(p){return p.id===oldParentId;})[0];
+        if(oldCoord&&oldCoord.role==='admin'){
+          await updateUserProfileDB(oldParentId,{role:'user',can_approve_leaves:false,can_schedule_tasks:false});
+          roleChanged.push({id:oldParentId,name:oldCoord.first_name+' '+oldCoord.last_name,from:'admin',to:'user'});
+        }
+      }
+    }
+    
+    await loadAllPersons();
+    await loadSubordinates();
+    applyRoleBasedUI();
+    
+    // ۵) اگر تغییر نقشی رخ داده، به مدیر آلارم بده
+    if(roleChanged.length>0){
+      var msg='⚠️ تغییر خودکار نقش:\n';
+      roleChanged.forEach(function(rc){
+        msg+='«'+rc.name+'» از '+rc.from+' به '+rc.to+' تغییر یافت.\n';
+        if(rc.to==='user')msg+='  این کاربر دیگر زیرمجموعه ندارد و دسترسی هماهنگ‌کننده از او سلب شد.\n';
+      });
+      showAlert(msg,'warning');
+      // ارسال نوتیفیکیشن به مدیر
+      try{
+        var admins=cachedPersons.filter(function(p){return p.role==='admin'||p.role==='super_admin';});
+        for(var ai=0;ai<admins.length;ai++){
+          await sendNotificationDB({
+            title:'تغییر خودکار نقش کاربر',
+            body:roleChanged.map(function(rc){return rc.name+': '+rc.from+' → '+rc.to;}).join('\n'),
+            recipient_id:admins[ai].id,
+            sender_id:currentUser.id,
+            priority:'high',
+            related_type:'role_change'
+          });
+        }
+      }catch(e){console.warn('notification:',e);}
+    }else{
+      showAlert('هماهنگ‌کننده تغییر کرد.','success');
+    }
+  }catch(e){showAlert('خطا: '+e.message);}
+  hideLoading();
+}
 async function changeRole(userId,newRole){
   if(currentRole!=='super_admin'&&newRole==='super_admin'){showAlert('فقط سوپرادمین می‌تواند نقش سوپرادمین بدهد.');return;}
+  // اگر نقش به user تغییر کرد و کاربر زیرمجموعه دارد، هشدار بده
+  if(newRole==='user'){
+    var subs=cachedPersons.filter(function(p){return p.parent_id===userId;});
+    if(subs.length>0){
+      if(!confirm('⚠️ این کاربر '+subs.length+' زیرمجموعه دارد.\nبا تغییر نقش به «کاربر عادی»، دسترسی هماهنگ‌کننده از او سلب می‌شود.\nزیرمجموعه‌ها باید به هماهنگ‌کننده جدید منتقل شوند.\n\nادامه می‌دهید؟'))return;
+      // زیرمجموعه‌ها را بدون هماهنگ‌کننده کن
+      for(var i=0;i<subs.length;i++){
+        await updateUserProfileDB(subs[i].id,{parent_id:null});
+      }
+      await updateUserProfileDB(userId,{role:newRole,can_approve_leaves:false,can_schedule_tasks:false});
+      await loadAllPersons();await loadSubordinates();applyRoleBasedUI();
+      showAlert('نقش تغییر کرد. '+subs.length+' زیرمجموعه بدون هماهنگ‌کننده شدند.','warning');
+      hideLoading();
+      return;
+    }
+  }
   showLoading('تغییر نقش...');
   try{await updateUserProfileDB(userId,{role:newRole});if(userId===currentUser.id){currentRole=newRole;currentUser.profile.role=newRole;updateUserBox();applyRoleBasedUI();}showAlert('نقش تغییر کرد.','success');
-    // اگر نقش به guest تغییر کرد، modal تنظیمات باز کن
     if(newRole==='guest'){await loadAllPersons();hideLoading();openGuestSettings(userId);return;}
   }catch(e){showAlert('خطا: '+e.message);}
   hideLoading();
 }
-async function changeParent(userId,parentVal){
-  showLoading('تغییر هماهنگ‌کننده...');
-  try{await updateUserProfileDB(userId,{parent_id:parentVal||null});showAlert('هماهنگ‌کننده تغییر کرد.','success');await loadAllPersons();await loadSubordinates();}catch(e){showAlert('خطا: '+e.message);}
-  hideLoading();
-}
 async function togglePermission(userId,perm,val){
+  // اگر دسترسی can_approve_leaves یا can_schedule_tasks خاموش می‌شود
+  // و کاربر نقش admin دارد، بررسی کن که آیا نقش باید به user برگردد
+  if(!val&&(perm==='can_approve_leaves'||perm==='can_schedule_tasks')){
+    var target=cachedPersons.filter(function(p){return p.id===userId;})[0];
+    if(target&&target.role==='admin'){
+      var otherPerm=perm==='can_approve_leaves'?'can_schedule_tasks':'can_approve_leaves';
+      if(!target[otherPerm]){
+        // هر دو دسترسی خاموش → بررسی زیرمجموعه
+        var subs=cachedPersons.filter(function(p){return p.parent_id===userId;});
+        if(subs.length===0){
+          if(!confirm('⚠️ با حذف این دسترسی، این کاربر دیگر هیچ دسترسی هماهنگ‌کننده ندارد و زیرمجموعه‌ای هم ندارد.\nنقش او به «کاربر عادی» تغییر می‌یابد.\n\nادامه می‌دهید؟'))return;
+          showLoading('تغییر دسترسی و نقش...');
+          try{
+            await updateUserProfileDB(userId,function(){var u={};u[perm]=false;u.role='user';return u;}());
+            showAlert('دسترسی حذف شد و نقش به کاربر عادی تغییر یافت.','warning');
+            await loadAllPersons();await loadSubordinates();applyRoleBasedUI();
+          }catch(e){showAlert('خطا: '+e.message);}
+          hideLoading();
+          return;
+        }else{
+          if(!confirm('⚠️ این کاربر '+subs.length+' زیرمجموعه دارد.\nبا حذف دسترسی، نقش او حفظ می‌شود اما این دسترسی از او سلب می‌گردد.\n\nادامه می‌دهید؟'))return;
+        }
+      }
+    }
+  }
   showLoading('تغییر دسترسی...');
   try{var updates={};updates[perm]=val;await updateUserProfileDB(userId,updates);showAlert('دسترسی تغییر کرد.','success');await loadAllPersons();await loadSubordinates();applyRoleBasedUI();}catch(e){showAlert('خطا: '+e.message);}
   hideLoading();
