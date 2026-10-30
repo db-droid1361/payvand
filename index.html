@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl" data-theme="day">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -223,94 +223,176 @@ body>*:not(.print-area){display:none!important}
 .no-print{display:none!important}
 }
 
-/* ════════════════════════════════════════════════════════════════
-   پیوند — سیستم طراحی جدید (سایدبار + ۳ تم)
-   ════════════════════════════════════════════════════════════════ */
+/* ════════════════════════════════════════════════════════════════════
+   پیوند — سیستم طراحی جامع سه‌تمی (DAY / NIGHT / SAADAT)
+   ════════════════════════════════════════════════════════════════════
+   هر تم شخصیت بصری مستقل دارد. تمام رنگ‌ها از متغیرهای مرکزی می‌آیند.
+   تم با data-theme روی <html> تنظیم می‌شود.
+   ════════════════════════════════════════════════════════════════════ */
 
-/* ─── تم روز (پیش‌فرض) ─── */
-:root{
-  --p-primary:#1769AA;
-  --p-primary-dark:#13577f;
-  --p-primary-light:#EAF4FC;
-  --p-bg:#F3F6FA;
-  --p-card:#FFFFFF;
-  --p-text:#1e293b;
-  --p-text-muted:#64748b;
-  --p-border:#e2e8f0;
-  --p-sidebar-bg:#1e293b;
-  --p-sidebar-text:#cbd5e1;
-  --p-sidebar-active:#1769AA;
-  --p-shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
-  --p-shadow-lg:0 10px 25px rgba(0,0,0,.08);
-  --p-radius:14px;
-  --p-radius-sm:8px;
-  --p-success:#10b981;
-  --p-danger:#ef4444;
-  --p-warning:#f59e0b;
-  --p-info:#3b82f6;
-  --p-purple:#8b5cf6;
+/* ─── تم روز (DAY) — رسمی، سازمانی، مینیمال ─── */
+:root,[data-theme="day"]{
+  --c-primary:#1769AA;
+  --c-primary-dark:#124B7A;
+  --c-primary-light:#EAF4FC;
+  --c-bg:#F3F6FA;
+  --c-bg-alt:#EDF1F7;
+  --c-card:#FFFFFF;
+  --c-card-alt:#F8FAFC;
+  --c-text:#202B38;
+  --c-text-muted:#687789;
+  --c-border:#E1E8F0;
+  --c-sidebar-bg:#FFFFFF;
+  --c-sidebar-text:#475569;
+  --c-sidebar-active-bg:#EAF4FC;
+  --c-sidebar-active-text:#1769AA;
+  --c-sidebar-border:#E1E8F0;
+  --c-shadow:0 1px 3px rgba(32,43,56,.06),0 1px 2px rgba(32,43,56,.04);
+  --c-shadow-lg:0 8px 24px rgba(32,43,56,.08);
+  --c-shadow-hover:0 4px 12px rgba(23,105,170,.12);
+  --c-radius:14px;
+  --c-radius-sm:8px;
+  --c-radius-xs:6px;
+  --c-success:#21865B;
+  --c-success-light:#E6F4EE;
+  --c-warning:#D99A24;
+  --c-warning-light:#FDF3E0;
+  --c-danger:#D94A4A;
+  --c-danger-light:#FCEAEA;
+  --c-info:#1769AA;
+  --c-info-light:#EAF4FC;
+  --c-gradient-btn:linear-gradient(135deg,#1769AA 0%,#124B7A 100%);
+  --c-gradient-card:linear-gradient(135deg,#EAF4FC 0%,#FFFFFF 100%);
+  --c-transition:.25s cubic-bezier(.4,0,.2,1);
+  --c-logo-filter:none;
+  --c-input-bg:#FFFFFF;
+  --c-input-border:#E1E8F0;
+  --c-input-focus-shadow:0 0 0 3px rgba(23,105,170,.12);
+  --c-table-head-bg:#F8FAFC;
+  --c-table-hover:#F8FAFC;
+  --c-modal-bg:#FFFFFF;
+  --c-modal-overlay:rgba(32,43,56,.4);
+  --c-badge-bg:#EAF4FC;
+  --c-badge-text:#1769AA;
 }
 
-/* ─── تم شب ─── */
-body.theme-dark{
-  --p-primary:#3b82f6;
-  --p-primary-dark:#2563eb;
-  --p-primary-light:#1e3a5f;
-  --p-bg:#0f172a;
-  --p-card:#1e293b;
-  --p-text:#e2e8f0;
-  --p-text-muted:#94a3b8;
-  --p-border:#334155;
-  --p-sidebar-bg:#0f172a;
-  --p-sidebar-text:#94a3b8;
-  --p-sidebar-active:#3b82f6;
-  --p-shadow:0 1px 3px rgba(0,0,0,.3);
-  --p-shadow-lg:0 10px 25px rgba(0,0,0,.4);
+/* ─── تم شب (NIGHT) — مدرن، تیره، آرام ─── */
+[data-theme="night"]{
+  --c-primary:#60A5FA;
+  --c-primary-dark:#38BDF8;
+  --c-primary-light:#1E3A5F;
+  --c-bg:#111827;
+  --c-bg-alt:#172235;
+  --c-card:#1D2A3D;
+  --c-card-alt:#26364C;
+  --c-text:#F1F5F9;
+  --c-text-muted:#A6B4C5;
+  --c-border:#334155;
+  --c-sidebar-bg:#0B1220;
+  --c-sidebar-text:#A6B4C5;
+  --c-sidebar-active-bg:rgba(96,165,250,.15);
+  --c-sidebar-active-text:#60A5FA;
+  --c-sidebar-border:#1E293B;
+  --c-shadow:0 1px 3px rgba(0,0,0,.3),0 1px 2px rgba(0,0,0,.2);
+  --c-shadow-lg:0 8px 32px rgba(0,0,0,.4);
+  --c-shadow-hover:0 4px 16px rgba(96,165,250,.2);
+  --c-radius:14px;
+  --c-radius-sm:8px;
+  --c-radius-xs:6px;
+  --c-success:#4ADE80;
+  --c-success-light:rgba(74,222,128,.12);
+  --c-warning:#FBBF24;
+  --c-warning-light:rgba(251,191,36,.12);
+  --c-danger:#FB7185;
+  --c-danger-light:rgba(251,113,133,.12);
+  --c-info:#60A5FA;
+  --c-info-light:rgba(96,165,250,.12);
+  --c-gradient-btn:linear-gradient(135deg,#60A5FA 0%,#38BDF8 100%);
+  --c-gradient-card:linear-gradient(135deg,#26364C 0%,#1D2A3D 100%);
+  --c-transition:.25s cubic-bezier(.4,0,.2,1);
+  --c-logo-filter:brightness(1.2);
+  --c-input-bg:#172235;
+  --c-input-border:#334155;
+  --c-input-focus-shadow:0 0 0 3px rgba(96,165,250,.15);
+  --c-table-head-bg:#172235;
+  --c-table-hover:rgba(96,165,250,.05);
+  --c-modal-bg:#1D2A3D;
+  --c-modal-overlay:rgba(0,0,0,.6);
+  --c-badge-bg:rgba(96,165,250,.15);
+  --c-badge-text:#60A5FA;
 }
 
-/* ─── تم SAADAT (فانتزی) ─── */
-body.theme-saadat{
-  --p-primary:#8b5cf6;
-  --p-primary-dark:#7c3aed;
-  --p-primary-light:#f3e8ff;
-  --p-bg:#faf5ff;
-  --p-card:#FFFFFF;
-  --p-text:#4c1d95;
-  --p-text-muted:#7c3aed;
-  --p-border:#e9d5ff;
-  --p-sidebar-bg:#2d1b4e;
-  --p-sidebar-text:#c4b5fd;
-  --p-sidebar-active:#8b5cf6;
-  --p-shadow:0 2px 8px rgba(139,92,246,.1);
-  --p-shadow-lg:0 10px 30px rgba(139,92,246,.15);
-  --p-radius:16px;
-  --p-radius-sm:10px;
+/* ─── تم SAADAT — فانتزی مدرن، خلاقانه، رنگارنگ ─── */
+[data-theme="saadat"]{
+  --c-primary:#7654D6;
+  --c-primary-dark:#49318F;
+  --c-primary-light:#E9DFFF;
+  --c-bg:#F7F2FF;
+  --c-bg-alt:#EEE7FF;
+  --c-card:#FFFFFF;
+  --c-card-alt:#F7F2FF;
+  --c-text:#34264D;
+  --c-text-muted:#786A91;
+  --c-border:#E2D8F2;
+  --c-sidebar-bg:linear-gradient(180deg,#49318F 0%,#7654D6 100%);
+  --c-sidebar-text:#E9DFFF;
+  --c-sidebar-active-bg:linear-gradient(90deg,#36CFC9 0%,#7654D6 100%);
+  --c-sidebar-active-text:#FFFFFF;
+  --c-sidebar-border:rgba(233,223,255,.15);
+  --c-shadow:0 2px 10px rgba(118,84,214,.08);
+  --c-shadow-lg:0 12px 36px rgba(118,84,214,.18);
+  --c-shadow-hover:0 6px 20px rgba(118,84,214,.25);
+  --c-radius:18px;
+  --c-radius-sm:12px;
+  --c-radius-xs:8px;
+  --c-success:#36CFC9;
+  --c-success-light:#E0FAF8;
+  --c-warning:#FFD166;
+  --c-warning-light:#FFF8E6;
+  --c-danger:#F5A6D6;
+  --c-danger-light:#FDEEF6;
+  --c-info:#7654D6;
+  --c-info-light:#E9DFFF;
+  --c-gradient-btn:linear-gradient(135deg,#7654D6 0%,#E9DFFF 50%,#36CFC9 100%);
+  --c-gradient-card:linear-gradient(135deg,#E9DFFF 0%,#FFFFFF 50%,#E0FAF8 100%);
+  --c-transition:.3s cubic-bezier(.4,0,.2,1);
+  --c-logo-filter:hue-rotate(30deg) saturate(1.2);
+  --c-input-bg:#FFFFFF;
+  --c-input-border:#E2D8F2;
+  --c-input-focus-shadow:0 0 0 4px rgba(118,84,214,.15);
+  --c-table-head-bg:#E9DFFF;
+  --c-table-hover:#F7F2FF;
+  --c-modal-bg:#FFFFFF;
+  --c-modal-overlay:rgba(73,49,143,.4);
+  --c-badge-bg:#E9DFFF;
+  --c-badge-text:#7654D6;
 }
 
-/* ─── لایوت کلی ─── */
-body{background:var(--p-bg);color:var(--p-text);font-size:14px;line-height:1.6}
+/* ─── عناصر پایه ─── */
+*{box-sizing:border-box}
+body{background:var(--c-bg);color:var(--c-text);font-size:14px;line-height:1.6;font-family:'Vazirmatn','Segoe UI',Tahoma,sans-serif;transition:background var(--c-transition),color var(--c-transition)}
 .app-layout{display:flex;min-height:100vh}
 
 /* ─── سایدبار ─── */
 .sidebar{
-  width:260px;background:var(--p-sidebar-bg);color:var(--p-sidebar-text);
+  width:260px;background:var(--c-sidebar-bg);color:var(--c-sidebar-text);
   display:flex;flex-direction:column;position:fixed;top:0;right:0;bottom:0;z-index:100;
-  transition:width .3s;overflow-y:auto;
+  transition:width var(--c-transition);overflow-y:auto;border-left:1px solid var(--c-sidebar-border);
 }
 .sidebar.collapsed{width:64px}
 .sidebar-brand{
   padding:18px 20px;display:flex;align-items:center;gap:10px;
-  border-bottom:1px solid rgba(255,255,255,.08);min-height:64px;
+  border-bottom:1px solid var(--c-sidebar-border);min-height:64px;
 }
-.sidebar-brand .payvand-logo-sm{width:32px;height:32px;flex-shrink:0}
+.sidebar-brand .payvand-logo-sm{width:32px;height:32px;flex-shrink:0;filter:var(--c-logo-filter)}
 .sidebar-brand .brand-text{font-size:16px;font-weight:700;color:#fff;white-space:nowrap}
 .sidebar.collapsed .brand-text{display:none}
 
 .sidebar-nav{flex:1;padding:12px 0;overflow-y:auto}
-.nav-group{margin-bottom:8px}
+.nav-group{margin-bottom:6px}
 .nav-group-title{
-  padding:10px 20px 4px;font-size:11px;font-weight:600;
-  color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;
+  padding:12px 20px 4px;font-size:11px;font-weight:600;
+  color:var(--c-sidebar-text);opacity:.5;text-transform:uppercase;letter-spacing:.5px;
   white-space:nowrap;
 }
 .sidebar.collapsed .nav-group-title{text-align:center;padding:10px 0;font-size:0}
@@ -318,87 +400,98 @@ body{background:var(--p-bg);color:var(--p-text);font-size:14px;line-height:1.6}
 
 .sidebar .nav-item{
   display:flex;align-items:center;gap:10px;padding:10px 20px;
-  color:var(--p-sidebar-text);font-size:13px;font-weight:500;
+  color:var(--c-sidebar-text);font-size:13px;font-weight:500;
   cursor:pointer;border:none;background:none;width:100%;text-align:right;
-  transition:.2s;white-space:nowrap;position:relative;
+  transition:var(--c-transition);white-space:nowrap;position:relative;border-radius:0;
 }
 .sidebar .nav-item:hover{background:rgba(255,255,255,.06);color:#fff}
-.sidebar .nav-item.active{background:var(--p-sidebar-active);color:#fff}
+[data-theme="day"] .sidebar .nav-item:hover{background:var(--c-sidebar-active-bg);color:var(--c-primary)}
+.sidebar .nav-item.active{background:var(--c-sidebar-active-bg);color:var(--c-sidebar-active-text);font-weight:600}
+.sidebar .nav-item.active::before{content:'';position:absolute;right:0;top:0;bottom:0;width:3px;background:var(--c-primary)}
 .sidebar .nav-item .ico{font-size:16px;width:22px;text-align:center;flex-shrink:0}
 .sidebar .nav-item .lbl{flex:1}
 .sidebar.collapsed .nav-item .lbl{display:none}
 .sidebar.collapsed .nav-item{padding:12px;justify-content:center}
 .sidebar .nav-badge{
-  background:var(--p-danger);color:#fff;font-size:10px;
+  background:var(--c-danger);color:#fff;font-size:10px;
   padding:2px 7px;border-radius:10px;font-weight:700;min-width:20px;text-align:center;
 }
 .sidebar.collapsed .nav-badge{position:absolute;top:4px;left:4px;font-size:8px;padding:1px 5px}
 .sidebar .nav-item.hidden,.sidebar .nav-group.hidden{display:none}
 
 /* ─── نوار بالا (Topbar) ─── */
-.main-area{flex:1;margin-right:260px;transition:margin .3s;min-width:0}
+.main-area{flex:1;margin-right:260px;transition:margin var(--c-transition);min-width:0}
 .main-area.sidebar-collapsed{margin-right:64px}
 .topbar{
-  background:var(--p-card);height:64px;display:flex;align-items:center;
-  justify-content:space-between;padding:0 20px;box-shadow:var(--p-shadow);
-  position:sticky;top:0;z-index:50;
+  background:var(--c-card);height:64px;display:flex;align-items:center;
+  justify-content:space-between;padding:0 20px;box-shadow:var(--c-shadow);
+  position:sticky;top:0;z-index:50;border-bottom:1px solid var(--c-border);
 }
 .topbar-left{display:flex;align-items:center;gap:12px}
 .topbar-toggle{
   background:none;border:none;font-size:20px;cursor:pointer;
-  color:var(--p-text);padding:8px;border-radius:8px;transition:.2s;
+  color:var(--c-text);padding:8px;border-radius:var(--c-radius-sm);transition:var(--c-transition);
 }
-.topbar-toggle:hover{background:var(--p-primary-light)}
-.topbar-title{font-size:16px;font-weight:700;color:var(--p-text)}
+.topbar-toggle:hover{background:var(--c-primary-light)}
+.topbar-title{font-size:16px;font-weight:700;color:var(--c-text)}
 .topbar-right{display:flex;align-items:center;gap:10px}
 
 /* ─── تم سوییچر ─── */
-.theme-switcher{display:flex;gap:4px;background:var(--p-bg);padding:4px;border-radius:10px}
+.theme-switcher{display:flex;gap:4px;background:var(--c-bg-alt);padding:4px;border-radius:10px}
 .theme-btn{
   background:none;border:none;width:32px;height:32px;border-radius:7px;
   cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;
-  transition:.2s;color:var(--p-text-muted);
+  transition:var(--c-transition);color:var(--c-text-muted);
 }
-.theme-btn:hover{background:var(--p-primary-light)}
-.theme-btn.active{background:var(--p-primary);color:#fff}
+.theme-btn:hover{background:var(--c-primary-light)}
+.theme-btn.active{background:var(--c-primary);color:#fff}
 
 /* ─── یوزر باکس ─── */
 .user-box{
   display:flex;align-items:center;gap:10px;padding:6px 12px;
-  background:var(--p-bg);border-radius:10px;
+  background:var(--c-bg-alt);border-radius:10px;
 }
 .user-box .avatar{
-  width:36px;height:36px;border-radius:50%;background:var(--p-primary);
+  width:36px;height:36px;border-radius:50%;background:var(--c-primary);
   display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:14px;
 }
 .user-box .user-info{font-size:13px;line-height:1.3}
-.user-box .user-info .uname{font-weight:600;color:var(--p-text)}
+.user-box .user-info .uname{font-weight:600;color:var(--c-text)}
 .role-badge{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;color:#fff}
-.role-user{background:var(--p-info)}.role-admin{background:var(--p-purple)}.role-super_admin{background:var(--p-danger)}
+.role-user{background:var(--c-info)}.role-admin{background:var(--c-primary)}.role-super_admin{background:var(--c-danger)}
 
 /* ─── محتوا ─── */
 .container{max-width:1200px;margin:0 auto;padding:24px 20px}
 .card{
-  background:var(--p-card);border-radius:var(--p-radius);padding:24px;
-  box-shadow:var(--p-shadow);margin-bottom:20px;
+  background:var(--c-card);border-radius:var(--c-radius);padding:24px;
+  box-shadow:var(--c-shadow);margin-bottom:20px;border:1px solid var(--c-border);
 }
-.card h2{font-size:18px;font-weight:700;margin:0 0 16px;color:var(--p-text)}
-.card h3{font-size:15px;font-weight:600;margin:16px 0 10px;color:var(--p-text)}
+.card h2{font-size:18px;font-weight:700;margin:0 0 16px;color:var(--c-text)}
+.card h3{font-size:15px;font-weight:600;margin:16px 0 10px;color:var(--c-text)}
 
 /* ─── دکمه‌ها ─── */
 .btn{
-  background:var(--p-primary);color:#fff;border:none;border-radius:var(--p-radius-sm);
-  padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;transition:.2s;
+  background:var(--c-primary);color:#fff;border:none;border-radius:var(--c-radius-sm);
+  padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;transition:var(--c-transition);
   display:inline-flex;align-items:center;gap:6px;
 }
-.btn:hover{background:var(--p-primary-dark);transform:translateY(-1px)}
+[data-theme="saadat"] .btn{background:var(--c-gradient-btn);background-size:200% auto}
+[data-theme="saadat"] .btn:hover{background-position:right center}
+.btn:hover{background:var(--c-primary-dark);transform:translateY(-1px);box-shadow:var(--c-shadow-hover)}
 .btn:active{transform:translateY(0)}
-.btn-success{background:var(--p-success)}.btn-success:hover{background:#059669}
-.btn-danger{background:var(--p-danger)}.btn-danger:hover{background:#dc2626}
-.btn-warning{background:var(--p-warning)}.btn-warning:hover{background:#d97706}
-.btn-info{background:var(--p-info)}.btn-info:hover{background:#2563eb}
-.btn-secondary{background:var(--p-bg);color:var(--p-text);border:1px solid var(--p-border)}
-.btn-secondary:hover{background:var(--p-primary-light)}
+.btn-success{background:var(--c-success)}
+[data-theme="saadat"] .btn-success{background:linear-gradient(135deg,#36CFC9 0%,#21865B 100%)}
+.btn-success:hover{filter:brightness(.9)}
+.btn-danger{background:var(--c-danger)}
+[data-theme="saadat"] .btn-danger{background:linear-gradient(135deg,#F5A6D6 0%,#D94A4A 100%)}
+.btn-danger:hover{filter:brightness(.9)}
+.btn-warning{background:var(--c-warning);color:var(--c-text)}
+.btn-warning:hover{filter:brightness(.9)}
+.btn-info{background:var(--c-info)}
+.btn-info:hover{filter:brightness(.9)}
+.btn-secondary{background:var(--c-bg-alt);color:var(--c-text);border:1px solid var(--c-border)}
+[data-theme="saadat"] .btn-secondary{background:var(--c-primary-light);color:var(--c-primary-dark);border:none}
+.btn-secondary:hover{background:var(--c-primary-light)}
 .btn-sm{padding:6px 12px;font-size:12px}
 .btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
 
@@ -406,52 +499,55 @@ body{background:var(--p-bg);color:var(--p-text);font-size:14px;line-height:1.6}
 .form-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .form-row .form-group{flex:1;min-width:200px}
 .form-group{margin-bottom:12px}
-.form-group label{display:block;font-size:12px;font-weight:600;margin-bottom:5px;color:var(--p-text)}
+.form-group label{display:block;font-size:12px;font-weight:600;margin-bottom:5px;color:var(--c-text)}
 input,select,textarea{
-  font-family:inherit;font-size:13px;padding:10px 12px;border:1px solid var(--p-border);
-  border-radius:var(--p-radius-sm);width:100%;background:var(--p-card);color:var(--p-text);
-  transition:.2s;
+  font-family:inherit;font-size:13px;padding:10px 12px;border:1px solid var(--c-input-border);
+  border-radius:var(--c-radius-sm);width:100%;background:var(--c-input-bg);color:var(--c-text);
+  transition:var(--c-transition);
 }
 input:focus,select:focus,textarea:focus{
-  outline:none;border-color:var(--p-primary);box-shadow:0 0 0 3px rgba(23,105,170,.1);
+  outline:none;border-color:var(--c-primary);box-shadow:var(--c-input-focus-shadow);
 }
 
 /* ─── جداول ─── */
 table{width:100%;border-collapse:collapse;font-size:13px}
-th{background:var(--p-primary-light);padding:12px;text-align:right;font-weight:600;color:var(--p-text);font-size:12px}
-td{padding:10px 12px;border-bottom:1px solid var(--p-border)}
-tr:hover td{background:var(--p-primary-light)}
-.table-wrap{overflow-x:auto;border-radius:var(--p-radius);box-shadow:var(--p-shadow);background:var(--p-card)}
+th{background:var(--c-table-head-bg);padding:12px;text-align:right;font-weight:600;color:var(--c-text);font-size:12px;border-bottom:2px solid var(--c-border)}
+td{padding:10px 12px;border-bottom:1px solid var(--c-border);color:var(--c-text)}
+tr:hover td{background:var(--c-table-hover)}
+.table-wrap{overflow-x:auto;border-radius:var(--c-radius);box-shadow:var(--c-shadow);background:var(--c-card)}
 
 /* ─── آلرت ─── */
-.alert{padding:12px 16px;border-radius:var(--p-radius-sm);margin-bottom:16px;font-size:13px;display:none}
-.alert-error{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
-.alert-success{background:#ecfdf5;color:#059669;border:1px solid #a7f3d0}
+.alert{padding:12px 16px;border-radius:var(--c-radius-sm);margin-bottom:16px;font-size:13px;display:none}
+.alert-error{background:var(--c-danger-light);color:var(--c-danger);border:1px solid var(--c-danger)}
+.alert-success{background:var(--c-success-light);color:var(--c-success);border:1px solid var(--c-success)}
 
 /* ─── آمار داشبورد ─── */
 .dash-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
 .dash-stat{
-  background:var(--p-card);border-radius:var(--p-radius);padding:20px;
-  box-shadow:var(--p-shadow);display:flex;align-items:center;gap:16px;
+  background:var(--c-card);border-radius:var(--c-radius);padding:20px;
+  box-shadow:var(--c-shadow);display:flex;align-items:center;gap:16px;border:1px solid var(--c-border);
 }
+[data-theme="saadat"] .dash-stat{background:var(--c-gradient-card)}
 .dash-stat .stat-icon{
   width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;
   font-size:22px;flex-shrink:0;
 }
-.dash-stat .stat-icon.blue{background:var(--p-primary-light);color:var(--p-primary)}
-.dash-stat .stat-icon.green{background:#d1fae5;color:var(--p-success)}
-.dash-stat .stat-icon.orange{background:#fef3c7;color:var(--p-warning)}
-.dash-stat .stat-icon.red{background:#fee2e2;color:var(--p-danger)}
-.dash-stat .stat-info .num{font-size:24px;font-weight:700;color:var(--p-text)}
-.dash-stat .stat-info .lbl{font-size:12px;color:var(--p-text-muted)}
+.dash-stat .stat-icon.blue{background:var(--c-info-light);color:var(--c-info)}
+.dash-stat .stat-icon.green{background:var(--c-success-light);color:var(--c-success)}
+.dash-stat .stat-icon.orange{background:var(--c-warning-light);color:var(--c-warning)}
+.dash-stat .stat-icon.red{background:var(--c-danger-light);color:var(--c-danger)}
+.dash-stat .stat-info .num{font-size:24px;font-weight:700;color:var(--c-text)}
+.dash-stat .stat-info .lbl{font-size:12px;color:var(--c-text-muted)}
 
 /* ─── صفحه ورود ─── */
-.auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,var(--p-primary) 0%,var(--p-primary-dark) 100%)}
+.auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--c-gradient-btn)}
+[data-theme="night"] .auth-screen{background:linear-gradient(135deg,#111827 0%,#1D2A3D 100%)}
+[data-theme="saadat"] .auth-screen{background:linear-gradient(135deg,#49318F 0%,#7654D6 50%,#36CFC9 100%)}
 .auth-card{
-  background:var(--p-card);border-radius:20px;padding:36px;width:100%;max-width:420px;
-  box-shadow:var(--p-shadow-lg);
+  background:var(--c-card);border-radius:var(--c-radius);padding:36px;width:100%;max-width:420px;
+  box-shadow:var(--c-shadow-lg);
 }
-.auth-error{background:#fee2e2;color:#dc2626;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none;border:1px solid #fecaca}
+.auth-error{background:var(--c-danger-light);color:var(--c-danger);padding:10px 14px;border-radius:var(--c-radius-sm);font-size:13px;margin-bottom:14px;display:none;border:1px solid var(--c-danger)}
 
 /* ─── اوورلی موبایل سایدبار ─── */
 .sidebar-overlay{
@@ -606,8 +702,8 @@ body.guest-mode .admin-only,body.guest-mode .coordinator-only{display:none!impor
   </div>
   <div class="topbar-right">
     <div class="theme-switcher">
-      <button class="theme-btn active" data-theme="light" title="تم روز">☀️</button>
-      <button class="theme-btn" data-theme="dark" title="تم شب">🌙</button>
+      <button class="theme-btn active" data-theme="day" title="تم روز">☀️</button>
+      <button class="theme-btn" data-theme="night" title="تم شب">🌙</button>
       <button class="theme-btn" data-theme="saadat" title="تم SAADAT">✦</button>
     </div>
     <div class="user-box">
@@ -944,11 +1040,33 @@ body.guest-mode .admin-only,body.guest-mode .coordinator-only{display:none!impor
 <div id="section-settings" class="card hidden">
   <h2>تنظیمات</h2>
   
+  <!-- ─── ظاهر سامانه ─── -->
+  <h3>🎨 ظاهر سامانه</h3>
+  <p style="color:var(--c-text-muted);font-size:13px;margin-bottom:14px">یک تم انتخاب کنید. تنظیم شما ذخیره می‌شود و در ورود بعدی حفظ خواهد بود.</p>
+  <div class="theme-options" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px">
+    <div class="theme-option" data-theme="day" onclick="setTheme('day')" style="cursor:pointer;border:2px solid var(--c-border);border-radius:var(--c-radius);overflow:hidden;transition:var(--c-transition)">
+      <div style="height:60px;background:linear-gradient(135deg,#1769AA 0%,#EAF4FC 100%);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px">☀️ روز</div>
+      <div style="padding:10px;background:var(--c-card);color:var(--c-text);font-size:12px">رسمی، سازمانی، مینیمال</div>
+    </div>
+    <div class="theme-option" data-theme="night" onclick="setTheme('night')" style="cursor:pointer;border:2px solid var(--c-border);border-radius:var(--c-radius);overflow:hidden;transition:var(--c-transition)">
+      <div style="height:60px;background:linear-gradient(135deg,#111827 0%,#1D2A3D 50%,#60A5FA 100%);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px">🌙 شب</div>
+      <div style="padding:10px;background:var(--c-card);color:var(--c-text);font-size:12px">مدرن، تیره، آرام</div>
+    </div>
+    <div class="theme-option" data-theme="saadat" onclick="setTheme('saadat')" style="cursor:pointer;border:2px solid var(--c-border);border-radius:var(--c-radius);overflow:hidden;transition:var(--c-transition)">
+      <div style="height:60px;background:linear-gradient(135deg,#49318F 0%,#7654D6 50%,#36CFC9 100%);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px">✦ SAADAT</div>
+      <div style="padding:10px;background:var(--c-card);color:var(--c-text);font-size:12px">فانتزی مدرن، رنگارنگ</div>
+    </div>
+  </div>
+  <style>
+  .theme-option.selected{border-color:var(--c-primary)!important;box-shadow:var(--c-shadow-hover);transform:scale(1.02)}
+  .theme-option:hover{border-color:var(--c-primary)}
+  </style>
+  
   <!-- بنر کد بازیابی (فقط سوپرادمین) -->
-  <div id="recovery_code_banner" class="hidden" style="background:linear-gradient(135deg,#fef3c7 0%,#fde68a 100%);padding:16px;border-radius:8px;margin-bottom:20px;border-right:4px solid var(--warning)">
+  <div id="recovery_code_banner" class="hidden" style="background:var(--c-warning-light);padding:16px;border-radius:var(--c-radius-sm);margin-bottom:20px;border-right:4px solid var(--c-warning)">
     <div id="recovery_code_not_set" class="hidden">
-      <h3 style="margin:0 0 6px;color:#92400e">⚠️ کد بازیابی تنظیم نشده</h3>
-      <p style="margin:0 0 12px;font-size:13px;color:#78350f">برای امنیت حساب سوپرادمین، یک کد بازیابی ۱۲ رقمی تولید کنید. این کد تنها راه بازیابی رمز در صورت فراموشی است.</p>
+      <h3 style="margin:0 0 6px;color:var(--c-warning)">⚠️ کد بازیابی تنظیم نشده</h3>
+      <p style="margin:0 0 12px;font-size:13px;color:var(--c-text-muted)">برای امنیت حساب سوپرادمین، یک کد بازیابی ۱۲ رقمی تولید کنید. این کد تنها راه بازیابی رمز در صورت فراموشی است.</p>
       <button class="btn btn-warning" id="btn_generate_recovery_code">🔑 تولید کد بازیابی</button>
     </div>
     <div id="recovery_code_is_set" class="hidden">
@@ -1525,19 +1643,25 @@ function applyRoleBasedUI(){
 
 /* ═══ تم سوییچر + سایدبار toggle ═══ */
 function setTheme(theme){
-  document.body.className=document.body.className.replace(/theme-\w+/g,'').trim();
-  if(theme&&theme!=='light')document.body.classList.add('theme-'+theme);
+  // اعمال data-theme روی html
+  var html=document.documentElement;
+  html.setAttribute('data-theme',theme);
+  // حفظ guest-mode روی body
   if(currentRole==='guest')document.body.classList.add('guest-mode');
-  // آپدیت دکمه‌ها
+  // آپدیت دکمه‌های تم سوییچر در topbar
   document.querySelectorAll('.theme-btn').forEach(function(b){
     b.classList.toggle('active',b.dataset.theme===theme);
+  });
+  // آپدیت بخش تنظیمات ظاهر سامانه (اگر باز است)
+  document.querySelectorAll('.theme-option').forEach(function(o){
+    o.classList.toggle('selected',o.dataset.theme===theme);
   });
   // ذخیره
   try{localStorage.setItem('payvand_theme',theme);}catch(e){}
 }
 function restoreTheme(){
-  var t='light';
-  try{t=localStorage.getItem('payvand_theme')||'light';}catch(e){}
+  var t='day';
+  try{t=localStorage.getItem('payvand_theme')||'day';}catch(e){}
   setTheme(t);
 }
 function toggleSidebar(){
