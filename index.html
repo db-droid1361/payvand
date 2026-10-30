@@ -902,6 +902,15 @@ button,.btn{-webkit-touch-callout:none}
 <div id="section-dashboard" class="card">
   <h2>داشبورد</h2>
   <div id="dashboard_content"><p>در حال بارگذاری...</p></div>
+  <!-- تقویم ماهانه در داشبورد -->
+  <hr style="margin:20px 0;border:0;border-top:1px solid var(--c-border)">
+  <div class="form-row" style="align-items:flex-end">
+    <div class="form-group" style="flex:0 0 auto"><label>ماه:</label><select id="dash_cal_month"><option value="1">فروردین</option><option value="2">اردیبهشت</option><option value="3">خرداد</option><option value="4">تیر</option><option value="5">مرداد</option><option value="6">شهریور</option><option value="7">مهر</option><option value="8">آبان</option><option value="9">آذر</option><option value="10">دی</option><option value="11">بهمن</option><option value="12">اسفند</option></select></div>
+    <div class="form-group" style="flex:0 0 auto;width:100px"><label>سال:</label><input type="number" id="dash_cal_year" value="1405"></div>
+    <div class="form-group" style="flex:0 0 auto"><button class="btn btn-info btn-sm" onclick="renderDashboardCalendar()">نمایش تقویم</button></div>
+  </div>
+  <div id="dash_monthly_summary" class="report-summary" style="margin-bottom:12px"></div>
+  <div id="dash_calendar_container"></div>
 </div>
 
 <!-- تابلوی اعلانات -->
@@ -2646,6 +2655,9 @@ async function renderDashboard(){
   try{
     var todayStr=getTodayJalali();
     var month=todayStr.split('/');
+    // ست کردن ماه/سال داشبورد
+    if($('dash_cal_month'))$('dash_cal_month').value=parseInt(month[1],10);
+    if($('dash_cal_year'))$('dash_cal_year').value=parseInt(month[0],10);
     var monthStart=month[0]+'/'+pad2(parseInt(month[1],10))+'/01';
     var myLogs=await loadLogs(currentUser.id,monthStart,todayStr);
     var myLeaves=await loadLeaves(currentUser.id);
@@ -2849,6 +2861,8 @@ async function renderCalendar(){
       'کلیک روی هر روز = ثبت/ویرایش اظهار آن روز</p>';
   }catch(e){c.innerHTML='<p>خطا: '+esc(e.message)+'</p>';}
   hideLoading();
+  // بارگذاری تقویم داشبورد
+  scheduleDashboardCalendar();
 }
 function summarize(logs){
   var s={normal:0,dailyLeaves:0,missionDays:0,hl:0,hm:0,ot:0,holiday:0},hol={};
@@ -4285,6 +4299,109 @@ async function reportActivityNotDone(id){
   hideLoading();
 }
 
+// تقویم ماهانه در داشبورد — نمایش همه کارها و اطلاعات
+async function renderDashboardCalendar(){
+  var month=parseInt($('dash_cal_month').value,10);
+  var year=parseInt($('dash_cal_year').value,10);
+  var c=$('dash_calendar_container');
+  var s=$('dash_monthly_summary');
+  if(!c)return;
+  if(isNaN(year)||year<1300||year>1500){c.innerHTML='<p>سال نامعتبر.</p>';return;}
+  c.innerHTML='<p style="color:var(--c-text-muted)">در حال بارگذاری تقویم...</p>';
+  try{
+    var personId=currentUser.id;
+    var days=jalaliMonthLength(year,month),first=getJalaliDayOfWeek(year,month,1);
+    var fromStr=fmtJalali(year,month,1),toStr=fmtJalali(year,month,days);
+    // بارگذاری همه داده‌ها
+    var logs=await loadLogs(personId,fromStr,toStr);
+    var leaves=await loadLeaves(personId);
+    var tasks=[];
+    try{tasks=await loadTasksForDate(personId,fromStr);}catch(e){}
+    var monthProgActs=[];
+    try{
+      var pStart=parseJalali(fromStr),pEnd=parseJalali(toStr);
+      var gStart=jalaliToGregorian(pStart.jy,pStart.jm,pStart.jd);
+      var gEnd=jalaliToGregorian(pEnd.jy,pEnd.jm,pEnd.jd);
+      var dStart=new Date(gStart[0],gStart[1]-1,gStart[2],0,0,0);
+      var dEnd=new Date(gEnd[0],gEnd[1]-1,gEnd[2],23,59,59);
+      const{data,error}=await sb.from('program_activities').select('*,programs!inner(id,title)').eq('assignee_id',personId).gte('deadline',dStart.toISOString()).lte('deadline',dEnd.toISOString());
+      if(!error)monthProgActs=data||[];
+    }catch(e){}
+    // رویدادها و تعطیلات
+    var monthEvents=[];
+    try{
+      const{data,error}=await sb.from('calendar_events').select('*').eq('event_year',year);
+      if(!error)monthEvents=(data||[]).filter(function(e){
+        try{var p=parseJalali(e.date);return p.jy===year&&p.jm===month;}catch(x){return false;}
+      });
+    }catch(e){}
+    // ساخت جدول
+    var h='<table style="width:100%;border-collapse:collapse;table-layout:fixed"><thead><tr>';
+    ['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه'].forEach(function(d){
+      h+='<th style="background:var(--c-primary);color:#fff;padding:6px;border:1px solid var(--c-border);font-size:11px">'+d+'</th>';
+    });
+    h+='</tr></thead><tbody><tr>';
+    for(var i=0;i<first;i++)h+='<td style="border:1px solid var(--c-border);height:70px"></td>';
+    for(var day=1;day<=days;day++){
+      var ds=fmtJalali(year,month,day),dow=(first+day-1)%7;
+      var isHol=isHolidayDow(dow);
+      var dl=logs.filter(function(l){return l.date===ds;});
+      var dayLeaves=leaves.filter(function(lv){
+        if(lv.status==='rejected'||lv.status==='canceled')return false;
+        if(lv.type==='daily')return jalaliToTimestamp(ds)>=jalaliToTimestamp(lv.start_date)&&jalaliToTimestamp(ds)<=jalaliToTimestamp(lv.end_date);
+        return lv.start_date===ds;
+      });
+      var dayTasks=tasks?tasks.filter(function(t){return t.task_date===ds;}):[];
+      var dayActs=monthProgActs.filter(function(a){
+        try{var dlDate=new Date(a.deadline);var jDate=gregorianToJalali(dlDate.getFullYear(),dlDate.getMonth()+1,dlDate.getDate());return fmtJalali(jDate[0],jDate[1],jDate[2])===ds;}catch(e){return false;}
+      });
+      var dayEvents=monthEvents.filter(function(e){
+        try{return e.date===ds||normJ(e.date)===ds;}catch(x){return false;}
+      });
+      // محتوای سلول
+      var cellContent='<div style="font-weight:bold;font-size:12px">'+day+'</div>';
+      var hasPersonal=false,hasWork=false,hasEvent=false;
+      var personalHtml='',workHtml='';
+      // شخصی
+      if(dl.length){hasPersonal=true;dl.forEach(function(l){var lbl=STATUS_LABEL[l.status]||'';var ic=l.status==='normal'?'✅':l.status==='overtime'?'⏰':'📋';personalHtml+='<div style="font-size:8px;border-right:2px solid '+var_c_success+';background:'+var_c_success_light+';color:'+var_c_success+';padding:0 2px;border-radius:2px;margin-top:1px;cursor:pointer" onclick="event.stopPropagation();openDailyLog(\''+ds+'\',\''+personId+'\')">'+ic+'</div>';});}
+      if(dayLeaves.length){hasPersonal=true;dayLeaves.forEach(function(lv){var used=(lv.used_days||[]).indexOf(ds)!==-1;personalHtml+='<div style="font-size:8px;border-right:2px solid '+(used?var_c_success:'#92400e')+';background:'+(used?var_c_success_light:'#fef3c7')+';color:'+(used?var_c_success:'#92400e')+';padding:0 2px;border-radius:2px;margin-top:1px;cursor:pointer" onclick="event.stopPropagation();showSection(\'leave_req\')">'+(used?'✓':'☐')+'</div>';});}
+      // کاری
+      if(dayTasks.length){hasWork=true;dayTasks.forEach(function(t){var st=t.status==='done'?'✅':t.status==='in_progress'?'🔄':'⬜';workHtml+='<div style="font-size:8px;border-right:2px solid '+var_c_info+';background:'+var_c_info_light+';color:'+var_c_info+';padding:0 2px;border-radius:2px;margin-top:1px;cursor:pointer" onclick="event.stopPropagation();showSection(\'my_tasks\')">'+st+'</div>';});}
+      if(dayActs.length){hasWork=true;dayActs.forEach(function(a){workHtml+='<div style="font-size:8px;border-right:2px solid var(--c-warning);background:#fff3cd;color:#856404;padding:0 2px;border-radius:2px;margin-top:1px;cursor:pointer" onclick="event.stopPropagation();showSection(\'my_activities\')">🎯</div>';});}
+      // رویدادها/تعطیلات
+      if(dayEvents.length){hasEvent=true;dayEvents.forEach(function(e){cellContent+='<div style="font-size:8px;color:'+var_c_danger+';font-weight:600;margin-top:1px">📌 '+esc((e.title||'').slice(0,10))+'</div>';});}
+      // ترکیب
+      if(hasPersonal)cellContent+='<div style="margin-top:1px">'+personalHtml+'</div>';
+      if(hasPersonal&&hasWork)cellContent+='<div style="border-top:1px dashed var(--c-border);margin:1px 0"></div>';
+      if(hasWork)cellContent+='<div style="margin-top:1px">'+workHtml+'</div>';
+      if(!hasPersonal&&!hasWork&&!hasEvent)cellContent+='<div style="font-size:8px;color:var(--c-text-muted);opacity:.3">·</div>';
+      var cellStyle='border:1px solid var(--c-border);height:70px;vertical-align:top;padding:2px;cursor:pointer;background:'+(hasEvent?'#fef3c7':isHol?var_c_danger_light:var_c_card);
+      if(dayActs.length)cellStyle+=';box-shadow:inset 0 0 0 2px var(--c-warning)';
+      h+='<td style="'+cellStyle+'" onclick="openDailyLog(\''+ds+'\',\''+personId+'\')">'+cellContent+'</td>';
+      if((first+day)%7===0&&day!==days)h+='</tr><tr>';
+    }
+    var rem=(7-((first+days)%7))%7;
+    for(var k=0;k<rem;k++)h+='<td style="border:1px solid var(--c-border)"></td>';
+    c.innerHTML=h+'</tr></tbody></table>';
+    // خلاصه
+    s.innerHTML=summaryHtml(summarize(logs));
+    // راهنما
+    c.innerHTML+='<p style="margin-top:8px;font-size:10px;color:var(--c-text-muted);line-height:1.6">'+
+      '🟢 شخصی (کارکرد/مرخصی) | 🔵 کاری (وظایف/فعالیت) | 📌 رویداد/تعطیل | خط چین = جدایی شخصی/کاری<br>'+
+      'کلیک روی هر روز = ثبت اظهار</p>';
+  }catch(e){c.innerHTML='<p>خطا: '+esc(e.message)+'</p>';}
+}
+// فراخوانی تقویم داشبورد بعد از render
+var _dashCalTimer;
+function scheduleDashboardCalendar(){
+  clearTimeout(_dashCalTimer);
+  _dashCalTimer=setTimeout(function(){
+    if($('section-dashboard')&&!$('section-dashboard').classList.contains('hidden')){
+      renderDashboardCalendar();
+    }
+  },500);
+}
+
 // نوار شمارش معکوس در داشبورد
 async function renderCountdownBanner(){
   try{
@@ -4677,7 +4794,7 @@ async function renderEventsList(){
 async function uploadEventsExcel(){
   var fileInput=$('events_file');
   if(!fileInput.files||!fileInput.files[0]){showAlert('فایل انتخاب نشده است.');return;}
-  var canManage=(currentRole==='admin'||currentRole==='super_admin')||(currentUser.profile&&currentUser.profile.can_create_programs);
+  var canManage=(currentRole==='admin'||currentRole==='super_admin')||(currentUser.profile&&currentUser.profile.can_manage_events);
   if(!canManage){showAlert('دسترسی غیرمجاز.','error');return;}
   var file=fileInput.files[0];
   var reader=new FileReader();
@@ -4689,7 +4806,6 @@ async function uploadEventsExcel(){
       var ws=wb.Sheets[wb.SheetNames[0]];
       var rows=XLSX.utils.sheet_to_json(ws,{header:1});
       if(rows.length<2){showAlert('فایل خالی است یا فقط هدر دارد.','error');hideLoading();return;}
-      // هدر مورد انتظار: تاریخ | عنوان | توضیحات | نوع | تعطیلی
       var header=rows[0].map(function(h){return String(h).trim();});
       var dateCol=-1,titleCol=-1,descCol=-1,typeCol=-1,holidayCol=-1;
       header.forEach(function(h,i){
@@ -4700,22 +4816,21 @@ async function uploadEventsExcel(){
         if(hl.indexOf('نوع')!==-1||hl.indexOf('type')!==-1)typeCol=i;
         if(hl.indexOf('تعطیل')!==-1||hl.indexOf('holiday')!==-1)holidayCol=i;
       });
-      if(dateCol===-1||titleCol===-1){showAlert('ستون «تاریخ» و «عنوان» در فایل یافت نشد. قالب را با دکمه «دانلود قالب» بررسی کنید.','error');hideLoading();return;}
+      if(dateCol===-1||titleCol===-1){showAlert('ستون «تاریخ» و «عنوان» در فایل یافت نشد.','error');hideLoading();return;}
       var events=[];
       var skipped=0;
+      var eventYears={};
       for(var i=1;i<rows.length;i++){
         var row=rows[i];
         if(!row||!row[dateCol])continue;
         var dateStr=toEnglishDigits(String(row[dateCol])).replace(/\s/g,'');
-        // نرمال‌سازی تاریخ: 1405/1/1 → 1405/01/01
         if(dateStr.indexOf('/')!==-1){
           var parts=dateStr.split('/');
-          if(parts.length===3){
-            dateStr=parts[0]+'/'+pad2(parseInt(parts[1],10))+'/'+pad2(parseInt(parts[2],10));
-          }
+          if(parts.length===3)dateStr=parts[0]+'/'+pad2(parseInt(parts[1],10))+'/'+pad2(parseInt(parts[2],10));
         }
         if(!isValidJalaliDate(dateStr)){skipped++;continue;}
         var year=parseInt(dateStr.split('/')[0],10);
+        eventYears[year]=true;
         var title=String(row[titleCol]||'').trim();
         if(!title){skipped++;continue;}
         var desc=descCol!==-1&&row[descCol]?String(row[descCol]).trim():'';
@@ -4733,44 +4848,180 @@ async function uploadEventsExcel(){
         events.push({date:dateStr,title:title,description:desc,event_type:type,is_holiday:isHoliday,event_year:year,created_by:currentUser.id});
       }
       if(!events.length){showAlert('هیچ رویداد معتبری در فایل یافت نشد. '+skipped+' ردیف نامعتبر.','error');hideLoading();return;}
-      // حذف رویدادهای قبلی این سال، سپس درج جدید
-      var firstYear=events[0].event_year;
-      (async function(){
-        try{
-          // حذف رویدادهای قبلی این سال
-          const{error:delError}=await sb.from('calendar_events').delete().eq('event_year',firstYear);
-          if(delError)throw delError;
-          // درج رویدادهای جدید
-          const{error:insError}=await sb.from('calendar_events').insert(events);
-          if(insError)throw insError;
-          showAlert(events.length+' رویداد برای سال '+firstYear+' ذخیره شد.'+(skipped>0?' ('+skipped+' ردیف نامعتبر رد شد)':''),'success');
+      var yearsList=Object.keys(eventYears).join('، ');
+      // ─── پرسش: جایگزینی یا اضافه یا به‌روزرسانی ───
+      hideLoading();
+      showUploadChoice(events.length,yearsList,skipped).then(function(choice){
+        if(!choice){showAlert('عملیات لغو شد.','info');return;}
+        showLoading('ذخیره رویدادها...');
+        (async function(){
+          try{
+            var todayJalali=getTodayJalali();
+            var todayTs=jalaliToTimestamp(todayJalali);
+            var resultMsg='';
+            if(choice.mode==='replace'){
+            // جایگزینی: حذف رویدادهای قبلی که برنامه/فعالیت روی آنها نیست
+            // فقط برای سال‌های موجود در فایل جدید
+            for(var yi=0;yi<choice.years.length;yi++){
+              var yr=choice.years[yi];
+              // دریافت رویدادهای قبلی این سال
+              const{data:oldEvents,error:oldErr}=await sb.from('calendar_events').select('id,date,title').eq('event_year',yr);
+              if(oldErr)throw oldErr;
+              if(oldEvents&&oldEvents.length){
+                // بررسی هر رویداد: آیا برنامه/فعالیتی روی آن ساخته شده؟
+                var safeToDelete=[];
+                for(var oi=0;oi<oldEvents.length;oi++){
+                  var oe=oldEvents[oi];
+                  var hasProgram=false;
+                  try{
+                    const{data:progCount}=await sb.from('programs').select('id',{"count":"exact",head:true}).eq('event_id',oe.id);
+                    if(progCount)hasProgram=progCount.length>0;
+                  }catch(e){}
+                  if(!hasProgram)safeToDelete.push(oe.id);
+                }
+                if(safeToDelete.length>0){
+                  const{error:delErr}=await sb.from('calendar_events').delete().in('id',safeToDelete);
+                  if(delErr)throw delErr;
+                }
+              }
+            }
+            // درج رویدادهای جدید (بدون تکرار)
+            var uniqueEvents=[];
+            var seenDates={};
+            events.forEach(function(ev){
+              var key=ev.date+'_'+ev.title;
+              if(!seenDates[key]){seenDates[key]=true;uniqueEvents.push(ev);}
+            });
+            const{error:insErr}=await sb.from('calendar_events').insert(uniqueEvents);
+            if(insErr)throw insErr;
+            resultMsg=uniqueEvents.length+' رویداد ذخیره شد (جایگزینی). '+(events.length-uniqueEvents.length)+' مورد تکراری حذف شد.';
+          }else if(choice.mode==='add'){
+            // اضافه: فقط رویدادهای جدید که قبلاً وجود ندارند
+            // دریافت رویدادهای موجود
+            var existingDates={};
+            for(var yi2=0;yi2<choice.years.length;yi2++){
+              const{data:existEvents}=await sb.from('calendar_events').select('date,title').eq('event_year',choice.years[yi2]);
+              if(existEvents)existEvents.forEach(function(e){existingDates[e.date+'_'+e.title]=true;});
+            }
+            var newEvents=events.filter(function(ev){
+              return !existingDates[ev.date+'_'+ev.title];
+            });
+            if(newEvents.length===0){
+              resultMsg='همه رویدادها قبلاً ثبت شده‌اند. چیزی اضافه نشد.';
+            }else{
+              const{error:insErr2}=await sb.from('calendar_events').insert(newEvents);
+              if(insErr2)throw insErr2;
+              resultMsg=newEvents.length+' رویداد جدید اضافه شد. '+(events.length-newEvents.length)+' مورد تکراری بود.';
+            }
+          }else if(choice.mode==='update_future'){
+            // به‌روزرسانی: فقط روزهای آینده
+            // حذف رویدادهای آینده موجود (بدون برنامه) + درج رویدادهای آینده جدید
+            var futureExisting=[];
+            var futureNew=[];
+            events.forEach(function(ev){
+              if(jalaliToTimestamp(ev.date)>=todayTs){
+                futureNew.push(ev);
+              }
+            });
+            // حذف رویدادهای آینده بدون برنامه
+            for(var yi3=0;yi3<choice.years.length;yi3++){
+              const{data:oldFut}=await sb.from('calendar_events').select('id,date,title').eq('event_year',choice.years[yi3]);
+              if(oldFut){
+                for(var fi=0;fi<oldFut.length;fi++){
+                  if(jalaliToTimestamp(oldFut[fi].date)>=todayTs){
+                    var hasProg=false;
+                    try{const{data:pc}=await sb.from('programs').select('id',{"count":"exact",head:true}).eq('event_id',oldFut[fi].id);if(pc)hasProg=pc.length>0;}catch(e){}
+                    if(!hasProg){
+                      await sb.from('calendar_events').delete().eq('id',oldFut[fi].id);
+                    }
+                  }
+                }
+              }
+            }
+            // درج رویدادهای آینده جدید (بدون تکرار)
+            var seenFut={};
+            var uniqueFut=futureNew.filter(function(ev){var k=ev.date+'_'+ev.title;if(seenFut[k])return false;seenFut[k]=true;return true;});
+            if(uniqueFut.length>0){
+              const{error:insErr3}=await sb.from('calendar_events').insert(uniqueFut);
+              if(insErr3)throw insErr3;
+            }
+            resultMsg=uniqueFut.length+' رویداد آینده به‌روز شد. اطلاعات گذشته دست‌نخورده باقی ماند.';
+          }
+          showAlert(resultMsg,'success');
           $('events_file').value='';
           await renderEventsList();
-          await renderCalendar();
-        }catch(err){showAlert('خطا در ذخیره: '+err.message,'error');}
-        hideLoading();
-      })();
+          if(typeof renderCalendar==='function')await renderCalendar();
+          if(typeof renderDashboardCalendar==='function')await renderDashboardCalendar();
+          }catch(err){showAlert('خطا در ذخیره: '+err.message,'error');}
+          hideLoading();
+        })();
+      });
     }catch(err){showAlert('خطا در خواندن فایل: '+err.message,'error');hideLoading();}
   };
   reader.readAsArrayBuffer(file);
 }
-
+// نمایش پنجره انتخاب نحوه آپلود
+function showUploadChoice(eventCount,yearsList,skippedCount){
+  return new Promise(function(resolve){
+    var overlay=document.createElement('div');
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+    overlay.innerHTML='<div style="background:var(--c-card);border-radius:16px;padding:28px;max-width:500px;width:100%;box-shadow:var(--c-shadow-lg)">'+
+      '<h2 style="margin:0 0 8px">📁 آپلود '+eventCount+' رویداد</h2>'+
+      '<p style="color:var(--c-text-muted);font-size:13px;margin-bottom:16px">سال‌ها: '+yearsList+(skippedCount>0?' | '+skippedCount+' ردیف نامعتبر':'')+'</p>'+
+      '<p style="font-size:13px;margin-bottom:16px">نحوه آپلود را انتخاب کنید:</p>'+
+      '<div style="display:flex;flex-direction:column;gap:10px">'+
+        '<button id="uc_replace" class="btn btn-danger" style="text-align:right;justify-content:flex-start">'+
+          '🔄 جایگزینی کامل<br><small style="opacity:.8;font-weight:400">حذف رویدادهای قبلی (بدون برنامه) + درج جدید. اطلاعات گذشته و آینده هر دو جایگزین می‌شوند.</small>'+
+        '</button>'+
+        '<button id="uc_add" class="btn btn-info" style="text-align:right;justify-content:flex-start">'+
+          '➕ اضافه کردن<br><small style="opacity:.8;font-weight:400">فقط رویدادهای جدید اضافه می‌شوند. تکراری‌ها رد می‌شوند. اطلاعات قبلی حفظ می‌شوند.</small>'+
+        '</button>'+
+        '<button id="uc_update" class="btn btn-warning" style="text-align:right;justify-content:flex-start">'+
+          '📅 به‌روزرسانی مناسبت‌ها<br><small style="opacity:.8;font-weight:400">فقط رویدادهای روزهای آینده به‌روز می‌شوند. اطلاعات گذشته دست‌نخورده باقی می‌ماند.</small>'+
+        '</button>'+
+        '<button id="uc_cancel" class="btn btn-secondary">انصراف</button>'+
+      '</div>'+
+    '</div>';
+    document.body.appendChild(overlay);
+    var years=yearsList.split('، ').map(function(y){return parseInt(y,10);});
+    overlay.querySelector('#uc_replace').onclick=function(){overlay.remove();resolve({mode:'replace',years:years});};
+    overlay.querySelector('#uc_add').onclick=function(){overlay.remove();resolve({mode:'add',years:years});};
+    overlay.querySelector('#uc_update').onclick=function(){overlay.remove();resolve({mode:'update_future',years:years});};
+    overlay.querySelector('#uc_cancel').onclick=function(){overlay.remove();resolve(null);};
+  });
+}
 function downloadEventsTemplate(){
-  var template=[
-    ['تاریخ (شمسی)','عنوان','توضیحات','نوع','تعطیلی'],
-    ['1405/01/01','نوروز','آغاز سال نو','تعطیلی','بله'],
-    ['1405/01/02','عید نوروز','روز دوم عید','تعطیلی','بله'],
-    ['1405/01/13','روز طبیعت (سیزده‌بدر)','روز طبیعت','تعطیلی','بله'],
-    ['1405/03/15','جلسه ماهانه','جلسه بررسی عملکرد','جلسه','خیر'],
-    ['1405/06/15','مهلت تحویل گزارش','تحویل گزارش ماهانه','مهلت','خیر'],
-    ['1405/11/22','پیروزی انقلاب','مناسبت ملی','تعطیلی','بله']
-  ];
-  var ws=XLSX.utils.aoa_to_sheet(template);
-  ws['!cols']=[{wch:16},{wch:25},{wch:30},{wch:12},{wch:10}];
-  var wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,'رویدادها');
-  XLSX.writeFile(wb,'قالب_رویدادها_پیوند.xlsx');
-  showAlert('قالب اکسل دانلود شد.','success');
+  // دانلود آخرین نسخه آپلودشده + ردیف‌های نمونه
+  showLoading('آماده‌سازی قالب...');
+  (async function(){
+    try{
+      // دریافت همه رویدادهای موجود
+      const{data:existing,error}=await sb.from('calendar_events').select('date,title,description,event_type,is_holiday').order('date');
+      var template=[['تاریخ (شمسی)','عنوان','توضیحات','نوع','تعطیلی']];
+      if(existing&&existing.length>0){
+        // اگر رویداد موجود است، همان را به‌عنوان قالب بده
+        existing.forEach(function(e){
+          var typeLabel={event:'رویداد',holiday:'تعطیلی',meeting:'جلسه',deadline:'مهلت',other:'سایر'}[e.event_type]||e.event_type;
+          template.push([e.date,e.title,e.description||'',typeLabel,e.is_holiday?'بله':'خیر']);
+        });
+      }else{
+        // اگر هیچ رویدادی موجود نیست، قالب نمونه بده
+        template.push(['1405/01/01','نوروز','آغاز سال نو','تعطیلی','بله']);
+        template.push(['1405/01/02','عید نوروز','روز دوم عید','تعطیلی','بله']);
+        template.push(['1405/01/13','روز طبیعت (سیزده‌بدر)','روز طبیعت','تعطیلی','بله']);
+        template.push(['1405/03/15','جلسه ماهانه','جلسه بررسی عملکرد','جلسه','خیر']);
+        template.push(['1405/06/15','مهلت تحویل گزارش','تحویل گزارش ماهانه','مهلت','خیر']);
+        template.push(['1405/11/22','پیروزی انقلاب','مناسبت ملی','تعطیلی','بله']);
+      }
+      var ws=XLSX.utils.aoa_to_sheet(template);
+      ws['!cols']=[{wch:16},{wch:25},{wch:30},{wch:12},{wch:10}];
+      var wb=XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb,ws,'رویدادها');
+      XLSX.writeFile(wb,'تقویم_پیوند_'+getTodayJalali().replace(/\//g,'-')+'.xlsx');
+      showAlert('قالب اکسل با '+(template.length-1)+' رویداد دانلود شد.','success');
+    }catch(e){showAlert('خطا: '+e.message,'error');}
+    hideLoading();
+  })();
 }
 
 async function deleteEvent(id){
