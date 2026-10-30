@@ -1012,12 +1012,7 @@ function clearLocalSession(){
   document.body.classList.remove('guest-mode');
 }
 
-// ═══ ورود: verify هش سفارشی (SHA-256 + brute-force lock) سپس signIn Supabase ═══
-// جریان:
-//   ۱) rpc_get_auth_info → salt + وضعیت قفل + email (بدون hash)
-//   ۲) کلاینت hash = SHA-256(salt + '::' + password) × 5000 دور
-//   ۳) rpc_verify_password → مقایسه server-side + مدیریت brute-force
-//   ۴) rpc_create_session → ورود مستقیم (بدون Supabase Auth، بدون ایمیل)
+// ═══ ورود: تک RPC (هش در سرور محاسبه می‌شود — بدون mismatch) ═══
 async function handleLogin(e){
   e.preventDefault();showAuthError('');
   var btn=$('login_btn');btn.disabled=true;btn.innerHTML='در حال ورود...<span class="auth-loading"></span>';
@@ -1025,97 +1020,26 @@ async function handleLogin(e){
   var password=val('login_password');
   if(!personnelId||!password){showAuthError('کد پرسنلی و رمز عبور الزامی است.');btn.disabled=false;btn.textContent='ورود به سیستم';return;}
   try{
-    // مرحله ۱: دریافت اطلاعات احراز هویت (salt + وضعیت)
-    var authInfo=null;
-    try{
-      const{data:infoData,error:infoError}=await sb.rpc('rpc_get_auth_info',{p_personnel_id:personnelId});
-      if(!infoError&&infoData)authInfo=infoData;
-    }catch(e){console.error('rpc_get_auth_info:',e);}
-    if(!authInfo||!authInfo.user_id){
-      showAuthError('کد پرسنلی یافت نشد. با ادمین تماس بگیرید.');
+    const{data:loginData,error:loginError}=await sb.rpc('rpc_login',{p_personnel_id:personnelId,p_password:password});
+    if(loginError){showAuthError('خطا: '+loginError.message);btn.disabled=false;btn.textContent='ورود به سیستم';return;}
+    if(!loginData||!loginData.success){
+      showAuthError(loginData&&loginData.error?loginData.error:'ورود ناموفق');
       btn.disabled=false;btn.textContent='ورود به سیستم';return;
     }
-    // بررسی قفل brute-force
-    if(authInfo.locked_until){
-      var lockDate=new Date(authInfo.locked_until);
-      if(lockDate>new Date()){
-        var mins=Math.ceil((lockDate-Date.now())/60000);
-        showAuthError('تعداد تلاش‌ها بیش از حد مجاز. '+mins+' دقیقه دیگر تلاش کنید.');
-        btn.disabled=false;btn.textContent='ورود به سیستم';return;
-      }
-    }
-    // بررسی وضعیت حساب
-    if(authInfo.status&&!authInfo.active){
-      var statusMsg=authInfo.status==='inactive'?'حساب شما غیرفعال شده است. با مدیر سامانه تماس بگیرید':
-                    authInfo.status==='archived'?'حساب شما بایگانی شده است. با مدیر سامانه تماس بگیرید':
-                    'حساب شما فعال نیست. با مدیر سامانه تماس بگیرید';
-      showAuthError(statusMsg);
-      btn.disabled=false;btn.textContent='ورود به سیستم';return;
-    }
-    if(!authInfo.password_salt||!authInfo.has_password){
-      showAuthError('رمز عبور برای این حساب تنظیم نشده است. با مدیر سامانه تماس بگیرید.');
-      btn.disabled=false;btn.textContent='ورود به سیستم';return;
-    }
-    // مرحله ۲: هش رمز در سمت کلاینت (SHA-256 + 5000 دور)
-    showAuthError('');
-    btn.innerHTML='در حال اعتبارسنجی...<span class="auth-loading"></span>';
-    var pwdHash=hashSecret(password,authInfo.password_salt);
-    // مرحله ۳: verify در سرور (مقایسه + مدیریت brute-force)
-    const{data:verifyData,error:verifyError}=await sb.rpc('rpc_verify_password',{p_personnel_id:personnelId,p_password_hash:pwdHash});
-    if(verifyError){showAuthError('خطا در اعتبارسنجی: '+verifyError.message);btn.disabled=false;btn.textContent='ورود به سیستم';return;}
-    if(!verifyData||!verifyData.success){
-      showAuthError(verifyData&&verifyData.error?verifyData.error:'کد پرسنلی یا رمز عبور اشتباه است.');
-      btn.disabled=false;btn.textContent='ورود به سیستم';return;
-    }
-    // مرحله ۴: ورود مستقیم با rpc_create_session (بدون Supabase Auth)
-    // کاربر فقط با کد پرسنلی + رمز وارد می‌شود — ایمیل نقشی ندارد
-    btn.innerHTML='در حال ورود به سیستم...<span class="auth-loading"></span>';
-    try{
-      const{data:fbData,error:fbError}=await sb.rpc('rpc_create_session',{p_personnel_id:personnelId,p_password_hash:pwdHash});
-      if(fbError||!fbData||!fbData.success){
-        showAuthError('ورود ناموفق: '+(fbData&&fbData.error?fbData.error:'خطای session'));
-        btn.disabled=false;btn.textContent='ورود به سیستم';return;
-      }
-      // تنظیم currentUser از داده‌های rpc_create_session
-      currentUser={id:fbData.user.id,email:fbData.user.email};
-      currentUser.profile={
-        id:fbData.user.id,
-        email:fbData.user.email,
-        role:fbData.user.role,
-        first_name:fbData.user.first_name,
-        last_name:fbData.user.last_name,
-        personnel_id:fbData.user.personnel_id,
-        status:fbData.user.status,
-        can_manage_users:fbData.user.can_manage_users,
-        can_approve_leaves:fbData.user.can_approve_leaves,
-        can_schedule_tasks:fbData.user.can_schedule_tasks,
-        can_create_programs:fbData.user.can_create_programs,
-        parent_id:fbData.user.parent_id,
-        expires_at:fbData.user.expires_at,
-        guest_permissions:fbData.user.guest_permissions,
-        password_hash:fbData.user.password_hash,
-        password_salt:fbData.user.password_salt,
-        recovery_hash:fbData.user.recovery_hash,
-        recovery_salt:fbData.user.recovery_salt
-      };
-      currentRole=fbData.user.role;
-      // ذخیره session در localStorage برای رفرش
-      saveSession(currentUser.profile);
-      // فعال‌سازی حالت مهمان
-      if(currentRole==='guest'){document.body.classList.add('guest-mode');}
-      else{document.body.classList.remove('guest-mode');}
-      // نمایش برنامه اصلی
-      $('auth_screen').classList.add('hidden');
-      $('main_app').classList.remove('hidden');
-      try{await loadAllPersons();await loadSubordinates();showSection('dashboard');setTimeout(checkUnreadNotifications,500);}catch(e){console.warn('post-login:',e);}
-      updateUserBox();
-      applyRoleBasedUI();
-    }catch(fbErr){
-      showAuthError('خطا در ورود: '+(fbErr.message||'نامشخص'));
-      btn.disabled=false;btn.textContent='ورود به سیستم';
-    }
+    // ورود موفق
+    currentUser={id:loginData.user.id,email:loginData.user.email};
+    currentUser.profile=loginData.user;
+    currentRole=loginData.user.role;
+    saveSession(loginData.user);
+    if(currentRole==='guest'){document.body.classList.add('guest-mode');}
+    else{document.body.classList.remove('guest-mode');}
+    $('auth_screen').classList.add('hidden');
+    $('main_app').classList.remove('hidden');
+    try{await loadAllPersons();await loadSubordinates();showSection('dashboard');setTimeout(checkUnreadNotifications,500);}catch(e){console.warn('post-login:',e);}
+    updateUserBox();
+    applyRoleBasedUI();
   }catch(err){
-    showAuthError('خطا در ورود: '+(err.message||'کد پرسنلی یا رمز اشتباه است.'));
+    showAuthError('خطا در ورود: '+(err.message||'نامشخص'));
     btn.disabled=false;btn.textContent='ورود به سیستم';
   }
 }
