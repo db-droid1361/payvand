@@ -600,6 +600,14 @@ body.guest-mode .admin-only,body.guest-mode .coordinator-only{display:none!impor
   .main-area{margin:0}
   .container{max-width:100%;padding:0}
   .card{box-shadow:none;border:1px solid #ddd}
+  .print-area{display:block;padding:10px;font-size:11px;background:#fff;color:#000}
+  .rep table{font-size:10px;width:100%;border-collapse:collapse}
+  .rep th,.rep td{border:1px solid #000;padding:3px 5px;color:#000}
+  .rep h4{font-size:12px;color:#000}
+  .rep .sum{font-size:11px;color:#000}
+  .rep-page{page-break-after:always}
+  .rep-page:last-child{page-break-after:auto}
+  @page{size:A4;margin:1cm}
 }
 
 
@@ -731,16 +739,27 @@ button,.btn{-webkit-touch-callout:none}
 
 /* ورودی‌ها */
 [data-theme="saadat"] input,[data-theme="saadat"] select,[data-theme="saadat"] textarea{border-radius:14px;padding:13px 18px;font-size:14px;background:var(--c-input-bg);border:1.5px solid var(--c-input-border)}
-[data-theme="saadat"] input:focus,[data-theme="saadat"] select:focus,[data-theme="saadat"] textarea:focus{border-color:var(--c-primary);box-shadow:0 0 0 4px rgba(217,119,6,.12);background:#fff}
+[data-theme="saadat"] input:focus,[data-theme="saadat"] select:focus,[data-theme="saadat"] textarea:focus{border-color:var(--c-primary);box-shadow:0 0 0 4px rgba(217,119,6,.12);background:var(--c-input-bg)}
 
-/* Topbar شیشه‌ای */
-[data-theme="saadat"] .topbar{background:rgba(255,255,255,.88);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--c-border)}
+/* Topbar تیره شیشه‌ای */
+[data-theme="saadat"] .topbar{background:rgba(15,15,30,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--c-border)}
+[data-theme="saadat"] .topbar-title{color:var(--c-text)!important}
+[data-theme="saadat"] .topbar-toggle{color:var(--c-text)!important}
+[data-theme="saadat"] .topbar-toggle:hover{background:var(--c-sidebar-active-bg)!important}
+[data-theme="saadat"] .theme-switcher{background:var(--c-bg-alt)}
+[data-theme="saadat"] .theme-btn{color:var(--c-text-muted)}
+[data-theme="saadat"] .theme-btn:hover{background:var(--c-sidebar-active-bg)}
 [data-theme="saadat"] .theme-btn.active{background:var(--c-gradient-btn);color:#fff;box-shadow:0 2px 8px rgba(217,119,6,.3)}
+[data-theme="saadat"] .user-box{background:var(--c-bg-alt);color:var(--c-text)}
+[data-theme="saadat"] .user-box .uname{color:var(--c-text)!important}
 [data-theme="saadat"] .user-box .avatar{background:var(--c-gradient-btn);box-shadow:0 2px 8px rgba(217,119,6,.25)}
+[data-theme="saadat"] .sidebar-brand .brand-text{color:#FBBF24!important}
 
 /* جداول */
-[data-theme="saadat"] th{background:var(--c-table-head-bg);color:var(--c-primary-dark);font-weight:700}
-[data-theme="saadat"] .table-wrap{border-radius:18px}
+[data-theme="saadat"] th{background:var(--c-table-head-bg);color:var(--c-text);font-weight:700}
+[data-theme="saadat"] td{color:var(--c-text)}
+[data-theme="saadat"] tr:hover td{background:var(--c-table-hover)}
+[data-theme="saadat"] .table-wrap{border-radius:12px;background:var(--c-card)}
 
 /* صفحه ورود */
 [data-theme="saadat"] .auth-screen{background:linear-gradient(135deg,#0F0F1E 0%,#1A1A2E 50%,#D97706 100%)}
@@ -1145,16 +1164,28 @@ button,.btn{-webkit-touch-callout:none}
 </div>
 
 <div id="section-reports" class="card hidden">
-  <h2>گزارش‌گیری</h2>
+  <h2>📊 گزارش کارکرد</h2>
   <div class="form-row">
-    <div class="form-group"><label>پرسنل:</label><select id="rep_person" class="person-dropdown"><option value="">همه</option></select></div>
-    <div class="form-group"><label>نوع گزارش:</label><select id="rep_type"><option value="daily">روزانه</option><option value="weekly">هفتگی</option><option value="monthly">ماهانه</option><option value="custom">بازه دلخواه</option></select></div>
+    <div class="form-group"><label>پرسنل:</label><select id="rep_person" class="person-dropdown"><option value="">همه کاربران</option></select></div>
+    <div class="form-group"><label>نوع گزارش:</label><select id="rep_type" onchange="toggleReportDates()"><option value="daily">روزانه</option><option value="weekly">هفتگی</option><option value="monthly" selected>ماهانه</option><option value="custom">بازه دلخواه</option></select></div>
     <div class="form-group" id="rep_start_box"><label>تاریخ شروع:</label><input type="text" id="rep_start_date" class="date-picker" placeholder="انتخاب تاریخ" readonly></div>
     <div class="form-group hidden" id="rep_end_box"><label>تاریخ پایان:</label><input type="text" id="rep_end_date" class="date-picker" placeholder="انتخاب تاریخ" readonly></div>
   </div>
-  <button class="btn" id="btn_gen_report">تولید گزارش</button>
-  <button class="btn btn-success" id="btn_print_report">چاپ / PDF</button>
-  <button class="btn" id="btn_export_report_csv">خروجی CSV گزارش</button>
+  <div class="form-row" id="rep_options_box" style="align-items:center">
+    <div class="form-group" style="flex:0 0 auto;display:flex;align-items:center;gap:6px">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600">
+        <input type="checkbox" id="rep_include_guests" checked> 👁️ شامل مهمان‌ها
+      </label>
+    </div>
+    <div class="form-group" style="flex:0 0 auto;display:flex;align-items:center;gap:6px">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600">
+        <input type="checkbox" id="rep_notify_users"> 📢 اطلاع به کاربران
+      </label>
+    </div>
+  </div>
+  <button class="btn btn-info" id="btn_gen_report">📊 تولید گزارش</button>
+  <button class="btn btn-success" id="btn_print_report">🖨️ چاپ / PDF</button>
+  <button class="btn" id="btn_export_report_csv">📥 خروجی CSV</button>
   <div id="report_area" class="table-wrap" style="margin-top:20px"></div>
 </div>
 
@@ -5083,43 +5114,87 @@ function repTable(title,heads,rows){
   return h+'</table>';
 }
 function personReport(person,logs,period){
-  var T={dl:[],hl:[],dm:[],hm:[],oth:[],ot:[],ho:[]};
+  // ─── دسته‌بندی مطابق با فرم خوداظهاری ───
+  var T={normal:[],dl:[],hl:[],dm:[],hm:[],oth:[],ot:[],ho:[]};
   logs.forEach(function(l){
     var x=(l.data&&l.data.fields)||{},t=l.data&&l.data.absence_type,d=l.date,dn=dayName(d),disc=(l.data&&l.data.discrepancy)||'';
     var note=[x.desc,disc].filter(Boolean).join(' — '),dur='';
     if(l.status==='overtime'){dur=formatMins(calcDuration(x.ot_start,x.ot_end));T.ot.push([d,dn,x.ot_start,x.ot_end,dur,x.ot_reason,x.ot_location,[x.ot_topic,x.ot_description].filter(Boolean).join(' — '),disc]);}
-    else if(l.status==='normal'){var p=parseJalali(d);if(isHolidayDow(getJalaliDayOfWeek(p.jy,p.jm,p.jd)))T.ho.push([d,dn,disc]);}
+    else if(l.status==='normal'){
+      var p=parseJalali(d);
+      if(isHolidayDow(getJalaliDayOfWeek(p.jy,p.jm,p.jd)))T.ho.push([d,dn,disc]);
+      else T.normal.push([d,dn,disc||'—']);
+    }
     else if(t==='daily_leave')T.dl.push([d,dn,x.leave_type,note]);
     else if(t==='hourly_leave')T.hl.push([d,dn,x.start_time,x.end_time,formatMins(calcDuration(x.start_time,x.end_time)),x.reason,note]);
     else if(t==='1day_mission'||t==='out_province_daily')T.dm.push([d,dn,x.province,x.location,note]);
     else if(t==='hourly_mission'||t==='out_province_hourly')T.hm.push([d,dn,x.start_time,x.end_time,formatMins(calcDuration(x.start_time,x.end_time)),x.province,x.location,x.activity,disc]);
     else T.oth.push([d,dn,x.reason,note]);
   });
-  var tables=repTable('مرخصی روزانه',['تاریخ','روز','نوع','توضیحات'],T.dl)+repTable('مرخصی ساعتی',['تاریخ','روز','از ساعت','تا ساعت','مدت','علت','توضیحات'],T.hl)+repTable('مأموریت روزانه',['تاریخ','روز','استان','محل','توضیحات'],T.dm)+repTable('مأموریت ساعتی',['تاریخ','روز','از ساعت','تا ساعت','مدت','استان','محل','شرح','توضیحات'],T.hm)+repTable('سایر',['تاریخ','روز','علت','توضیحات'],T.oth)+repTable('اضافه‌کاری',['تاریخ','روز','از ساعت','تا ساعت','مدت','علت','محل','موضوع و شرح','توضیحات'],T.ot)+repTable('کارکرد در تعطیلات',['تاریخ','روز','توضیحات'],T.ho);
-  if(!tables)tables='<p>مغایرتی در این دوره ثبت نشده است.</p>';
+  // ─── جداول گزارش به همان ترتیب فرم خوداظهاری ───
+  var tables=
+    repTable('✅ حضور و کارکرد عادی',['تاریخ','روز','توضیحات'],T.normal)+
+    repTable('✈️ مرخصی روزانه',['تاریخ','روز','نوع','توضیحات'],T.dl)+
+    repTable('⏰ مرخصی ساعتی',['تاریخ','روز','از ساعت','تا ساعت','مدت','علت','توضیحات'],T.hl)+
+    repTable('🚗 مأموریت روزانه',['تاریخ','روز','استان','محل','توضیحات'],T.dm)+
+    repTable('🏍 مأموریت ساعتی',['تاریخ','روز','از ساعت','تا ساعت','مدت','استان','محل','شرح','توضیحات'],T.hm)+
+    repTable('📋 سایر علل عدم حضور',['تاریخ','روز','علت','توضیحات'],T.oth)+
+    repTable('⚡ اضافه‌کاری',['تاریخ','روز','از ساعت','تا ساعت','مدت','علت','محل','موضوع و شرح','توضیحات'],T.ot)+
+    repTable('🕌 کارکرد در تعطیلات',['تاریخ','روز','توضیحات'],T.ho);
+  if(!tables)tables='<p style="text-align:center;padding:20px;color:var(--c-text-muted)">مغایرتی در این دوره ثبت نشده است.</p>';
   return '<div class="rep rep-page">'+
-    '<div style="border:1px solid #000;padding:6px 10px;margin-bottom:6px"><div style="text-align:center;font-weight:bold;font-size:13px">گزارش مغایرت‌های کارکرد</div>'+
-    '<div style="display:flex;flex-wrap:wrap;gap:2px 24px;margin-top:4px"><span><b>نام:</b> '+esc(person.first_name)+'</span><span><b>نام خانوادگی:</b> '+esc(person.last_name)+'</span><span><b>شماره پرسنلی:</b> '+esc(person.personnel_id)+'</span><span><b>دوره:</b> '+esc(period)+'</span><span><b>واحد:</b> تولید محتوا، رسانه و مستندسازی</span></div></div>'+
-    '<div class="sum">'+summaryHtml(summarize(logs))+'</div>'+tables+
+    '<div style="border:2px solid var(--c-primary);padding:8px 12px;margin-bottom:8px;border-radius:8px"><div style="text-align:center;font-weight:bold;font-size:14px;color:var(--c-primary)">📊 گزارش کارکرد</div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:2px 24px;margin-top:6px;font-size:12px"><span><b>نام:</b> '+esc(person.first_name)+'</span><span><b>نام خانوادگی:</b> '+esc(person.last_name)+'</span><span><b>شماره پرسنلی:</b> '+esc(person.personnel_id)+'</span><span><b>نقش:</b> '+esc(ROLE_LABEL[person.role]||person.role)+'</span><span><b>دوره:</b> '+esc(period)+'</span></div></div>'+
+    '<div class="sum" style="background:var(--c-bg-alt);padding:10px;border-radius:8px;margin-bottom:10px">'+summaryHtml(summarize(logs))+'</div>'+tables+
     '<div style="margin-top:14px;display:flex;justify-content:space-between"><div>امضای کاربر: ..................</div><div>امضای مسئول: ..................</div></div>'+
-    '<p style="text-align:center;margin:6px 0 0;font-size:9px;color:#777">این سند صرفاً گزارش اظهارات ثبت‌شده است.</p></div>';
+    '<p style="text-align:center;margin:6px 0 0;font-size:9px;color:var(--c-text-muted)">این سند صرفاً گزارش اظهارات ثبت‌شده است — تولید شده در '+getTodayJalali()+'</p></div>';
 }
 async function generateReport(){
   var type=$('rep_type').value,startStr=$('rep_start_date').value,personId=$('rep_person').value,start,end,period;
-  if(!isValidJalaliDate(startStr)){showAlert('تاریخ نامعتبر است.');return;}
+  if(!isValidJalaliDate(startStr)){showAlert('تاریخ نامعتبر است.','error');return;}
   var p=parseJalali(startStr);
   if(type==='monthly'){start=fmtJalali(p.jy,p.jm,1);end=fmtJalali(p.jy,p.jm,jalaliMonthLength(p.jy,p.jm));period=MONTH_NAMES[p.jm-1]+' '+p.jy;}
-  else{start=normJ(startStr);if(type==='daily')end=start;else if(type==='weekly')end=addDaysToJalali(start,6);else{if(!isValidJalaliDate($('rep_end_date').value)){showAlert('تاریخ پایان نامعتبر است.');return;}end=normJ($('rep_end_date').value);if(jalaliToTimestamp(end)<jalaliToTimestamp(start)){showAlert('تاریخ پایان نباید قبل از شروع باشد.');return;}}period=start===end?start:start+' تا '+end;}
+  else{start=normJ(startStr);if(type==='daily')end=start;else if(type==='weekly')end=addDaysToJalali(start,6);else{if(!isValidJalaliDate($('rep_end_date').value)){showAlert('تاریخ پایان نامعتبر است.','error');return;}end=normJ($('rep_end_date').value);if(jalaliToTimestamp(end)<jalaliToTimestamp(start)){showAlert('تاریخ پایان نباید قبل از شروع باشد.','error');return;}}period=start===end?start:start+' تا '+end;}
   if(currentRole==='user'){personId=currentUser.id;$('rep_person').value=currentUser.id;}
+  // ─── فیلتر مهمان‌ها ───
+  var includeGuests=$('rep_include_guests')?$('rep_include_guests').checked:true;
   showLoading('تولید گزارش...');
   try{
     var persons=personId?cachedPersons.filter(function(x){return x.id===personId;}):cachedPersons;
+    // فیلتر مهمان‌ها اگر گزینه خاموش است
+    if(!includeGuests&&!personId){
+      persons=persons.filter(function(x){return x.role!=='guest';});
+    }
     var all=await loadLogs(personId,start,end);
     all.sort(function(a,b){return jalaliToTimestamp(a.date)-jalaliToTimestamp(b.date);});
     var h='';
-    persons.forEach(function(pp){var logs=all.filter(function(l){return l.user_id===pp.id;});if(logs.length||personId)h+=personReport(pp,logs,period);});
-    $('report_area').innerHTML=h||'<p>اظهاری در این بازه یافت نشد.</p>';
-  }catch(e){showAlert('خطا: '+e.message);}
+    var personsWithLogs=0;
+    persons.forEach(function(pp){var logs=all.filter(function(l){return l.user_id===pp.id;});if(logs.length||personId){h+=personReport(pp,logs,period);personsWithLogs++;}});
+    if(!h)h='<p>اظهاری در این بازه یافت نشد.</p>';
+    else h='<div style="background:var(--c-primary-light);padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:13px"><b>📊 گزارش کارکرد</b> — دوره: '+esc(period)+' | '+personsWithLogs+' نفر | '+(includeGuests?'شامل مهمان‌ها':'بدون مهمان‌ها')+'</div>'+h;
+    $('report_area').innerHTML=h;
+    
+    // ─── اطلاع به کاربران ───
+    var notifyUsers=$('rep_notify_users')?$('rep_notify_users').checked:false;
+    if(notifyUsers&&(currentRole==='admin'||currentRole==='super_admin')){
+      showLoading('ارسال اطلاعیه به کاربران...');
+      var managerName=currentUser.profile.first_name+' '+currentUser.profile.last_name;
+      var notifTitle='📊 گزارش کارکرد تولید شد';
+      var notifBody='مدیر سامانه ('+managerName+') یک گزارش کارکرد برای دوره «'+period+'» تولید کرد.\n\nتعداد نفرات: '+personsWithLogs+'\nنوع: '+type+'\n\nبرای مشاهده گزارش کارکرد خود، به بخش «گزارش‌ها» مراجعه کنید.';
+      var targetUsers=includeGuests?cachedPersons:cachedPersons.filter(function(x){return x.role!=='guest';});
+      var sent=0;
+      for(var ui=0;ui<targetUsers.length;ui++){
+        if(targetUsers[ui].id===currentUser.id)continue;
+        try{
+          await sendNotificationDB({sender_id:currentUser.id,recipient_id:targetUsers[ui].id,title:notifTitle,body:notifBody,priority:'normal',related_type:'report'});
+          sent++;
+        }catch(e){}
+      }
+      showAlert('گزارش تولید شد و به '+sent+' کاربر اطلاعیه ارسال شد.','success');
+    }else{
+      showAlert('گزارش تولید شد.','success');
+    }
+  }catch(e){showAlert('خطا: '+e.message,'error');}
   hideLoading();
 }
 function exportReportCSV(){
@@ -5127,7 +5202,12 @@ function exportReportCSV(){
   var lines=[];tables.forEach(function(table){Array.from(table.querySelectorAll('tr')).forEach(function(tr){var cells=Array.from(tr.querySelectorAll('th,td')).map(function(td){return '"'+String(td.innerText||td.textContent||'').replace(/"/g,'""').replace(/\r?\n/g,' ')+'"';});lines.push(cells.join(','));});lines.push('');});
   var blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='report_'+getTodayJalali().replace(/\//g,'-')+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},1500);showAlert('خروجی CSV آماده شد.','success');
 }
-function printReport(){var c=$('report_area');if(!c.querySelector('.rep')){showAlert('ابتدا گزارش را تولید کنید.');return;}$('print_area').innerHTML=c.innerHTML;window.print();}
+function printReport(){
+  var c=$('report_area');
+  if(!c.querySelector('.rep')){showAlert('ابتدا گزارش را تولید کنید.','error');return;}
+  $('print_area').innerHTML=c.innerHTML;
+  window.print();
+}
 
 /* ═════ Programs & Activities ═════ */
 var ACTIVITY_STATUS_LABEL={pending:'در انتظار',in_progress:'در حال انجام',done:'انجام شد',not_done:'انجام نشد',cancelled:'لغو'};
