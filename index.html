@@ -840,6 +840,7 @@ button,.btn{-webkit-touch-callout:none}
     <!-- گروه ۴: مدیریت ارتباطات -->
     <div class="nav-group">
       <div class="nav-group-title">مدیریت ارتباطات</div>
+      <button class="nav-item has-delegation hidden" data-target="delegations"><span class="ico">🔁</span><span class="lbl">تفویض‌ها</span><span class="nav-badge hidden" id="delegations_badge">۰</span></button>
       <button class="nav-item coordinator-only hidden" data-target="coordinator_approvals"><span class="ico">👥</span><span class="lbl">تأییدهای هماهنگ‌کننده</span><span class="nav-badge hidden" id="coord_badge">۰</span></button>
       <button class="nav-item coordinator-only hidden" data-target="coordinator_tasks"><span class="ico">📋</span><span class="lbl">مدیریت وظایف زیرمجموعه</span></button>
       <button class="nav-item admin-only hidden" data-target="approvals"><span class="ico">✅</span><span class="lbl">تأیید مرخصی‌ها</span><span class="nav-badge hidden" id="admin_approvals_badge">۰</span></button>
@@ -1104,6 +1105,29 @@ button,.btn{-webkit-touch-callout:none}
 </div>
 
 <!-- تأییدهای هماهنگ‌کننده -->
+<!-- ═══ تفویض‌ها ═══ -->
+<div id="section-delegations" class="card hidden">
+  <h2>🔁 تفویض‌ها</h2>
+  
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+    <!-- تفویض‌شده به من -->
+    <div class="card" style="margin:0;padding:16px">
+      <h3 style="margin:0 0 10px;color:var(--c-primary)">📥 تفویض‌شده به من</h3>
+      <p style="font-size:12px;color:var(--c-text-muted);margin-bottom:10px">کارهایی که دیگران به من تفویض کرده‌اند</p>
+      <div id="delegations_received"></div>
+    </div>
+    <!-- تفویض‌شده از من -->
+    <div class="card" style="margin:0;padding:16px">
+      <h3 style="margin:0 0 10px;color:var(--c-warning)">📤 تفویض‌شده از من</h3>
+      <p style="font-size:12px;color:var(--c-text-muted);margin-bottom:10px">کارهایی که من به دیگران تفویض کرده‌ام</p>
+      <div id="delegations_given"></div>
+    </div>
+  </div>
+  
+  <!-- جزئیات هر تفویض -->
+  <div id="delegations_detail"></div>
+</div>
+
 <div id="section-coordinator_approvals" class="card hidden">
   <h2>تأیید اولیه درخواست‌های مرخصی</h2>
   <p>درخواست‌های مرخصی زیرمجموعه‌های شما که در انتظار تأیید اولیه هستند. تأیید شما نهایی نیست و ادمین باید بعداً تأیید نهایی کند.</p>
@@ -1887,6 +1911,8 @@ function applyRoleBasedUI(){
   // events-access: admin/super_admin یا کاربر با can_manage_events
   var canEvents=currentRole==='admin'||currentRole==='super_admin'||(currentUser.profile&&currentUser.profile.can_manage_events);
   document.querySelectorAll('.events-access').forEach(function(el){el.classList.toggle('hidden',!canEvents);});
+  // تفویض‌ها: فقط اگر کاربر تفویضی دارد (داده یا گرفته)
+  updateDelegationVisibility();
   // coordinator-only: کاربرانی که هماهنگ‌کننده هستند (زیرمجموعه دارند) یا ادمین
   var isCoordinator=currentRole!=='user'||(currentUser.profile&&(currentUser.profile.can_approve_leaves||currentUser.profile.can_schedule_tasks))||cachedSubordinates.length>0;
   document.querySelectorAll('.coordinator-only').forEach(function(el){el.classList.toggle('hidden',!isCoordinator);});
@@ -2213,6 +2239,210 @@ function toggleReminderPattern(){
   if(box)box.classList.toggle('hidden',freq!=='custom');
 }
 
+/* ═════ Delegations System ═════ */
+function getDelegationData(){
+  // جمع‌آوری تمام تفویض‌های مرتبط با کاربر فعلی
+  var received=[]; // تفویض‌شده به من
+  var given=[];    // تفویض‌شده از من
+  if(!cachedPersons.length)return{received:received,given:given};
+  
+  cachedPersons.forEach(function(p){
+    // تفویض‌شده به من: کاربرانی که parent_id آنها = من
+    if(p.parent_id===currentUser.id){
+      received.push({
+        type:'coordinator',
+        from:currentUser.profile.first_name+' '+currentUser.profile.last_name,
+        to:p.first_name+' '+p.last_name,
+        toId:p.id,
+        permissions:['هماهنگ‌کننده'],
+        detail:'هماهنگ‌کننده کاربر «'+p.first_name+' '+p.last_name+'» ('+p.personnel_id+')',
+        icon:'👥',
+        status:p.status||'فعال',
+        id:p.id
+      });
+    }
+    // تفویض‌شده از من: parent_id من = شخص دیگر
+    if(currentUser.profile.parent_id===p.id){
+      given.push({
+        type:'coordinator',
+        from:p.first_name+' '+p.last_name,
+        to:currentUser.profile.first_name+' '+currentUser.profile.last_name,
+        toId:currentUser.id,
+        permissions:['هماهنگ‌کننده'],
+        detail:'هماهنگ‌کننده من: «'+p.first_name+' '+p.last_name+'» ('+p.personnel_id+')',
+        icon:'👥',
+        status:p.status||'فعال',
+        id:p.id
+      });
+    }
+  });
+  
+  // دسترسی‌های تفویض‌شده
+  var permLabels={
+    can_approve_leaves:'تأیید مرخصی',
+    can_schedule_tasks:'تعریف وظیفه',
+    can_create_programs:'ساخت برنامه',
+    can_manage_events:'مدیریت رویدادها',
+    can_manage_users:'مدیریت کاربران',
+    can_log:'ثبت کارکرد'
+  };
+  
+  // بررسی دسترسی‌های تفویض‌شده به کاربران دیگر (در جدول مدیریت کاربران)
+  cachedPersons.forEach(function(p){
+    if(p.id===currentUser.id)return;
+    var perms=[];
+    Object.keys(permLabels).forEach(function(k){
+      if(p[k]===true){
+        // اگر مدیر/سوپرادمین این دسترسی را به این کاربر داده
+        // و کاربر فعلی مدیر/سوپرادمین است → تفویض‌شده از من
+        if(currentRole==='admin'||currentRole==='super_admin'){
+          perms.push(permLabels[k]);
+        }
+      }
+    });
+    if(perms.length>0&&(currentRole==='admin'||currentRole==='super_admin')){
+      given.push({
+        type:'permission',
+        from:currentUser.profile.first_name+' '+currentUser.profile.last_name,
+        to:p.first_name+' '+p.last_name,
+        toId:p.id,
+        permissions:perms,
+        detail:'دسترسی‌های '+perms.join('، '),
+        icon:'🔑',
+        status:p.status||'فعال',
+        id:p.id
+      });
+    }
+  });
+  
+  // دسترسی‌های تفویض‌شده به من (اگر من کاربر عادی هستم و دسترسی‌های خاصی دارم)
+  if(currentUser.profile){
+    var myPerms=[];
+    Object.keys(permLabels).forEach(function(k){
+      if(currentUser.profile[k]===true&&k!=='can_log'){
+        myPerms.push(permLabels[k]);
+      }
+    });
+    if(myPerms.length>0&&currentRole==='user'){
+      // پیدا کن کی این دسترسی را داده
+      var giver=cachedPersons.filter(function(p){return p.role==='admin'||p.role==='super_admin';})[0];
+      received.push({
+        type:'permission',
+        from:giver?(giver.first_name+' '+giver.last_name):'مدیر سیستم',
+        to:currentUser.profile.first_name+' '+currentUser.profile.last_name,
+        toId:currentUser.id,
+        permissions:myPerms,
+        detail:'دسترسی‌های '+myPerms.join('، '),
+        icon:'🔑',
+        status:'فعال',
+        id:currentUser.id
+      });
+    }
+  }
+  
+  return{received:received,given:given};
+}
+function updateDelegationVisibility(){
+  var data=getDelegationData();
+  var hasAny=data.received.length>0||data.given.length>0;
+  document.querySelectorAll('.has-delegation').forEach(function(el){
+    el.classList.toggle('hidden',!hasAny);
+  });
+  // badge
+  var badge=$('delegations_badge');
+  if(badge){
+    var total=data.received.length+data.given.length;
+    if(total>0){badge.textContent=total;badge.classList.remove('hidden');}
+    else badge.classList.add('hidden');
+  }
+}
+function renderDelegations(){
+  var data=getDelegationData();
+  var recvBox=$('delegations_received');
+  var givenBox=$('delegations_given');
+  var detailBox=$('delegations_detail');
+  
+  // تفویض‌شده به من
+  if(!data.received.length){
+    recvBox.innerHTML='<div style="text-align:center;padding:20px;color:var(--c-text-muted);font-size:13px">📭 هیچ تفویضی دریافت نکرده‌اید</div>';
+  }else{
+    var rh='<div style="display:flex;flex-direction:column;gap:8px">';
+    data.received.forEach(function(d){
+      rh+='<div style="padding:10px 12px;border-radius:10px;background:var(--c-primary-light);border-right:3px solid var(--c-primary);cursor:pointer" onclick="showDelegationDetail(\''+esc(JSON.stringify(d).replace(/'/g,'&#39;'))+'\')">'+
+        '<div style="display:flex;align-items:center;gap:8px">'+
+        '<span style="font-size:18px">'+d.icon+'</span>'+
+        '<div style="flex:1">'+
+        '<div style="font-weight:600;font-size:13px">'+esc(d.detail)+'</div>'+
+        '<div style="font-size:11px;color:var(--c-text-muted)">از: '+esc(d.from)+'</div>'+
+        '</div>'+
+        '<span style="font-size:11px;padding:2px 8px;border-radius:8px;background:'+var_c_success_light+';color:'+var_c_success+'">'+esc(d.status)+'</span>'+
+        '</div>'+
+        '</div>';
+    });
+    rh+='</div>';
+    recvBox.innerHTML=rh;
+  }
+  
+  // تفویض‌شده از من
+  if(!data.given.length){
+    givenBox.innerHTML='<div style="text-align:center;padding:20px;color:var(--c-text-muted);font-size:13px">📭 هیچ تفویضی نداده‌اید</div>';
+  }else{
+    var gh='<div style="display:flex;flex-direction:column;gap:8px">';
+    data.given.forEach(function(d){
+      gh+='<div style="padding:10px 12px;border-radius:10px;background:var(--c-warning-light);border-right:3px solid var(--c-warning);cursor:pointer" onclick="showDelegationDetail(\''+esc(JSON.stringify(d).replace(/'/g,'&#39;'))+'\')">'+
+        '<div style="display:flex;align-items:center;gap:8px">'+
+        '<span style="font-size:18px">'+d.icon+'</span>'+
+        '<div style="flex:1">'+
+        '<div style="font-weight:600;font-size:13px">'+esc(d.detail)+'</div>'+
+        '<div style="font-size:11px;color:var(--c-text-muted)">به: '+esc(d.to)+'</div>'+
+        '</div>'+
+        '<span style="font-size:11px;padding:2px 8px;border-radius:8px;background:'+var_c_success_light+';color:'+var_c_success+'">'+esc(d.status)+'</span>'+
+        '</div>'+
+        '</div>';
+    });
+    gh+='</div>';
+    givenBox.innerHTML=gh;
+  }
+  
+  detailBox.innerHTML='<p style="text-align:center;color:var(--c-text-muted);font-size:12px;padding:16px">برای جزئیات، روی هر تفویض کلیک کنید</p>';
+}
+function showDelegationDetail(jsonStr){
+  try{
+    var d=JSON.parse(jsonStr);
+    var box=$('delegations_detail');
+    var html='<div class="card" style="margin:0">'+
+      '<h3 style="margin:0 0 12px">'+d.icon+' '+esc(d.detail)+'</h3>'+
+      '<table style="margin:0">'+
+      '<tr><td style="width:30%;color:var(--c-text-muted)">نوع:</td><td>'+esc(d.type==='coordinator'?'هماهنگ‌کننده':'دسترسی')+'</td></tr>'+
+      '<tr><td style="color:var(--c-text-muted)">از:</td><td>'+esc(d.from)+'</td></tr>'+
+      '<tr><td style="color:var(--c-text-muted)">به:</td><td>'+esc(d.to)+'</td></tr>'+
+      '<tr><td style="color:var(--c-text-muted)">دسترسی‌ها:</td><td>'+(d.permissions?d.permissions.map(esc).join('، '):'—')+'</td></tr>'+
+      '<tr><td style="color:var(--c-text-muted)">وضعیت:</td><td>'+esc(d.status)+'</td></tr>'+
+      '</table>'+
+      '<div style="margin-top:14px;display:flex;gap:8px">'+
+      (d.toId&&d.toId!==currentUser.id?'<button class="btn btn-sm btn-danger" onclick="revokeDelegation(\''+d.toId+'\','+ (d.type==='coordinator'?'\'coordinator\'':'\'permission\'') +')">لغو تفویض</button>':'')+
+      '</div>'+
+    '</div>';
+    box.innerHTML=html;
+  }catch(e){console.error('showDelegationDetail:',e);}
+}
+async function revokeDelegation(userId,type){
+  if(!confirm('⚠️ لغو این تفویض؟\nاین عمل قابل بازگشت نیست.'))return;
+  showLoading('لغو تفویض...');
+  try{
+    if(type==='coordinator'){
+      await updateUserProfileDB(userId,{parent_id:null});
+    }else{
+      await updateUserProfileDB(userId,{can_approve_leaves:false,can_schedule_tasks:false,can_create_programs:false,can_manage_events:false});
+    }
+    showAlert('تفویض لغو شد.','success');
+    await loadAllPersons();await loadSubordinates();
+    applyRoleBasedUI();
+    renderDelegations();
+  }catch(e){showAlert('خطا: '+e.message);}
+  hideLoading();
+}
+
 /* ═════ Notifications Modal ═════ */
 var unreadNotifications=[];
 async function checkUnreadNotifications(){
@@ -2332,6 +2562,7 @@ function showSection(id,skipHistory){
     if(isSA)checkRecoveryCodeStatus();
   }
   if(id==='reminders'){loadReminders();updateReminderDelegateBox();}
+  if(id==='delegations')renderDelegations();
   if(id==='users')renderUsers();
   if(id==='audit_log')renderAuditLog();
   window.scrollTo(0,0);
