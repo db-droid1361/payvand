@@ -2885,7 +2885,7 @@ function calToday(){
   renderCalendar();
 }
 function showDayDetail(dateStr,personId){
-  // پنجره جزئیات روز: مناسبت‌ها + خوداظهاری + ساخت فعالیت
+  // پنجره جزئیات روز: مناسبت‌ها + خوداظهاری + اقدامات
   var overlay=document.createElement('div');
   overlay.id='day_detail_overlay';
   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto';
@@ -2930,7 +2930,8 @@ function showDayDetail(dateStr,personId){
       var html='';
       // ─── بخش ۱: مناسبت‌ها و رویدادها ───
       html+='<div style="margin-bottom:16px">';
-      html+='<h3 style="margin:0 0 8px;font-size:15px">📅 مناسبت‌ها و رویدادهای روز</h3>';
+      var canManageEvents=currentRole==='admin'||currentRole==='super_admin'||(currentUser.profile&&currentUser.profile.can_manage_events);
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><h3 style="margin:0;font-size:15px">📅 مناسبت‌ها و رویدادهای روز</h3>'+(canManageEvents?'<button class="btn btn-sm btn-info" onclick="addManualEvent(\''+dateStr+'\')">➕ رویداد جدید</button>':'')+'</div>';
       if(dayEvents.length===0){
         html+='<p style="color:var(--c-text-muted);font-size:13px;padding:8px 0">مناسبتی برای این روز ثبت نشده.</p>';
       }else{
@@ -2941,9 +2942,9 @@ function showDayDetail(dateStr,personId){
             '<div style="font-weight:600;font-size:14px;color:'+evColor+'">'+(ev.is_holiday?'🔴 ':'📌 ')+esc(ev.title)+'</div>'+
             (ev.description?'<div style="font-size:12px;color:var(--c-text-muted);margin-top:4px">'+esc(ev.description)+'</div>':'')+
             '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'+
-              '<button class="btn btn-sm btn-info" onclick="createActivityFromEvent(\''+ev.id+'\',\''+dateStr+'\')">➕ ساخت فعالیت</button>'+
+              '<button class="btn btn-sm btn-info" onclick="createEventAction(\''+ev.id+'\',\''+dateStr+'\')">➕ ساخت اقدام</button>'+
             '</div>'+
-            // فعالیت‌های این رویداد
+            // اقدامات این رویداد
             '<div id="event_acts_'+ev.id+'" style="margin-top:8px"></div>'+
           '</div>';
         });
@@ -2982,7 +2983,7 @@ function showDayDetail(dateStr,personId){
       $('day_detail_status').textContent=dayEvents.length+' مناسبت | '+dayLogs.length+' اظهار | '+(dayTasks.length+dayActs.length)+' وظیفه/فعالیت';
       // بارگذاری فعالیت‌های هر رویداد
       for(var ei=0;ei<dayEvents.length;ei++){
-        loadEventActivitiesInModal(dayEvents[ei].id,dateStr);
+        loadEventActionsInModal(dayEvents[ei].id,dateStr);
       }
     }catch(e){
       $('day_detail_status').textContent='خطا: '+e.message;
@@ -3000,85 +3001,243 @@ function goToDailyLog(dateStr,personId){
   resetDailyLogForm();
   syncLog();
 }
-// ساخت فعالیت از رویداد در مودال روز
-function createActivityFromEvent(eventId,dateStr){
-  // باز کردن فرم ساخت فعالیت در پنجره جدید
-  var personId=$('cal_person')?$('cal_person').value:currentUser.id;
+// ساخت اقدام مناسبت — با فعالیت‌های زیرمجموعه
+function addManualEvent(dateStr){
+  var canManage=currentRole==='admin'||currentRole==='super_admin'||(currentUser.profile&&currentUser.profile.can_manage_events);
+  if(!canManage){showAlert('دسترسی غیرمجاز.','error');return;}
+  var p=parseJalali(dateStr);
+  var year=p.jy;
   var overlay=document.createElement('div');
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10001;display:flex;align-items:center;justify-content:center;padding:16px';
-  overlay.innerHTML='<div style="background:var(--c-card);border-radius:12px;padding:20px;max-width:440px;width:100%">'+
-    '<h3 style="margin:0 0 12px">➕ ساخت فعالیت برای مناسبت</h3>'+
-    '<div class="form-group"><label>عنوان فعالیت:</label><input type="text" id="act_evt_title" placeholder="عنوان"></div>'+
-    '<div class="form-group"><label>توضیحات:</label><textarea id="act_evt_desc" rows="2"></textarea></div>'+
-    '<div class="form-group"><label>مدت (ساعت):</label><input type="number" id="act_evt_hours" value="1" min="0.5" step="0.5"></div>'+
-    '<div style="display:flex;gap:8px;margin-top:12px">'+
-      '<button class="btn btn-success" onclick="saveActivityFromEvent(\''+eventId+'\',\''+dateStr+'\',\''+personId+'\')">ثبت فعالیت</button>'+
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10001;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto';
+  overlay.innerHTML='<div style="background:var(--c-card);border-radius:12px;padding:20px;max-width:480px;width:100%">'+
+    '<h3 style="margin:0 0 12px">➕ رویداد جدید — '+esc(dateStr)+'</h3>'+
+    '<div class="form-group"><label>عنوان رویداد (الزامی):</label><input type="text" id="me_title" placeholder="مثلاً: همایش ماهانه"></div>'+
+    '<div class="form-group"><label>توضیحات:</label><textarea id="me_desc" rows="2"></textarea></div>'+
+    '<div class="form-row">'+
+      '<div class="form-group"><label>نوع:</label><select id="me_type"><option value="event">رویداد</option><option value="meeting">جلسه</option><option value="deadline">مهلت</option><option value="holiday">تعطیلی</option><option value="other">سایر</option></select></div>'+
+      '<div class="form-group"><label>اولویت:</label><select id="me_priority"><option value="low">🟢 پایین</option><option value="medium" selected>🟡 متوسط</option><option value="high">🟠 بالا</option><option value="force">🔴 اجباری</option></select></div>'+
+    '</div>'+
+    '<div class="form-group"><label><input type="checkbox" id="me_holiday"> روز تعطیل</label></div>'+
+    '<div style="display:flex;gap:8px;margin-top:14px">'+
+      '<button class="btn btn-success" onclick="saveManualEvent(\''+dateStr+'\','+year+')">ثبت رویداد</button>'+
+      '<button class="btn btn-secondary" onclick="this.closest(\'div[style*=fixed]\').remove()">انصراف</button>'+
+    '</div>'+
+    '<p style="font-size:11px;color:var(--c-text-muted);margin-top:10px">⚠️ این رویداد برای همه کاربران قابل مشاهده خواهد بود. کاربران مجاز می‌توانند روی آن اقدام تعریف کنند.</p>'+
+  '</div>';
+  document.body.appendChild(overlay);
+}
+async function saveManualEvent(dateStr,year){
+  var title=val('me_title'),desc=val('me_desc'),type=val('me_type'),priority=val('me_priority');
+  var isHoliday=$('me_holiday')?$('me_holiday').checked:false;
+  if(!title){showAlert('عنوان الزامی است.','error');return;}
+  showLoading('ثبت رویداد...');
+  try{
+    const{data,error}=await sb.from('calendar_events').insert({
+      date:dateStr,
+      title:title,
+      description:desc,
+      event_type:type,
+      is_holiday:isHoliday,
+      event_year:year,
+      created_by:currentUser.id,
+      priority:priority,
+      is_manual:true
+    }).select();
+    if(error)throw error;
+    showAlert('✅ رویداد «'+title+'» برای '+dateStr+' ثبت شد.\nهمه کاربران آن را می‌بینند.','success');
+    // بستن پنجره
+    var overlays=document.querySelectorAll('div[style*="z-index:10001"]');
+    overlays.forEach(function(o){o.remove();});
+    // رفرش پنجره روز
+    closeDayDetail();
+    var personId=$('cal_person')?$('cal_person').value:currentUser.id;
+    setTimeout(function(){showDayDetail(dateStr,personId);},100);
+  }catch(e){showAlert('خطا: '+e.message);}
+  hideLoading();
+}
+function createEventAction(eventId,dateStr){
+  var personId=$('cal_person')?$('cal_person').value:currentUser.id;
+  // محاسبه آخرین مهلت اجرا = یک روز قبل از رویداد
+  var p=parseJalali(dateStr);
+  var g=jalaliToGregorian(p.jy,p.jm,p.jd);
+  var eventDate=new Date(g[0],g[1]-1,g[2]);
+  var maxDeadline=new Date(eventDate.getTime()-86400000); // یک روز قبل
+  var maxJ=gregorianToJalali(maxDeadline.getFullYear(),maxDeadline.getMonth()+1,maxDeadline.getDate());
+  var maxStr=fmtJalali(maxJ[0],maxJ[1],maxJ[2]);
+  var overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10001;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto';
+  overlay.innerHTML='<div style="background:var(--c-card);border-radius:12px;padding:20px;max-width:520px;width:100%">'+
+    '<h3 style="margin:0 0 12px">➕ اقدام مناسبت</h3>'+
+    '<div class="form-group"><label>عنوان اقدام:</label><input type="text" id="act_title" placeholder="مثلاً: آماده‌سازی تبریک نوروز"></div>'+
+    '<div class="form-group"><label>توضیحات:</label><textarea id="act_desc" rows="2"></textarea></div>'+
+    '<div class="form-row">'+
+      '<div class="form-group"><label>اولویت:</label><select id="act_priority"><option value="low">پایین</option><option value="medium" selected>متوسط</option><option value="high">بالا</option><option value="force">اجباری</option></select></div>'+
+      '<div class="form-group"><label>آخرین مهلت اجرا (شمسی):</label><input type="text" id="act_deadline" class="date-picker" value="'+maxStr+'" readonly><small style="color:var(--c-warning);font-size:11px">حداکثر یک روز قبل از رویداد</small></div>'+
+    '</div>'+
+    '<hr style="margin:12px 0;border:0;border-top:1px solid var(--c-border)">'+
+    '<h4 style="margin:0 0 8px;font-size:14px">📋 فعالیت‌های زیرمجموعه</h4>'+
+    '<div id="act_subtasks" style="margin-bottom:8px"></div>'+
+    '<button class="btn btn-sm btn-secondary" onclick="addSubTask()">➕ افزودن فعالیت</button>'+
+    '<div style="display:flex;gap:8px;margin-top:14px">'+
+      '<button class="btn btn-success" onclick="saveEventAction(\''+eventId+'\',\''+dateStr+'\')">ثبت اقدام</button>'+
       '<button class="btn btn-secondary" onclick="this.closest(\'div[style*=fixed]\').remove()">انصراف</button>'+
     '</div>'+
   '</div>';
   document.body.appendChild(overlay);
+  act_subTaskList=[];
+  addSubTask();
 }
-async function saveActivityFromEvent(eventId,dateStr,personId){
-  var title=val('act_evt_title'),desc=val('act_evt_desc'),hours=val('act_evt_hours');
-  if(!title){showAlert('عنوان الزامی است.','error');return;}
-  // تبدیل تاریخ شمسی به میلادی برای deadline
+var act_subTaskList=[];
+function addSubTask(){
+  var idx=act_subTaskList.length;
+  act_subTaskList.push({title:'',assignees:[],hours:1});
+  var box=$('act_subtasks');
+  var div=document.createElement('div');
+  div.id='subtask_'+idx;
+  div.style.cssText='padding:10px;border:1px solid var(--c-border);border-radius:8px;margin-bottom:6px';
+  div.innerHTML='<div class="form-row">'+
+    '<div class="form-group"><label>عنوان فعالیت:</label><input type="text" id="st_title_'+idx+'" placeholder="مثلاً: خرید کارت تبریک" oninput="act_subTaskList['+idx+'].title=this.value"></div>'+
+    '<div class="form-group" style="flex:0 0 80px"><label>مدت (ساعت):</label><input type="number" id="st_hours_'+idx+'" value="1" min="0.5" step="0.5" onchange="act_subTaskList['+idx+'].hours=parseFloat(this.value)||1"></div>'+
+  '</div>'+
+  '<div class="form-group"><label>کاربران مسئول:</label><div id="st_users_'+idx+'" style="display:flex;flex-wrap:wrap;gap:4px"></div></div>'+
+  '<button class="btn btn-sm btn-danger" style="margin-top:4px" onclick="act_subTaskList['+idx+']=null;$(\'subtask_'+idx+'\').remove()">حذف</button>';
+  box.appendChild(div);
+  // پر کردن چک‌باکس کاربران
+  var usersDiv=$('st_users_'+idx);
+  cachedPersons.forEach(function(p){
+    var label=document.createElement('label');
+    label.style.cssText='font-size:11px;padding:2px 6px;border:1px solid var(--c-border);border-radius:4px;cursor:pointer';
+    var cb=document.createElement('input');
+    cb.type='checkbox';cb.value=p.id;
+    cb.onchange=function(){
+      var list=act_subTaskList[idx].assignees;
+      if(this.checked){if(list.indexOf(p.id)===-1)list.push(p.id);}
+      else{var i=list.indexOf(p.id);if(i>-1)list.splice(i,1);}
+      label.style.background=this.checked?'var(--c-primary-light)':'';
+    };
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(' '+p.first_name+' '+p.last_name));
+    usersDiv.appendChild(label);
+  });
+}
+async function saveEventAction(eventId,dateStr){
+  var title=val('act_title'),desc=val('act_desc'),priority=val('act_priority'),deadline=val('act_deadline');
+  if(!title){showAlert('عنوان اقدام الزامی است.','error');return;}
+  // اعتبارسنجی: مهلت اجرا نباید بعد از یک روز قبل از رویداد باشد
   var p=parseJalali(dateStr);
   var g=jalaliToGregorian(p.jy,p.jm,p.jd);
-  var deadline=new Date(g[0],g[1]-1,g[2],23,59,59).toISOString();
-  showLoading('ثبت فعالیت...');
+  var eventTs=new Date(g[0],g[1]-1,g[2]).getTime();
+  var maxTs=eventTs-86400000;
+  if(deadline&&isValidJalaliDate(deadline)){
+    var dlTs=jalaliToTimestamp(deadline);
+    if(dlTs>maxTs){
+      showAlert('مهلت اجرا باید حداکثر یک روز قبل از رویداد باشد.','error');return;
+    }
+  }else{
+    // استفاده از یک روز قبل به‌صورت پیش‌فرض
+    var maxDate=new Date(maxTs);
+    var maxJ=gregorianToJalali(maxDate.getFullYear(),maxDate.getMonth()+1,maxDate.getDate());
+    deadline=fmtJalali(maxJ[0],maxJ[1],maxJ[2]);
+  }
+  // اعتبارسنجی فعالیت‌های زیرمجموعه
+  var validSubs=act_subTaskList.filter(function(s){return s&&s.title.trim();});
+  if(validSubs.length===0){showAlert('حداقل یک فعالیت زیرمجموعه الزامی است.','error');return;}
+  // تبدیل تاریخ شمسی به میلادی
+  var dlp=parseJalali(deadline);
+  var dlg=jalaliToGregorian(dlp.jy,dlp.jm,dlp.jd);
+  var deadlineISO=new Date(dlg[0],dlg[1]-1,dlg[2],23,59,59).toISOString();
+  showLoading('ثبت اقدام...');
   try{
-    // ایجاد یا پیدا کردن برنامه «مناسبت‌ها»
+    // ایجاد یا پیدا کردن برنامه «اقدامات مناسبت»
     var progId=null;
-    const{data:existProg}=await sb.from('programs').select('id').eq('title','مناسبت‌ها و رویدادها').eq('status','active').limit(1);
+    const{data:existProg}=await sb.from('programs').select('id').eq('title','اقدامات مناسبت').eq('status','active').limit(1);
     if(existProg&&existProg.length){
       progId=existProg[0].id;
     }else{
       const{data:newProg}=await sb.from('programs').insert({
-        title:'مناسبت‌ها و رویدادها',
-        description:'برنامه برای فعالیت‌های مرتبط با مناسبت‌ها',
+        title:'اقدامات مناسبت',
+        description:'برنامه برای اقدامات مرتبط با مناسبت‌ها و رویدادها',
         status:'active',
         created_by:currentUser.id,
         event_id:eventId
       }).select();
       if(newProg&&newProg[0])progId=newProg[0].id;
     }
-    // درج فعالیت
-    const{data,error}=await sb.from('program_activities').insert({
+    // ثبت اقدام اصلی (به‌عنوان یک فعالیت با اولویت)
+    var personId=$('cal_person')?$('cal_person').value:currentUser.id;
+    const{data:mainAct,error:mainErr}=await sb.from('program_activities').insert({
       program_id:progId,
       title:title,
       description:desc,
       assignee_id:personId,
-      deadline:deadline,
+      deadline:deadlineISO,
       status:'pending',
-      estimated_hours:parseFloat(hours)||1
+      priority:priority,
+      is_parent_action:true,
+      event_id:eventId
     }).select();
-    if(error)throw error;
-    showAlert('فعالیت ساخته شد.','success');
-    // بستن پنجره
+    if(mainErr)throw mainErr;
+    var mainActId=mainAct&&mainAct[0]?mainAct[0].id:null;
+    // ثبت فعالیت‌های زیرمجموعه
+    for(var si=0;si<validSubs.length;si++){
+      var st=validSubs[si];
+      var assigneeId=st.assignees.length>0?st.assignees[0]:personId;
+      const{error:subErr}=await sb.from('program_activities').insert({
+        program_id:progId,
+        title:st.title,
+        description:'',
+        assignee_id:assigneeId,
+        deadline:deadlineISO,
+        status:'pending',
+        priority:priority,
+        parent_activity_id:mainActId,
+        event_id:eventId,
+        estimated_hours:st.hours||1,
+        additional_assignees:st.assignees.length>1?st.assignees.slice(1):null
+      });
+      if(subErr)console.warn('sub insert:',subErr);
+    }
+    showAlert('اقدام با '+validSubs.length+' فعالیت ثبت شد.','success');
     var overlays=document.querySelectorAll('div[style*="z-index:10001"]');
     overlays.forEach(function(o){o.remove();});
-    // رفرش فعالیت‌های رویداد
-    loadEventActivitiesInModal(eventId,dateStr);
+    loadEventActionsInModal(eventId,dateStr);
   }catch(e){showAlert('خطا: '+e.message);}
   hideLoading();
 }
-async function loadEventActivitiesInModal(eventId,dateStr){
+async function loadEventActionsInModal(eventId,dateStr){
   var div=$('event_acts_'+eventId);
   if(!div)return;
   try{
-    // دریافت فعالیت‌های مرتبط با این رویداد
-    const{data,error}=await sb.from('program_activities').select('*,programs!inner(id,title,event_id)').eq('programs.event_id',eventId).order('deadline');
+    const{data,error}=await sb.from('program_activities').select('*,programs!inner(id,title,event_id)').eq('programs.event_id',eventId).eq('is_parent_action',true).order('priority',{ascending:false});
     if(error)throw error;
-    var acts=data||[];
-    if(acts.length===0){
-      div.innerHTML='<small style="color:var(--c-text-muted);font-size:11px;padding:4px 0;display:block">فعالیتی برای این مناسبت ثبت نشده</small>';
+    var actions=data||[];
+    if(actions.length===0){
+      div.innerHTML='<small style="color:var(--c-text-muted);font-size:11px;padding:4px 0;display:block">اقدامی ثبت نشده</small>';
       return;
     }
-    var html='<div style="margin-top:6px"><small style="font-size:11px;color:var(--c-text-muted);font-weight:600">'+acts.length+' فعالیت:</small>';
-    acts.forEach(function(a){
+    var priorityLabel={force:'🔴 اجباری',high:'🟠 بالا',medium:'🟡 متوسط',low:'🟢 پایین'};
+    var html='<div style="margin-top:6px">';
+    for(var ai=0;ai<actions.length;ai++){
+      var a=actions[ai];
       var st=a.status==='done'?'✅':a.status==='in_progress'?'🔄':'⬜';
-      html+='<div style="padding:4px 8px;border-radius:6px;background:rgba(255,255,255,.5);margin:2px 0;font-size:11px">'+st+' '+esc(a.title)+(a.estimated_hours?' ('+a.estimated_hours+'س)':'')+'</div>';
-    });
+      html+='<div style="padding:8px;border-radius:6px;background:rgba(255,255,255,.6);margin:4px 0;font-size:12px;border-right:2px solid var(--c-primary)">'+
+        '<div style="font-weight:600">'+st+' '+esc(a.title)+' <small style="color:var(--c-text-muted)">('+priorityLabel[a.priority||'medium']+'</small>)'+
+        (a.deadline?'<small style="color:var(--c-warning)"> | مهلت: '+normJ(new Date(a.deadline).toISOString().slice(0,10))||''+'</small>':'')+
+        '</div>';
+      // بارگذاری فعالیت‌های زیرمجموعه
+      try{
+        const{data:subs}=await sb.from('program_activities').select('title,assignee_id,status,estimated_hours').eq('parent_activity_id',a.id);
+        if(subs&&subs.length){
+          html+='<div style="margin-top:4px;padding-right:8px;border-right:1px dashed var(--c-border)">';
+          subs.forEach(function(s){
+            var sst=s.status==='done'?'✅':s.status==='in_progress'?'🔄':'⬜';
+            html+='<div style="font-size:11px;color:var(--c-text-muted)">'+sst+' '+esc(s.title)+' — '+esc(getPersonName(s.assignee_id))+(s.estimated_hours?' ('+s.estimated_hours+'س)':'')+'</div>';
+          });
+          html+='</div>';
+        }
+      }catch(e){}
+      html+='</div>';
+    }
     html+='</div>';
     div.innerHTML=html;
   }catch(e){div.innerHTML='<small style="color:var(--c-danger);font-size:11px">خطا</small>';}
