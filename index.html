@@ -116,15 +116,15 @@ tr:nth-child(even){background:var(--c-bg-alt,#fafafa)}
 .dp-today-btn:hover{background:var(--c-primary);color:#fff}
 /* ═══ انتخاب ساعت — سبک سامسونگ (درام اسکرول) ═══ */
 .time-picker-popup{position:absolute;right:0;top:calc(100% + 6px);z-index:1000;background:var(--c-modal-bg,#fff);border:none;border-radius:24px;box-shadow:0 10px 40px rgba(0,0,0,.25);padding:0;width:280px;max-width:calc(100vw - 32px);direction:rtl;animation:dpSlideUp .25s cubic-bezier(.4,0,.2,1);overflow:hidden}
-.tp-header{padding:14px 20px;background:var(--c-primary);color:#fff;text-align:center;font-size:16px;font-weight:700}
-.tp-body{display:flex;gap:0;position:relative;max-height:220px;overflow:hidden}
-.tp-drum{flex:1;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;scroll-snap-type:y mandatory;padding:80px 0}
+.tp-header{padding:12px 20px;background:var(--c-primary);color:#fff;text-align:center;font-size:14px;font-weight:700}
+.tp-body{display:flex;gap:0;position:relative;max-height:180px;overflow:hidden}
+.tp-drum{flex:1;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;scroll-snap-type:y mandatory;padding:70px 0;position:relative;z-index:1}
 .tp-drum::-webkit-scrollbar{display:none}
-.tp-drum-item{text-align:center;font-size:22px;font-weight:600;padding:8px 0;color:var(--c-text-muted);scroll-snap-align:center;transition:.15s;cursor:pointer}
-.tp-drum-item.selected{color:var(--c-primary);font-size:26px;font-weight:800}
+.tp-drum-item{text-align:center;font-size:16px;font-weight:600;padding:6px 0;color:var(--c-text-muted);scroll-snap-align:center;transition:.15s;cursor:pointer;position:relative;z-index:2}
+.tp-drum-item.selected{color:var(--c-primary);font-size:20px;font-weight:800}
 .tp-drum-item:hover{color:var(--c-text)}
-.tp-separator{display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:var(--c-primary);padding:80px 0}
-.tp-highlight{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:44px;background:var(--c-primary-light);border-top:1px solid var(--c-border);border-bottom:1px solid var(--c-border);pointer-events:none;z-index:1}
+.tp-separator{display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--c-primary);padding:80px 0;position:relative;z-index:2}
+.tp-highlight{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:36px;background:var(--c-primary-light);border-radius:8px;border-top:1px solid var(--c-border);border-bottom:1px solid var(--c-border);pointer-events:none;z-index:0;opacity:.5}
 .tp-actions{display:flex;gap:0;padding:0;border-top:1px solid var(--c-border)}
 .tp-action-btn{flex:1;padding:14px;text-align:center;font-size:15px;font-weight:600;border:none;background:none;cursor:pointer;transition:.15s}
 .tp-action-btn:hover{background:var(--c-primary-light)}
@@ -3990,9 +3990,9 @@ function openTimepicker(e){
   popup.innerHTML='<div class="tp-header">⏰ انتخاب ساعت</div>'+
     '<div class="tp-body">'+
       '<div class="tp-highlight"></div>'+
-      '<div class="tp-drum" id="tp_hours">'+hh+'</div>'+
-      '<div class="tp-separator">:</div>'+
       '<div class="tp-drum" id="tp_minutes">'+mm+'</div>'+
+      '<div class="tp-separator">:</div>'+
+      '<div class="tp-drum" id="tp_hours">'+hh+'</div>'+
     '</div>'+
     '<div class="tp-actions">'+
       '<button type="button" class="tp-action-btn" id="tp_cancel">لغو</button>'+
@@ -6233,7 +6233,7 @@ function exportProgramReportCSV(){
 // چاپ گزارش برنامه‌ها
 function printProgramReport(){
   var c=$('prog_report_area');
-  if(!c.innerHTML.trim()||c.querySelector('p')){showAlert('ابتدا گزارش را تولید کنید.','error');return;}
+  if(!c.innerHTML.trim()||!c.querySelector('table')){showAlert('ابتدا گزارش را تولید کنید.','error');return;}
   $('print_area').innerHTML=c.innerHTML;
   window.print();
 }
