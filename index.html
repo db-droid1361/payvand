@@ -1327,9 +1327,6 @@ button,.btn{-webkit-touch-callout:none}
 <!-- تنظیمات -->
 <div id="section-audit_log" class="card hidden">
   <h2>📜 تاریخچه تغییرات سامانه</h2>
-  <div id="audit_log_notice" style="background:var(--c-warning-light);padding:14px;border-radius:8px;margin-bottom:16px;border-right:4px solid var(--c-warning);font-size:13px">
-    ⚠️ برای فعال شدن این بخش، فایل <code style="background:var(--c-bg-alt);padding:2px 6px;border-radius:4px">audit_logs.sql</code> را در Supabase → SQL Editor اجرا کنید.
-  </div>
   <div id="audit_log_container" class="table-wrap"></div>
 </div>
 
@@ -4909,17 +4906,34 @@ function editUserDetails(userId){
   var isCoord=isCoordinatorRole()&&!isAdmin;
   // هماهنگ‌کننده فقط زیرمجموعه‌های خودش را می‌تواند ویرایش کند
   if(isCoord&&!isAdmin&&p.parent_id!==currentUser.id){showAlert('شما فقط زیرمجموعه‌های خودتان را می‌توانید ویرایش کنید.','error');return;}
+  // تعیین نقش فعلی برای نمایش در dropdown
+  var currentDisplayRole='user';
+  if(p.role==='admin')currentDisplayRole='admin';
+  else if(p.role==='super_admin')currentDisplayRole='super_admin';
+  else if(p.role==='guest')currentDisplayRole='guest';
+  else if(p.role==='user'&&(p.can_approve_leaves||p.can_schedule_tasks))currentDisplayRole='coordinator';
   // ساخت پنجره ویرایش
   var overlay=document.createElement('div');
   overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto';
-  overlay.innerHTML='<div style="background:var(--c-modal-bg,#fff);border-radius:16px;padding:24px;max-width:440px;width:100%;box-shadow:var(--c-shadow-lg);color:var(--c-text)">'+
+  overlay.innerHTML='<div style="background:var(--c-modal-bg,#fff);border-radius:16px;padding:24px;max-width:480px;width:100%;box-shadow:var(--c-shadow-lg);color:var(--c-text)">'+
     '<h3 style="margin:0 0 16px;color:var(--c-primary)">✏️ ویرایش اطلاعات کاربر</h3>'+
-    '<div class="form-group"><label>نام:</label><input type="text" id="ed_first_name" value="'+esc(p.first_name||'')+'"></div>'+
-    '<div class="form-group"><label>نام خانوادگی:</label><input type="text" id="ed_last_name" value="'+esc(p.last_name||'')+'"></div>'+
-    '<div class="form-group"><label>شماره پرسنلی:</label><input type="text" id="ed_personnel_id" dir="ltr" value="'+esc(p.personnel_id||'')+'"></div>'+
-    '<div class="form-group"><label>ایمیل:</label><input type="email" id="ed_email" dir="ltr" value="'+esc(p.email||'')+'"></div>'+
+    '<div class="form-row">'+
+      '<div class="form-group"><label>نام:</label><input type="text" id="ed_first_name" value="'+esc(p.first_name||'')+'"></div>'+
+      '<div class="form-group"><label>نام خانوادگی:</label><input type="text" id="ed_last_name" value="'+esc(p.last_name||'')+'"></div>'+
+    '</div>'+
+    '<div class="form-row">'+
+      '<div class="form-group"><label>شماره پرسنلی:</label><input type="text" id="ed_personnel_id" dir="ltr" value="'+esc(p.personnel_id||'')+'"></div>'+
+      '<div class="form-group"><label>ایمیل:</label><input type="email" id="ed_email" dir="ltr" value="'+esc(p.email||'')+'"></div>'+
+    '</div>'+
+    '<div class="form-group"><label>نقش:</label><select id="ed_role">'+
+      '<option value="user"'+(currentDisplayRole==='user'?' selected':'')+'>کاربر</option>'+
+      '<option value="coordinator"'+(currentDisplayRole==='coordinator'?' selected':'')+'>👥 هماهنگ‌کننده</option>'+
+      '<option value="guest"'+(currentDisplayRole==='guest'?' selected':'')+'>👁️ مهمان</option>'+
+      '<option value="admin"'+(currentDisplayRole==='admin'?' selected':'')+'>مدیر</option>'+
+      (currentRole==='super_admin'?'<option value="super_admin"'+(currentDisplayRole==='super_admin'?' selected':'')+'>سوپرادمین</option>':'')+
+    '</select></div>'+
     '<div style="display:flex;gap:8px;margin-top:16px">'+
-      '<button class="btn btn-success" id="ed_save">💾 ذخیره</button>'+
+      '<button class="btn btn-success" id="ed_save">💾 ذخیره تغییرات</button>'+
       '<button class="btn btn-secondary" id="ed_cancel">انصراف</button>'+
     '</div>'+
   '</div>';
@@ -4928,15 +4942,69 @@ function editUserDetails(userId){
   $('ed_cancel').onclick=function(){overlay.remove();};
   $('ed_save').onclick=async function(){
     var firstName=val('ed_first_name'),lastName=val('ed_last_name'),pid=toEnglishDigits(val('ed_personnel_id')),email=val('ed_email');
+    var newRole=$('ed_role').value;
     if(!firstName||!lastName||!pid){showAlert('نام، نام خانوادگی و شماره پرسنلی الزامی است.','error');return;}
+    // ─── بررسی تغییر نقش ───
+    var roleChanged=(newRole!==currentDisplayRole);
+    var roleLabel={user:'کاربر',coordinator:'هماهنگ‌کننده',guest:'مهمان',admin:'مدیر',super_admin:'سوپرادمین'}[newRole]||newRole;
+    if(roleChanged){
+      // پاپ‌آپ تأیید تغییر نقش
+      var confirmMsg='⚠️ تغییر نقش کاربر\n\n';
+      confirmMsg+='نام: '+p.first_name+' '+p.last_name+'\n';
+      confirmMsg+='نقش فعلی: '+(ROLE_LABEL[p.role]||currentDisplayRole)+'\n';
+      confirmMsg+='نقش جدید: '+roleLabel+'\n\n';
+      if(newRole==='coordinator'){
+        confirmMsg+='با انتخاب هماهنگ‌کننده، دسترسی‌های تأیید مرخصی و تعریف وظیفه فعال می‌شود.\n';
+      }
+      if(newRole==='user'&&currentDisplayRole==='coordinator'){
+        var subs=cachedPersons.filter(function(s){return s.parent_id===userId;});
+        if(subs.length>0)confirmMsg+='⚠️ این کاربر '+subs.length+' زیرمجموعه دارد که بدون هماهنگ‌کننده می‌مانند.\n';
+      }
+      confirmMsg+='\nآیا از تغییر اطمینان دارید؟';
+      if(!confirm(confirmMsg))return;
+    }
     showLoading('ذخیره...');
     try{
-      await updateUserProfileDB(userId,{first_name:firstName,last_name:lastName,personnel_id:pid,email:email||null});
-      await recordAudit('update','profiles',userId,{first_name:firstName,last_name:lastName,personnel_id:pid});
-      showAlert('اطلاعات کاربر به‌روزرسانی شد.','success');
+      // ─── ذخیره اطلاعات básica ───
+      var updates={first_name:firstName,last_name:lastName,personnel_id:pid,email:email||null};
+      // ─── ذخیره نقش اگر تغییر کرده ───
+      if(roleChanged){
+        if(newRole==='coordinator'){
+          updates.role='user';
+          updates.can_approve_leaves=true;
+          updates.can_schedule_tasks=true;
+        }else if(newRole==='user'){
+          updates.role='user';
+          updates.can_approve_leaves=false;
+          updates.can_schedule_tasks=false;
+          // زیرمجموعه‌ها را بدون هماهنگ‌کننده کن
+          var subs=cachedPersons.filter(function(s){return s.parent_id===userId;});
+          for(var i=0;i<subs.length;i++){
+            await updateUserProfileDB(subs[i].id,{parent_id:null});
+          }
+        }else{
+          updates.role=newRole;
+          updates.can_approve_leaves=false;
+          updates.can_schedule_tasks=false;
+        }
+      }
+      await updateUserProfileDB(userId,updates);
+      await recordAudit('update','profiles',userId,{first_name:firstName,last_name:lastName,personnel_id:pid,role:newRole});
+      // اگر نقش خودش تغییر کرد
+      if(userId===currentUser.id&&roleChanged){
+        currentUser.profile.role=updates.role||newRole;
+        currentUser.profile.can_approve_leaves=updates.can_approve_leaves||false;
+        currentUser.profile.can_schedule_tasks=updates.can_schedule_tasks||false;
+        currentRole=updates.role||newRole;
+        updateUserBox();
+        applyRoleBasedUI();
+      }
+      showAlert(roleChanged?('✅ اطلاعات و نقش کاربر به‌روزرسانی شد.\nنقش جدید: '+roleLabel):'اطلاعات کاربر به‌روزرسانی شد.','success');
       overlay.remove();
       await loadAllPersons();
+      await loadSubordinates();
       await renderUsers();
+      applyRoleBasedUI();
     }catch(e){showAlert('خطا: '+e.message,'error');}
     hideLoading();
   };
@@ -6686,11 +6754,43 @@ async function saveScoringRules(){
 }
 
 async function renderAuditLog(){
-  var c=$('audit_log_container');if(!c)return;c.innerHTML='<p>در حال بارگذاری...</p>';
+  var c=$('audit_log_container');if(!c)return;c.innerHTML='<p style="color:var(--c-text-muted)">در حال بارگذاری...</p>';
   if(currentRole!=='admin'&&currentRole!=='super_admin'){c.innerHTML='<p>دسترسی غیرمجاز.</p>';return;}
-  try{var{data,error}=await sb.from('audit_logs').select('*').order('created_at',{ascending:false}).limit(250);if(error)throw error;if(!data||!data.length){c.innerHTML='<p>تاریخچه‌ای ثبت نشده است. ابتدا SQL همراه فایل را اجرا کنید.</p>';return;}
-    var h='<table><tr><th>زمان</th><th>کاربر</th><th>عملیات</th><th>بخش</th><th>شناسه رکورد</th><th>جزئیات</th></tr>';data.forEach(function(r){var actor=cachedPersons.filter(function(p){return p.id===r.actor_id;})[0];h+='<tr><td>'+esc(r.created_at?new Date(r.created_at).toLocaleString('fa-IR'):'—')+'</td><td>'+esc(actor?actor.first_name+' '+actor.last_name:r.actor_id||'—')+'</td><td>'+esc(r.action)+'</td><td>'+esc(r.entity)+'</td><td>'+esc(r.entity_id||'—')+'</td><td>'+esc(JSON.stringify(r.details||{}))+'</td></tr>';});c.innerHTML=h+'</table>';
-  }catch(e){c.innerHTML='<p>خطا در بارگذاری تاریخچه: '+esc(e.message)+'<br>وجود جدول audit_logs و سیاست‌های دسترسی را بررسی کنید.</p>';}
+  try{
+    var{data,error}=await sb.from('audit_logs').select('*').order('created_at',{ascending:false}).limit(250);
+    if(error){
+      // اگر جدول وجود ندارد — پیام تمیز نشان بده، نه ارور
+      if(error.code==='42P01'||error.code==='PGRST205'||(error.message&&error.message.indexOf('Could not find')!==-1)){
+        c.innerHTML='<div style="text-align:center;padding:30px 20px">'+
+          '<div style="font-size:48px;margin-bottom:12px">📋</div>'+
+          '<h3 style="margin:0 0 8px;color:var(--c-text)">تاریخچه هنوز فعال نیست</h3>'+
+          '<p style="color:var(--c-text-muted);font-size:13px;margin:0 0 16px">برای فعال‌سازی تاریخچه تغییرات، فایل <code style="background:var(--c-bg-alt);padding:2px 8px;border-radius:6px;font-weight:600">audit_logs.sql</code> را در Supabase → SQL Editor اجرا کنید.</p>'+
+          '<p style="color:var(--c-text-muted);font-size:12px;margin:0">پس از اجرای اسکریپت، این بخش به‌طور خودکار فعال می‌شود.</p>'+
+        '</div>';
+        return;
+      }
+      throw error;
+    }
+    if(!data||!data.length){
+      c.innerHTML='<div style="text-align:center;padding:30px 20px;color:var(--c-text-muted)"><div style="font-size:36px;margin-bottom:8px">📭</div><p>هنوز تغییری در سامانه ثبت نشده است.</p><p style="font-size:12px">با ایجاد یا ویرایش برنامه‌ها و فعالیت‌ها، تاریخچه اینجا نمایش داده می‌شود.</p></div>';
+      return;
+    }
+    var actionLabels={create:'➕ ایجاد',update:'✏️ ویرایش',delete:'🗑️ حذف',start:'▶️ شروع',complete:'✅ تکمیل',not_done:'❌ انجام‌نشده',delegate:'🔁 ارجاع',reactivate:'🔄 فعال‌سازی'};
+    var h='<table><tr><th>زمان</th><th>کاربر</th><th>عملیات</th><th>بخش</th><th>شناسه</th><th>جزئیات</th></tr>';
+    data.forEach(function(r){
+      var actor=cachedPersons.filter(function(p){return p.id===r.actor_id;})[0];
+      var actorName=actor?actor.first_name+' '+actor.last_name:(r.actor_id||'سیستم');
+      var actionLabel=actionLabels[r.action]||r.action;
+      var entityLabel=r.entity==='programs'?'برنامه':r.entity==='program_activities'?'فعالیت':r.entity==='tasks'?'وظیفه':r.entity==='profiles'?'کاربر':r.entity;
+      var detailsStr='';
+      try{var d=typeof r.details==='string'?JSON.parse(r.details):r.details;if(d){var parts=[];if(d.title)parts.push(d.title);if(d.status)parts.push('وضعیت: '+d.status);if(d.priority)parts.push('اولویت: '+d.priority);if(d.role)parts.push('نقش: '+d.role);detailsStr=parts.join(' | ');}}catch(e){}
+      h+='<tr><td style="white-space:nowrap">'+esc(r.created_at?new Date(r.created_at).toLocaleString('fa-IR'):'—')+'</td><td>'+esc(actorName)+'</td><td style="font-weight:600">'+esc(actionLabel)+'</td><td>'+esc(entityLabel)+'</td><td style="font-size:11px;color:var(--c-text-muted)">'+esc(r.entity_id?String(r.entity_id).slice(0,8)+'...':'—')+'</td><td style="font-size:12px">'+esc(detailsStr||'—')+'</td></tr>';
+    });
+    c.innerHTML=h+'</table>';
+  }catch(e){
+    c.innerHTML='<div style="text-align:center;padding:30px 20px;color:var(--c-text-muted)"><p>خطا در بارگذاری. بعداً تلاش کنید.</p></div>';
+    console.warn('renderAuditLog:',e);
+  }
 }
 
 /* ═════ Announcements Board ═════ */
