@@ -1467,7 +1467,19 @@ const SUPABASE_URL='https://grzdgeesocmfpvptoskk.supabase.co';
 const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyemRnZWVzb2NtZnB2cHRvc2trIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyODAwMTIsImV4cCI6MjEwODg1NjAxMn0.scRr5_Hy6SozvrzVH-aSFwykwGfenuI9rKyArOqhP5U';
 let sb=null;
 const SUPABASE_CONFIGURED=!!(SUPABASE_URL&&SUPABASE_ANON_KEY&&SUPABASE_URL.indexOf('YOUR_PROJECT')===-1&&SUPABASE_ANON_KEY!=='YOUR_ANON_KEY');
-try{if(SUPABASE_CONFIGURED)sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,detectSessionUrl:false}});}catch(e){console.error('Supabase init:',e);}
+try{
+  if(SUPABASE_CONFIGURED&&window.supabase){
+    sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{
+      auth:{
+        persistSession:false,
+        autoRefreshToken:false,
+        detectSessionInUrl:false
+      }
+    });
+  }else if(SUPABASE_CONFIGURED&&!window.supabase){
+    console.error('Supabase JS library not loaded. Check CDN connection.');
+  }
+}catch(e){console.error('Supabase init error:',e);}
 // پاک کردن token قدیمی Supabase از localStorage (که باعث خطای JWT می‌شود)
 try{
   var keys=Object.keys(localStorage);
