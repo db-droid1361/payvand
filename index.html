@@ -789,6 +789,16 @@ body.guest-mode .admin-only,body.guest-mode .coordinator-only{display:none!impor
     <div class="form-group"><label>تاریخ شمسی:</label><input type="text" id="log_date" class="date-picker" placeholder="انتخاب تاریخ" readonly></div>
     <div class="form-group"><label>وضعیت روز:</label><select id="log_status"><option value="normal">حضور و کارکرد عادی</option><option value="absence">عدم حضور (مرخصی/مأموریت/سایر)</option><option value="overtime">حضور همراه با اضافه‌کاری خارج از کارت</option></select></div>
   </div>
+  <!-- تفویض کارکرد: فقط برای ادمین/سوپرادمین/هماهنگ‌کننده -->
+  <div id="delegate_box" class="form-row hidden" style="background:var(--c-warning-light);padding:12px;border-radius:var(--c-radius-sm);margin-bottom:12px">
+    <div class="form-group" style="margin:0">
+      <label>⚠️ ثبت به نمایندگی از کاربر دیگر (تفویض):</label>
+      <select id="log_delegate_user" onchange="checkDelegateWarning()">
+        <option value="">خودم ثبت می‌کنم</option>
+      </select>
+      <small style="color:var(--c-warning);display:block;margin-top:4px">⚠️ با انتخاب کاربر دیگر، شما مسئولیت صحت اطلاعات را می‌پذیرید. شناسه پرسنلی شما در گزارش ثبت می‌شود.</small>
+    </div>
+  </div>
   <div id="fields_normal"><p>برای کارکرد عادی نیازی به وارد کردن ساعت نیست.</p></div>
   <div id="fields_absence" class="hidden">
     <div class="form-group"><label>نوع عدم حضور:</label><select id="absence_type"><option value="hourly_leave">مرخصی ساعتی</option><option value="daily_leave">مرخصی روزانه</option><option value="1day_mission">مأموریت یک‌روزه</option><option value="out_province_daily">مأموریت خارج از استان (روزانه)</option><option value="out_province_hourly">مأموریت خارج از استان (ساعتی)</option><option value="hourly_mission">مأموریت ساعتی</option><option value="other_absence">سایر علل عدم حضور</option></select></div>
@@ -1675,7 +1685,15 @@ function restoreTheme(){
   var t='day';
   try{t=localStorage.getItem('payvand_theme')||'day';}catch(e){}
   setTheme(t);
+  // اعمال تم بلافاصله روی html (حتی قبل از init)
 }
+// اعمال تم قبل از init — در صفحه ورود هم تم نشان داده شود
+try{
+  var _t='day';
+  try{_t=localStorage.getItem('payvand_theme')||'day';}catch(e){}
+  document.documentElement.setAttribute('data-theme',_t);
+}catch(e){}
+
 function toggleSidebar(){
   var sb=$('sidebar'),ma=$('main_area');
   if(!sb)return;
@@ -1804,7 +1822,7 @@ function showSection(id,skipHistory){
   if(id==='dashboard')renderDashboard();
   if(id==='announcements')renderAnnouncements();
   if(id==='calendar'){populatePersonDropdown('cal_person',true);renderCalendar();renderEventsList();}
-  if(id==='daily_log'){populatePersonDropdown('log_person_id',false);if(!currentLogPerson)$('log_person_id').value=currentUser.id;currentLogPerson=$('log_person_id').value;toggleLogFields();syncLog();}
+  if(id==='daily_log'){populatePersonDropdown('log_person_id',false);if(!currentLogPerson)$('log_person_id').value=currentUser.id;currentLogPerson=$('log_person_id').value;updateDelegateBox();toggleLogFields();syncLog();}
   if(id==='leave_req'){populatePersonDropdown('lv_person_id',false);$('lv_person_id').value=currentUser.id;renderLeaves();}
   if(id==='my_tasks')renderMyTasks();
   if(id==='my_activities')renderMyActivities();
@@ -1835,14 +1853,52 @@ function closePopups(){var p=document.querySelectorAll('.datepicker-popup,.time-
 /* ═════ Dropdowns ═════ */
 function populatePersonDropdown(dropdownId,autoFirst){
   var select=$(dropdownId),cur=select.value;
-  var all=(dropdownId==='rec_person'||dropdownId==='rep_person'||currentRole==='admin'||currentRole==='super_admin');
-  var persons=all?cachedPersons:cachedPersons.filter(function(p){return p.id===currentUser.id;});
-  var o='<option value="">'+(all?'همه':'انتخاب...')+'</option>';
-  persons.forEach(function(p){o+='<option value="'+esc(p.id)+'">'+esc(p.first_name+' '+p.last_name+' - '+p.personnel_id)+'</option>';});
-  select.innerHTML=o;
-  if(cur&&persons.some(function(p){return p.id===cur;}))select.value=cur;
-  else if(autoFirst&&persons.length)select.value=persons[0].id;
-  else if(!all&&persons.length)select.value=persons[0].id;
+  var all=(dropdownId==='rec_person'||dropdownId==='rep_person'||currentRole==='admin'||currentRole==='super_admin'||dropdownId==='cal_person');
+  // برای تقویم: کاربر عادی هم خودش را می‌بیند هم تفویض‌شده‌ها
+  var persons;
+  if(dropdownId==='cal_person'){
+    // کاربر فعلی + همه (برای انتخاب تفویض‌شده‌ها)
+    persons=cachedPersons;
+  }else if(all){
+    persons=cachedPersons;
+  }else{
+    persons=cachedPersons.filter(function(p){return p.id===currentUser.id;});
+  }
+  // برای تقویم: کاربر فعلی همیشه اول + تفویض‌شده‌ها
+  if(dropdownId==='cal_person'){
+    // کاربر فعلی اول
+    var me=persons.filter(function(p){return p.id===currentUser.id;});
+    var others=persons.filter(function(p){return p.id!==currentUser.id;});
+    var o='';
+    if(me.length){
+      o+='<option value="'+esc(me[0].id)+'">'+esc(me[0].first_name+' '+me[0].last_name+' - '+me[0].personnel_id)+' 👤</option>';
+    }
+    if(others.length){
+      o+='<optgroup label="——— تفویض‌شده‌ها ———">';
+      others.forEach(function(p){
+        o+='<option value="'+esc(p.id)+'">'+esc(p.first_name+' '+p.last_name+' - '+p.personnel_id)+' 🔄</option>';
+      });
+      o+='</optgroup>';
+    }
+    if(!me.length&&!others.length){
+      o='<option value="">انتخاب...</option>';
+    }
+    select.innerHTML=o;
+    // پیش‌فرض: کاربر فعلی
+    if(me.length)select.value=me[0].id;
+    else if(cur&&persons.some(function(p){return p.id===cur;}))select.value=cur;
+    else if(persons.length)select.value=persons[0].id;
+  }else{
+    var o='<option value="">'+(all?'همه':'انتخاب...')+'</option>';
+    persons.forEach(function(p){
+      var icon=p.id===currentUser.id?' 👤':'';
+      o+='<option value="'+esc(p.id)+'">'+esc(p.first_name+' '+p.last_name+' - '+p.personnel_id)+icon+'</option>';
+    });
+    select.innerHTML=o;
+    if(cur&&persons.some(function(p){return p.id===cur;}))select.value=cur;
+    else if(autoFirst&&persons.length)select.value=persons[0].id;
+    else if(!all&&persons.length)select.value=persons[0].id;
+  }
 }
 function populateSubordinateDropdown(dropdownId){
   var select=$(dropdownId);
@@ -2163,7 +2219,25 @@ async function saveDailyLog(){
   var id=$('log_id').value,personId=$('log_person_id').value,dateStr=$('log_date').value,status=$('log_status').value,disc=val('log_discrepancy');
   if(!personId){showAlert('پرسنل را انتخاب کنید.');return;}
   if(!isValidJalaliDate(dateStr)){showAlert('تاریخ نامعتبر است.');return;}
-  if(currentRole==='user'&&personId!==currentUser.id){showAlert('شما فقط برای خودتان می‌توانید ثبت کنید.');return;}
+  // بررسی تفویض
+  var delegateUser=$('log_delegate_user')?$('log_delegate_user').value:'';
+  var actualPersonId=personId;
+  var submittedBy=null;
+  var submittedByName=null;
+  if(delegateUser&&delegateUser!==currentUser.id){
+    // کاربر دارد برای شخص دیگری ثبت می‌کند
+    actualPersonId=delegateUser;
+    submittedBy=currentUser.id;
+    submittedByName=(currentUser.profile.first_name||'')+' '+(currentUser.profile.last_name||'')+' ('+(currentUser.profile.personnel_id||'')+')';
+    // هشدار نهایی
+    if(!confirm('⚠️ هشدار تفویض کارکرد\n\nشما در حال ثبت کارکرد برای «'+getPersonName(delegateUser)+'» هستید.\n\n'+
+      'با تأیید این عمل:\n'+
+      '۱. شما مسئولیت صحت اطلاعات را می‌پذیرید.\n'+
+      '۲. شناسه پرسنلی شما در گزارش ثبت می‌شود.\n'+
+      '۳. در گزارش‌ها، نام شما به‌عنوان ثبت‌کننده نمایش داده می‌شود.\n\n'+
+      'آیا مطمئن هستید؟'))return;
+  }
+  if(currentRole==='user'&&!delegateUser&&personId!==currentUser.id){showAlert('شما فقط برای خودتان می‌توانید ثبت کنید. برای ثبت برای شخص دیگر، از بخش تفویض استفاده کنید.');return;}
   dateStr=normJ(dateStr);
   var d={discrepancy:disc,fields:{}},f=d.fields,s='00:00',e='23:59',fullDay=false;
   function need(c,m){if(!c){showAlert(m);return false;}return true;}
@@ -2176,17 +2250,63 @@ async function saveDailyLog(){
   }else if(status==='overtime'){s=$('ot_start').value;e=$('ot_end').value;if(!need(s&&e,'ساعت شروع و پایان الزامی است.'))return;f.ot_start=s;f.ot_end=e;f.ot_reason=val('ot_reason');f.ot_location=val('ot_location');f.ot_topic=val('ot_topic');f.ot_description=val('ot_description');if(!need(f.ot_reason&&f.ot_location,'علت و محل الزامی است.'))return;}
   showLoading('ذخیره...');
   try{
-    var logObj={id:id||('tmp-'+Date.now()),user_id:personId,date:dateStr,status:status,data:d};
+    var logObj={id:id||('tmp-'+Date.now()),user_id:actualPersonId,date:dateStr,status:status,data:d};
+    if(submittedBy){logObj.submitted_by=submittedBy;logObj.submitted_by_name=submittedByName;}
     var savedLog=await saveLogToDB(logObj);
-    // پاک‌سازی رکوردهای تمام‌روز تکراری فقط پس از ذخیره موفق و هرگز حذف رکورد جاری.
+    // پاک‌سازی رکوردهای تمام‌روز تکراری فقط پس از ذخیره موفق
     var cleanupWarning='';
-    if(fullDay){try{var existing=await loadLogs(personId,dateStr,dateStr);for(var i=0;i<existing.length;i++){if(existing[i].id!==savedLog.id&&existing[i].status==='absence'&&existing[i].data&&FULL_DAY.indexOf(existing[i].data.absence_type)!==-1){await deleteLogFromDB(existing[i].id);await recordAudit('delete','daily_logs',existing[i].id,{reason:'duplicate_full_day_log',date:dateStr});}}}catch(cleanupError){console.warn('Saved log but duplicate cleanup failed:',cleanupError);cleanupWarning=' اظهار ذخیره شد، اما پاک‌سازی رکوردهای تکراری کامل نشد؛ فهرست را بررسی کنید.';}}
+    if(fullDay){try{var existing=await loadLogs(actualPersonId,dateStr,dateStr);for(var i=0;i<existing.length;i++){if(existing[i].id!==savedLog.id&&existing[i].status==='absence'&&existing[i].data&&FULL_DAY.indexOf(existing[i].data.absence_type)!==-1){await deleteLogFromDB(existing[i].id);await recordAudit('delete','daily_logs',existing[i].id,{reason:'duplicate_full_day_log',date:dateStr});}}}catch(cleanupError){console.warn('cleanup:',cleanupError);cleanupWarning=' پاک‌سازی رکوردهای تکراری کامل نشد.';}}
     $('log_date').value=dateStr;
-    showAlert('اظهار ثبت شد.'+cleanupWarning,cleanupWarning?'error':'success');
+    showAlert(submittedBy?'کارکرد برای '+getPersonName(actualPersonId)+' ثبت شد. شناسه شما در گزارش ذخیده شد.':'اظهار ثبت شد.'+cleanupWarning,cleanupWarning?'error':'success');
     resetDailyLogForm();
     await renderDailyLogsList();
   }catch(e){showAlert('خطا در ذخیره: '+e.message);}
   hideLoading();
+}
+// هشدار زنده هنگام انتخاب تفویض
+function checkDelegateWarning(){
+  var sel=$('log_delegate_user');
+  if(!sel||!sel.value)return;
+  var name=getPersonName(sel.value);
+  if(sel.value!==currentUser.id){
+    // نمایش هشدار
+    var box=$('delegate_box');
+    if(box){
+      var existing=box.querySelector('.delegate-alert');
+      if(!existing){
+        existing=document.createElement('div');
+        existing.className='delegate-alert';
+        existing.style.cssText='background:#fee2e2;color:#991b1b;padding:8px 12px;border-radius:6px;margin-top:8px;font-size:12px;border:1px solid #fca5a5';
+        box.querySelector('.form-group').appendChild(existing);
+      }
+      existing.textContent='⚠️ شما در حال ثبت برای «'+name+'» هستید. با ثبت، مسئولیت با شماست و شناسه پرسنلی شما در گزارش ثبت می‌شود.';
+    }
+    // تغییر پرسنل در فرم به کاربر تفویض‌شده
+    $('log_person_id').value=sel.value;
+  }else{
+    var alert=box.querySelector('.delegate-alert');
+    if(alert)alert.remove();
+  }
+}
+// نمایش/مخفی کردن باکس تفویض بر اساس نقش
+function updateDelegateBox(){
+  var box=$('delegate_box');
+  if(!box)return;
+  // فقط ادمین/سوپرادمین/هماهنگ‌کننده می‌توانند تفویض کنند
+  var canDelegate=currentRole==='admin'||currentRole==='super_admin'||
+    (currentUser.profile&&(currentUser.profile.can_approve_leaves||currentUser.profile.can_schedule_tasks));
+  box.classList.toggle('hidden',!canDelegate);
+  if(canDelegate){
+    // پر کردن dropdown با همه کاربران
+    var sel=$('log_delegate_user');
+    if(sel){
+      var o='<option value="">خودم ثبت می‌کنم</option>';
+      cachedPersons.forEach(function(p){
+        o+='<option value="'+p.id+'">'+esc(p.first_name+' '+p.last_name+' - '+p.personnel_id)+'</option>';
+      });
+      sel.innerHTML=o;
+    }
+  }
 }
 function resetDailyLogForm(){
   $('log_id').value='';$('log_status').value='normal';$('absence_type').value='hourly_leave';
