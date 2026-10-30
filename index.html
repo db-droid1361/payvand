@@ -978,7 +978,7 @@ function showAuthError(msg){var e=$('auth_error');e.textContent=msg;e.style.disp
 //   ۱) rpc_get_auth_info → salt + وضعیت قفل + email (بدون hash)
 //   ۲) کلاینت hash = SHA-256(salt + '::' + password) × 5000 دور
 //   ۳) rpc_verify_password → مقایسه server-side + مدیریت brute-force
-//   ۴) در صورت موفقیت → sb.auth.signInWithPassword برای ایجاد session (RLS کار کند)
+//   ۴) rpc_create_session → ورود مستقیم (بدون Supabase Auth، بدون ایمیل)
 async function handleLogin(e){
   e.preventDefault();showAuthError('');
   var btn=$('login_btn');btn.disabled=true;btn.innerHTML='در حال ورود...<span class="auth-loading"></span>';
@@ -1028,24 +1028,66 @@ async function handleLogin(e){
       showAuthError(verifyData&&verifyData.error?verifyData.error:'کد پرسنلی یا رمز عبور اشتباه است.');
       btn.disabled=false;btn.textContent='ورود به سیستم';return;
     }
-    // مرحله ۴: ورود به Supabase Auth برای ایجاد session (RLS)
-    // رمز یکسان است چون مدیر هنگام تعریف کاربر همان رمز را در هش و Supabase Auth ثبت کرده
+    // مرحله ۴: ورود مستقیم با rpc_create_session (بدون Supabase Auth)
+    // کاربر فقط با کد پرسنلی + رمز وارد می‌شود — ایمیل نقشی ندارد
     btn.innerHTML='در حال ورود به سیستم...<span class="auth-loading"></span>';
-    const{data:signInData,error:signInError}=await sb.auth.signInWithPassword({email:verifyData.email,password:password});
-    if(signInError){
-      // هش درست بود ولی Supabase Auth قبول نکرد — احتمالاً رمز در Supabase ثبت نشده
-      // در این حالت: خودکار ثبت می‌کنیم
-      if(signInError.message&&signInError.message.indexOf('Invalid login')!==-1){
-        // تلاش برای به‌روزرسانی رمز Supabase (نیازمند session موقت)
-        showAuthError('هماهنگ‌سازی session... لطفاً دوباره وارد شوید.');
-        // کاربر باید دوباره کلیک کند — session هماهنگ نمی‌شود بدون service_role
-      }else{
-        showAuthError('خطا در ورود به session: '+signInError.message);
+    try{
+      const{data:fbData,error:fbError}=await sb.rpc('rpc_create_session',{p_personnel_id:personnelId,p_password_hash:pwdHash});
+      if(fbError||!fbData||!fbData.success){
+        showAuthError('ورود ناموفق: '+(fbData&&fbData.error?fbData.error:'خطای session'));
+        btn.disabled=false;btn.textContent='ورود به سیستم';return;
       }
+      // ساخت session محلی
+      var localSession={
+        access_token:'local-'+Date.now()+'-'+Math.random().toString(36).slice(2),
+        refresh_token:'local-refresh',
+        token_type:'bearer',
+        expires_in:8*60*60,
+        expires_at:Date.now()+8*60*60*1000,
+        user:{
+          id:fbData.user.id,
+          email:fbData.user.email,
+          aud:'authenticated',
+          role:'authenticated'
+        }
+      };
+      // ذخیره session محلی در localStorage (supabase-js آن را می‌خواند)
+      try{
+        var storageKey='sb-'+SUPABASE_URL.replace(/^https?:\/\//,'').replace(/\.supabase\.co.*$/,'')+'-auth-token';
+        localStorage.setItem(storageKey,JSON.stringify(localSession));
+      }catch(e){console.warn('localStorage save:',e);}
+      // تنظیم currentUser مستقیم
+      currentUser={id:fbData.user.id,email:fbData.user.email};
+      currentUser.profile={
+        id:fbData.user.id,
+        email:fbData.user.email,
+        role:fbData.user.role,
+        first_name:fbData.user.first_name,
+        last_name:fbData.user.last_name,
+        personnel_id:fbData.user.personnel_id,
+        status:fbData.user.status,
+        can_manage_users:fbData.user.can_manage_users,
+        can_approve_leaves:fbData.user.can_approve_leaves,
+        can_schedule_tasks:fbData.user.can_schedule_tasks,
+        can_create_programs:fbData.user.can_create_programs,
+        parent_id:fbData.user.parent_id,
+        expires_at:fbData.user.expires_at,
+        guest_permissions:fbData.user.guest_permissions
+      };
+      currentRole=fbData.user.role;
+      // فعال‌سازی حالت مهمان
+      if(currentRole==='guest'){document.body.classList.add('guest-mode');}
+      else{document.body.classList.remove('guest-mode');}
+      // نمایش برنامه اصلی
+      $('auth_screen').classList.add('hidden');
+      $('main_app').classList.remove('hidden');
+      try{await loadAllPersons();await loadSubordinates();showSection('dashboard');setTimeout(checkUnreadNotifications,500);}catch(e){console.warn('post-login:',e);}
+      updateUserBox();
+      applyRoleBasedUI();
+    }catch(fbErr){
+      showAuthError('خطا در ورود: '+(fbErr.message||'نامشخص'));
       btn.disabled=false;btn.textContent='ورود به سیستم';
-      return;
     }
-    // موفقیت — handleAuthState توسط onAuthStateChange ادامه می‌دهد
   }catch(err){
     showAuthError('خطا در ورود: '+(err.message||'کد پرسنلی یا رمز اشتباه است.'));
     btn.disabled=false;btn.textContent='ورود به سیستم';
