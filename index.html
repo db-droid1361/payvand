@@ -1027,12 +1027,15 @@ async function handleLogin(e){
   var btn=$('login_btn');btn.disabled=true;btn.innerHTML='در حال ورود...<span class="auth-loading"></span>';
   var personnelId=toEnglishDigits(val('login_email'));
   var password=val('login_password');
-  if(!personnelId||!password){showAuthError('کد پرسنلی و رمز عبور الزامی است.');btn.disabled=false;btn.textContent='ورود به سیستم';return;}
+  if(!personnelId||!password){showAuthError('کد پرسنلی و رمز را وارد کنید.');btn.disabled=false;btn.textContent='ورود به سیستم';return;}
   try{
     const{data:loginData,error:loginError}=await sb.rpc('rpc_login',{p_personnel_id:personnelId,p_password:password});
-    if(loginError){showAuthError('خطا: '+loginError.message);btn.disabled=false;btn.textContent='ورود به سیستم';return;}
+    if(loginError){
+      var friendlyMsg=translateError(loginError.message);
+      showAuthError(friendlyMsg);btn.disabled=false;btn.textContent='ورود به سیستم';return;
+    }
     if(!loginData||!loginData.success){
-      showAuthError(loginData&&loginData.error?loginData.error:'ورود ناموفق');
+      showAuthError(loginData&&loginData.error?loginData.error:'ورود ناموفق بود.');
       btn.disabled=false;btn.textContent='ورود به سیستم';return;
     }
     // ورود موفق
@@ -1048,9 +1051,25 @@ async function handleLogin(e){
     updateUserBox();
     applyRoleBasedUI();
   }catch(err){
-    showAuthError('خطا در ورود: '+(err.message||'نامشخص'));
+    showAuthError(translateError(err.message||''));
     btn.disabled=false;btn.textContent='ورود به سیستم';
   }
+}
+// ترجمه خطاهای فنی به فارسی ساده
+function translateError(msg){
+  if(!msg)return 'خطای ناشناخته. با مدیر تماس بگیرید.';
+  msg=String(msg);
+  if(msg.indexOf('JWT')!==-1||msg.indexOf('token')!==-1)
+    return 'مشکل فنی پیش آمد. صفحه را تازه‌سازی کنید (یک بار کش مرورگر را پاک کنید).';
+  if(msg.indexOf('Failed to fetch')!==-1||msg.indexOf('NetworkError')!==-1)
+    return 'ارتباط با سرور برقرار نشد. اینترنت را بررسی کنید و دوباره تلاش کنید.';
+  if(msg.indexOf('Could not find')!==-1||msg.indexOf('function')!==-1)
+    return 'سیستم در حال به‌روزرسانی است. چند دقیقه دیگر تلاش کنید یا با مدیر تماس بگیرید.';
+  if(msg.indexOf('timeout')!==-1)
+    return 'سرور پاسخ نداد. دوباره تلاش کنید.';
+  if(msg.indexOf('CORS')!==-1)
+    return 'دسترسی مسدود شده. با مدیر تماس بگیرید.';
+  return 'خطا: '+msg;
 }
 
 // ═══ فراموشی رمز سوپرادمین (با کد بازیابی) ═══
