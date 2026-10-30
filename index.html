@@ -39,7 +39,7 @@ header h1{margin:0;font-size:1.2rem}
 .nav{display:flex;flex-wrap:wrap;gap:5px;background:var(--card-bg);padding:10px;border-radius:5px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
 .nav button{background:var(--light);border:1px solid var(--border);padding:8px 15px;border-radius:4px;cursor:pointer;color:var(--secondary);font-weight:bold;transition:.2s}
 .nav button:hover,.nav button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-.nav button.admin-only{background:#fef3c7;border-color:var(--warning)}
+.nav button.admin-only{background:var(--c-warning-light,#fef3c7);border-color:var(--warning)}
 .nav button.admin-only:hover{background:var(--role-admin);color:#fff}
 .nav button.coordinator-only{background:#e8daef;border-color:var(--purple)}
 .nav button.coordinator-only:hover{background:var(--purple);color:#fff}
@@ -743,8 +743,8 @@ button,.btn{-webkit-touch-callout:none}
 [data-theme="saadat"] .table-wrap{border-radius:18px}
 
 /* صفحه ورود */
-[data-theme="saadat"] .auth-screen{background:linear-gradient(135deg,#0D9488 0%,#0F766E 50%,#134E4A 100%)}
-[data-theme="saadat"] .auth-card{border-radius:14px;padding:40px;box-shadow:0 20px 60px rgba(19,78,74,.4)}
+[data-theme="saadat"] .auth-screen{background:linear-gradient(135deg,#0F0F1E 0%,#1A1A2E 50%,#D97706 100%)}
+[data-theme="saadat"] .auth-card{border-radius:12px;padding:40px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
 
 /* سایر */
 [data-theme="saadat"] .badge{border-radius:6px}
@@ -773,7 +773,7 @@ button,.btn{-webkit-touch-callout:none}
     <form id="login_form">
       <div class="form-group"><label>کد پرسنلی:</label><input type="text" id="login_email" required placeholder="مثلاً 88652" autocomplete="off"></div>
       <div class="form-group"><label>رمز عبور:</label><input type="password" id="login_password" required></div>
-      <button type="submit" class="btn btn-info" id="login_btn" style="width:100%;padding:12px;font-size:15px;background:#3b82f6;border-color:#3b82f6">ورود به سیستم</button>
+      <button type="submit" class="btn btn-info" id="login_btn" style="width:100%;padding:12px;font-size:15px">ورود به سیستم</button>
     </form>
     <p style="text-align:center;margin-top:10px;font-size:12px">
       <a href="javascript:void(0)" onclick="showRecoveryScreen()" style="color:var(--secondary);text-decoration:underline">فراموشی رمز سوپرادمین</a>
@@ -1406,8 +1406,10 @@ button,.btn{-webkit-touch-callout:none}
 
 <!-- تنظیمات -->
 <div id="section-audit_log" class="card hidden">
-  <h2>تاریخچه تغییرات سامانه</h2>
-  <p>برای فعال شدن این بخش، اسکریپت SQL همراه فایل را در Supabase اجرا کنید.</p>
+  <h2>📜 تاریخچه تغییرات سامانه</h2>
+  <div id="audit_log_notice" style="background:var(--c-warning-light);padding:14px;border-radius:8px;margin-bottom:16px;border-right:4px solid var(--c-warning);font-size:13px">
+    ⚠️ برای فعال شدن این بخش، فایل <code style="background:var(--c-bg-alt);padding:2px 6px;border-radius:4px">audit_logs.sql</code> را در Supabase → SQL Editor اجرا کنید.
+  </div>
   <div id="audit_log_container" class="table-wrap"></div>
 </div>
 
@@ -1490,7 +1492,7 @@ button,.btn{-webkit-touch-callout:none}
   
   <h3>تغییر رمز عبور</h3>
   <div id="change_pwd_super_admin_fields" class="hidden">
-    <div style="background:#fef3c7;padding:10px;border-radius:6px;margin-bottom:12px;border-right:4px solid var(--warning);font-size:13px">
+    <div style="background:var(--c-warning-light,#fef3c7);padding:10px;border-radius:6px;margin-bottom:12px;border-right:4px solid var(--warning);font-size:13px">
       ⚠️ شما سوپرادمین هستید. برای تغییر رمز، علاوه بر رمز فعلی، <b>کد بازیابی</b> نیز الزامی است. پس از تغییر، کد بازیابی جدید تولید می‌شود.
     </div>
   </div>
@@ -1981,7 +1983,7 @@ function showRecoverySuccess(newCode,email){
     '<h2 style="text-align:center;color:var(--success);margin-bottom:10px">✅ رمز تغییر کرد</h2>'+
     '<p style="text-align:center;color:var(--secondary);margin-bottom:16px">برای حساب <b dir="ltr">'+esc(email)+'</b></p>'+
     '<div style="background:#1e293b;color:#fff;padding:20px;border-radius:8px;text-align:center;font-family:monospace;font-size:24px;letter-spacing:3px;margin-bottom:14px" dir="ltr">'+newCode+'</div>'+
-    '<p style="background:#fef3c7;padding:12px;border-radius:6px;font-size:13px;border-right:4px solid var(--warning);margin-bottom:16px">⚠️ این کد بازیابی جدید شماست. آن را در جای امن ذخیره کنید. کد قبلی باطل شد.</p>'+
+    '<p style="background:var(--c-warning-light,#fef3c7);padding:12px;border-radius:6px;font-size:13px;border-right:4px solid var(--warning);margin-bottom:16px">⚠️ این کد بازیابی جدید شماست. آن را در جای امن ذخیره کنید. کد قبلی باطل شد.</p>'+
     '<button class="btn btn-success" style="width:100%" onclick="location.reload()">ورود به سیستم</button>'+
   '</div>';
 }
@@ -3113,9 +3115,9 @@ async function renderDashboard(){
     }
 
     var statsHtml='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px">'+
-      '<div class="report-summary"><div style="font-size:12px;color:#666">اظهارات این ماه</div><div style="font-size:24px;font-weight:bold;color:var(--accent)">'+myLogs.length+'</div></div>'+
-      '<div class="report-summary"><div style="font-size:12px;color:#666">درخواست‌های در جریان</div><div style="font-size:24px;font-weight:bold;color:var(--warning)">'+pendingLeaves+'</div></div>'+
-      '<div class="report-summary"><div style="font-size:12px;color:#666">وظایف در انتظار</div><div style="font-size:24px;font-weight:bold;color:var(--purple)">'+myTasks.length+'</div></div>'+
+      '<div class="report-summary"><div style="font-size:12px;color:var(--c-text-muted,#666)">اظهارات این ماه</div><div style="font-size:24px;font-weight:bold;color:var(--accent)">'+myLogs.length+'</div></div>'+
+      '<div class="report-summary"><div style="font-size:12px;color:var(--c-text-muted,#666)">درخواست‌های در جریان</div><div style="font-size:24px;font-weight:bold;color:var(--warning)">'+pendingLeaves+'</div></div>'+
+      '<div class="report-summary"><div style="font-size:12px;color:var(--c-text-muted,#666)">وظایف در انتظار</div><div style="font-size:24px;font-weight:bold;color:var(--purple)">'+myTasks.length+'</div></div>'+
       '</div>';
 
     var html='<div style="background:#d6eaf8;padding:14px;border-radius:8px;margin-bottom:20px;border-right:4px solid var(--accent);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px"><div><b>خوش آمدید، '+esc(currentUser.profile.first_name)+'!</b><br>نقش: <span class="role-badge role-'+currentRole+'">'+ROLE_LABEL[currentRole]+'</span></div><div><span class="score-badge '+(myScore>0?'':myScore<0?'negative':'zero')+'">🏆 امتیاز شما: '+myScore+'</span></div></div>';
@@ -3150,11 +3152,11 @@ async function renderDashboard(){
       var activeUsers=cachedPersons.filter(function(p){return p.status==='active';}).length;
       var allMonthLogs=await loadLogs(null,monthStart,todayStr);
       html+='<h3>نمای مدیریتی</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:12px 0">'+
-        '<div class="report-summary"><div style="font-size:12px;color:#666">کاربران فعال</div><div style="font-size:24px;font-weight:bold">'+activeUsers+'</div></div>'+
-        '<div class="report-summary"><div style="font-size:12px;color:#666">اظهارات این ماه (کل)</div><div style="font-size:24px;font-weight:bold">'+allMonthLogs.length+'</div></div>'+
-        '<div class="report-summary"><div style="font-size:12px;color:#666">مرخصی‌های در انتظار</div><div style="font-size:24px;font-weight:bold">'+allPending.length+'</div></div></div>';
+        '<div class="report-summary"><div style="font-size:12px;color:var(--c-text-muted,#666)">کاربران فعال</div><div style="font-size:24px;font-weight:bold">'+activeUsers+'</div></div>'+
+        '<div class="report-summary"><div style="font-size:12px;color:var(--c-text-muted,#666)">اظهارات این ماه (کل)</div><div style="font-size:24px;font-weight:bold">'+allMonthLogs.length+'</div></div>'+
+        '<div class="report-summary"><div style="font-size:12px;color:var(--c-text-muted,#666)">مرخصی‌های در انتظار</div><div style="font-size:24px;font-weight:bold">'+allPending.length+'</div></div></div>';
       if(allPending.length){
-        html+='<div style="background:#fef3c7;padding:14px;border-radius:8px;margin-top:20px;border-right:4px solid var(--warning)"><b>⏰ '+allPending.length+' درخواست مرخصی در انتظار تأیید</b> <button class="btn btn-sm" onclick="showSection(\'approvals\')">مشاهده</button></div>';
+        html+='<div style="background:var(--c-warning-light,#fef3c7);padding:14px;border-radius:8px;margin-top:20px;border-right:4px solid var(--warning)"><b>⏰ '+allPending.length+' درخواست مرخصی در انتظار تأیید</b> <button class="btn btn-sm" onclick="showSection(\'approvals\')">مشاهده</button></div>';
       }
     }
 
@@ -3305,7 +3307,7 @@ function showDayDetail(dateStr,personId){
           html+='<div style="padding:6px 12px;border-radius:8px;background:var(--c-info-light);margin-bottom:4px;font-size:13px">'+stIcon+' '+esc(t.title||'وظیفه')+'</div>';
         });
         dayActs.forEach(function(a){
-          html+='<div style="padding:6px 12px;border-radius:8px;background:#fff3cd;margin-bottom:4px;font-size:13px">🎯 '+esc(a.title||'فعالیت')+' <small style="color:var(--c-text-muted)">('+esc(a.programs?a.programs.title:'')+')</small></div>';
+          html+='<div style="padding:6px 12px;border-radius:8px;background:var(--c-warning-light,#fff3cd);margin-bottom:4px;font-size:13px">🎯 '+esc(a.title||'فعالیت')+' <small style="color:var(--c-text-muted)">('+esc(a.programs?a.programs.title:'')+')</small></div>';
         });
         html+='</div>';
       }
@@ -3765,7 +3767,7 @@ async function renderCalendar(){
       if(dayActs.length){
         hasWork=true;
         dayActs.forEach(function(a){
-          workHtml+='<div style="font-size:9px;margin-top:1px;padding:1px 3px;border-radius:3px;border-right:2px solid var(--c-warning);background:#fff3cd;color:#856404;cursor:pointer" onclick="event.stopPropagation();showSection(\'my_activities\')">🎯 '+esc((a.title||'فعالیت').slice(0,15))+'</div>';
+          workHtml+='<div style="font-size:9px;margin-top:1px;padding:1px 3px;border-radius:3px;border-right:2px solid var(--c-warning);background:var(--c-warning-light,#fff3cd);color:var(--c-warning,#856404);cursor:pointer" onclick="event.stopPropagation();showSection(\'my_activities\')">🎯 '+esc((a.title||'فعالیت').slice(0,15))+'</div>';
         });
       }
       // ترکیب با خط جداکننده
@@ -3953,7 +3955,7 @@ function checkDelegateWarning(){
     if(!existing){
       existing=document.createElement('div');
       existing.className='delegate-alert';
-      existing.style.cssText='background:#fee2e2;color:#991b1b;padding:8px 12px;border-radius:6px;margin-top:8px;font-size:12px;border:1px solid #fca5a5';
+      existing.style.cssText='background:var(--c-danger-light,#fee2e2);color:#991b1b;padding:8px 12px;border-radius:6px;margin-top:8px;font-size:12px;border:1px solid #fca5a5';
       box.querySelector('.form-group').appendChild(existing);
     }
     existing.textContent='⚠️ شما در حال ثبت برای «'+name+'» هستید. با ثبت، مسئولیت با شماست و شناسه پرسنلی شما در گزارش ثبت می‌شود.';
@@ -4437,7 +4439,7 @@ async function renderApprovals(){
         if(l.type==='daily'&&l.end_date&&l.start_date!==l.end_date){
           var days=jalaliDateRange(l.start_date,l.end_date);
           var approved=l.approved_days||[];
-          h+='<div style="background:#f9f9f9;padding:8px;border-radius:4px;margin-bottom:6px"><b>انتخاب روزهای تأیید:</b><br>';
+          h+='<div style="background:var(--c-bg-alt,#f9f9f9);padding:8px;border-radius:4px;margin-bottom:6px"><b>انتخاب روزهای تأیید:</b><br>';
           days.forEach(function(d){
             var checked=approved.indexOf(d)!==-1||l.status==='approved'?'checked':'';
             h+='<label style="margin-left:8px"><input type="checkbox" class="day-check" data-leave="'+l.id+'" value="'+d+'" '+checked+'> '+d+'</label>';
@@ -4987,7 +4989,7 @@ async function openGuestSettings(userId){
     '<div class="form-group"><label>📅 تاریخ انقضای حساب (شمسی):</label>'+
     '<input type="text" id="guest_expires" class="date-picker" placeholder="خالی = دائمی" value="'+expiryStr+'" readonly></div>'+
     '<div class="form-group"><label>👁️ بخش‌های قابل دسترسی (فقط خواندن):</label>'+
-    '<div style="background:#f9f9f9;padding:10px;border-radius:8px;border:1px solid var(--border)">'+
+    '<div style="background:var(--c-bg-alt,#f9f9f9);padding:10px;border-radius:8px;border:1px solid var(--border)">'+
     GUEST_SECTIONS.map(function(s){
       var checked=currentPerms.indexOf(s.id)!==-1?'checked':'';
       return '<label style="display:block;padding:6px 0;cursor:pointer"><input type="checkbox" class="guest-perm-check" value="'+s.id+'" '+checked+'> '+s.label+'</label>';
@@ -5284,7 +5286,7 @@ async function renderPrograms(){
           var isForce=actPriority==='force';
           var priorityTagText=isForce?'🚨 فوری':actPriority==='high'?'🟠 بالا':actPriority==='low'?'⚪ پایین':'🔵 متوسط';
           html+='<div class="activity-row'+(isForce?' force-row':'')+'">'+
-            '<div class="ar-title"><span class="priority-tag '+actPriority+'" style="margin-left:4px">'+priorityTagText+'</span>'+esc(a.title)+(a.description?'<br><small style="color:#666;font-weight:normal">'+esc(a.description)+'</small>':'')+'</div>'+
+            '<div class="ar-title"><span class="priority-tag '+actPriority+'" style="margin-left:4px">'+priorityTagText+'</span>'+esc(a.title)+(a.description?'<br><small style="color:var(--c-text-muted,#666);font-weight:normal">'+esc(a.description)+'</small>':'')+'</div>'+
             '<div class="ar-assignee">👤 '+esc(assigneeName)+'</div>'+
             '<div class="ar-deadline">⏰ '+new Date(a.deadline).toLocaleString('fa-IR')+'</div>'+
             '<div class="ar-status">'+activityStatusBadge(a.status)+(a.status==='pending'||a.status==='in_progress'?'<br><small style="color:'+(rem.overdue?'var(--danger)':'var(--warning)')+'">'+rem.text+'</small>':'')+'</div>'+
@@ -5472,7 +5474,7 @@ async function renderMyActivities(){
         '<h4>'+(isForce?'<span class="priority-tag force">🚨 فوری</span> ':'<span class="priority-tag '+actPriority+'" style="margin-left:4px">'+priorityTagText+'</span>')+esc(a.title)+'</h4>'+
         '<div class="task-meta">📁 برنامه: '+esc(progTitle)+' | ⏰ مهلت: '+new Date(a.deadline).toLocaleString('fa-IR')+' | وضعیت: '+activityStatusBadge(a.status)+'</div>'+
         (a.description?'<div class="task-desc">'+esc(a.description)+'</div>':'')+
-        (rem.overdue&&a.status!=='done'?'<div class="task-desc" style="background:#fee2e2;padding:8px;border-radius:4px"><b>⚠️ تأخیر:</b> '+rem.text+'</div>':'<div class="task-desc" style="background:'+(isForce?'#fef3c7':'#f9f9f9')+';padding:8px;border-radius:4px"><b>⏰ زمان باقی‌مانده:</b> '+rem.text+'</div>')+
+        (rem.overdue&&a.status!=='done'?'<div class="task-desc" style="background:var(--c-danger-light,#fee2e2);padding:8px;border-radius:4px"><b>⚠️ تأخیر:</b> '+rem.text+'</div>':'<div class="task-desc" style="background:'+(isForce?'#fef3c7':'#f9f9f9')+';padding:8px;border-radius:4px"><b>⏰ زمان باقی‌مانده:</b> '+rem.text+'</div>')+
         (a.report_note?'<div class="task-desc" style="background:#d5f5e3;padding:8px;border-radius:4px"><b>گزارش شما:</b> '+esc(a.report_note)+'</div>':'')+
         '<div class="task-actions">'+
           (a.status!=='done'&&a.status!=='cancelled'?'<button class="btn btn-success btn-sm" onclick="reportActivityDone(\''+a.id+'\')">✅ انجام شد — ثبت گزارش</button>':'')+
@@ -6118,7 +6120,7 @@ async function renderDashboardCalendar(){
       if(dayLeaves.length){hasPersonal=true;dayLeaves.forEach(function(lv){var used=(lv.used_days||[]).indexOf(ds)!==-1;personalHtml+='<div style="font-size:8px;border-right:2px solid '+(used?var_c_success:'#92400e')+';background:'+(used?var_c_success_light:'#fef3c7')+';color:'+(used?var_c_success:'#92400e')+';padding:0 2px;border-radius:2px;margin-top:1px;cursor:pointer" onclick="event.stopPropagation();showSection(\'leave_req\')">'+(used?'✓':'☐')+'</div>';});}
       // کاری
       if(dayTasks.length){hasWork=true;dayTasks.forEach(function(t){var st=t.status==='done'?'✅':t.status==='in_progress'?'🔄':'⬜';workHtml+='<div style="font-size:8px;border-right:2px solid '+var_c_info+';background:'+var_c_info_light+';color:'+var_c_info+';padding:0 2px;border-radius:2px;margin-top:1px;cursor:pointer" onclick="event.stopPropagation();showSection(\'my_tasks\')">'+st+'</div>';});}
-      if(dayActs.length){hasWork=true;dayActs.forEach(function(a){workHtml+='<div style="font-size:8px;border-right:2px solid var(--c-warning);background:#fff3cd;color:#856404;padding:0 2px;border-radius:2px;margin-top:1px;cursor:pointer" onclick="event.stopPropagation();showSection(\'my_activities\')">🎯</div>';});}
+      if(dayActs.length){hasWork=true;dayActs.forEach(function(a){workHtml+='<div style="font-size:8px;border-right:2px solid var(--c-warning);background:var(--c-warning-light,#fff3cd);color:var(--c-warning,#856404);padding:0 2px;border-radius:2px;margin-top:1px;cursor:pointer" onclick="event.stopPropagation();showSection(\'my_activities\')">🎯</div>';});}
       // رویدادها/تعطیلات
       if(dayEvents.length){hasEvent=true;dayEvents.forEach(function(e){cellContent+='<div style="font-size:8px;color:'+var_c_danger+';font-weight:600;margin-top:1px;cursor:pointer" onclick="event.stopPropagation();openDailyLog(\''+ds+'\',\''+personId+'\')">📌 '+esc((e.title||'').slice(0,10))+'</div>';});}
       // ─── برنامه‌های مرتبط با رویداد این روز (دقیقاً مثل رویداد) ───
@@ -6271,7 +6273,7 @@ async function generateCategorizedReport(){
         const{data:scoreData,error:scoreError}=await sb.rpc('get_user_score',{target_user:uid});
         if(!scoreError&&typeof scoreData==='number')score=scoreData;
       }catch(e){}
-      html+='<div style="background:#f9f9f9;border:1px solid #ddd;padding:14px;border-radius:8px;margin-bottom:14px">';
+      html+='<div style="background:var(--c-bg-alt,#f9f9f9);border:1px solid #ddd;padding:14px;border-radius:8px;margin-bottom:14px">';
       html+='<h3 style="margin:0 0 10px">'+esc(u.name)+' <span class="score-badge '+(score>0?'':score<0?'negative':'zero')+'">🏆 امتیاز: '+score+'</span></h3>';
       html+='<div class="report-grid">'+
         '<div class="report-stat"><div class="rs-label">کل فعالیت‌ها</div><div class="rs-value">'+total+'</div></div>'+
@@ -6333,7 +6335,7 @@ async function renderScoringRules(){
       html+='</tr>';
     });
     html+='</tbody></table>';
-    html+='<p style="font-size:12px;color:#666;margin-top:10px">💡 مثال: اگر «فوری × انجام به‌موقع = ۲۰» باشد، کاربری که یک فعالیت فوری را به‌موقع انجام دهد، ۲۰ امتیاز می‌گیرد.</p>';
+    html+='<p style="font-size:12px;color:var(--c-text-muted,#666);margin-top:10px">💡 مثال: اگر «فوری × انجام به‌موقع = ۲۰» باشد، کاربری که یک فعالیت فوری را به‌موقع انجام دهد، ۲۰ امتیاز می‌گیرد.</p>';
     c.innerHTML=html;
   }catch(e){c.innerHTML='<p>خطا: '+esc(e.message)+'</p>';}
 }
@@ -6434,7 +6436,7 @@ async function renderAnnouncements(){
         '<div style="background:var(--c-success-light);padding:8px 14px;border-radius:8px;text-align:center;flex:1;min-width:100px"><div style="font-size:20px;font-weight:700;color:var(--c-success)">'+newCount+'</div><div style="font-size:11px;color:var(--c-text-muted)">📝 جدید</div></div>'+
         '<div style="background:var(--c-warning-light);padding:8px 14px;border-radius:8px;text-align:center;flex:1;min-width:100px"><div style="font-size:20px;font-weight:700;color:var(--c-warning)">'+pinnedCount+'</div><div style="font-size:11px;color:var(--c-text-muted)">📌 سنجاق‌شده</div></div>'+
         '<div style="background:var(--c-danger-light);padding:8px 14px;border-radius:8px;text-align:center;flex:1;min-width:100px"><div style="font-size:20px;font-weight:700;color:var(--c-danger)">'+urgentCount+'</div><div style="font-size:11px;color:var(--c-text-muted)">🚨 فوری</div></div>'+
-        (expiringCount>0?'<div style="background:#fef3c7;padding:8px 14px;border-radius:8px;text-align:center;flex:1;min-width:100px"><div style="font-size:20px;font-weight:700;color:#92400e">'+expiringCount+'</div><div style="font-size:11px;color:var(--c-text-muted)">⏳ در حال انقضا</div></div>':'');
+        (expiringCount>0?'<div style="background:var(--c-warning-light,#fef3c7);padding:8px 14px;border-radius:8px;text-align:center;flex:1;min-width:100px"><div style="font-size:20px;font-weight:700;color:var(--c-warning,#92400e)">'+expiringCount+'</div><div style="font-size:11px;color:var(--c-text-muted)">⏳ در حال انقضا</div></div>':'');
     }
     
     // ─── اعمال فیلترها ───
@@ -6947,7 +6949,7 @@ function showNewRecoveryCode(code){
       '<button class="btn btn-sm" style="flex:1" onclick="navigator.clipboard.writeText(\''+code+'\').then(function(){showAlert(\'کپی شد\',\'success\')})">📋 کپی</button>'+
       '<button class="btn btn-sm" style="flex:1" onclick="downloadRecoveryCode(\''+code+'\')">⬇ دانلود</button>'+
     '</div>'+
-    '<p style="background:#fef3c7;padding:10px;border-radius:6px;font-size:12px;border-right:4px solid var(--warning);margin-bottom:16px">⚠️ این کد را در جای امن ذخیره کنید. کد قبلی باطل شد. این کد تنها راه بازیابی رمز سوپرادمین است.</p>'+
+    '<p style="background:var(--c-warning-light,#fef3c7);padding:10px;border-radius:6px;font-size:12px;border-right:4px solid var(--warning);margin-bottom:16px">⚠️ این کد را در جای امن ذخیره کنید. کد قبلی باطل شد. این کد تنها راه بازیابی رمز سوپرادمین است.</p>'+
     '<button class="btn btn-success" style="width:100%" onclick="this.closest(\'div[style*=fixed]\').remove()">متوجه شدم</button>'+
   '</div>';
   document.body.appendChild(overlay);
@@ -7005,7 +7007,7 @@ function showRecoveryCodeModal(code){
       '<button class="btn btn-sm" style="flex:1" onclick="downloadRecoveryCode(\''+code+'\')">⬇ دانلود فایل</button>'+
       '<button class="btn btn-sm" style="flex:1" onclick="printRecoveryCode(\''+code+'\')">🖨 چاپ</button>'+
     '</div>'+
-    '<p style="background:#fee2e2;padding:10px;border-radius:6px;font-size:12px;border-right:4px solid var(--danger);margin-bottom:16px;color:#991b1b">⚠️ این کد فقط یک بار نمایش داده می‌شود. اگر آن را گم کنید، باید از Supabase Dashboard کد جدید تولید کنید.</p>'+
+    '<p style="background:var(--c-danger-light,#fee2e2);padding:10px;border-radius:6px;font-size:12px;border-right:4px solid var(--danger);margin-bottom:16px;color:#991b1b">⚠️ این کد فقط یک بار نمایش داده می‌شود. اگر آن را گم کنید، باید از Supabase Dashboard کد جدید تولید کنید.</p>'+
     '<label style="display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:14px;cursor:pointer"><input type="checkbox" id="rec_saved_confirm"> کد را ذخیره کردم</label>'+
     '<button class="btn btn-success" id="rec_close_btn" style="width:100%" disabled onclick="this.closest(\'div[style*=fixed]\').remove()">متوجه شدم</button>'+
   '</div>';
