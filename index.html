@@ -240,11 +240,11 @@ table{font-size:12px}.nav button{flex:1 0 45%}
 header{flex-direction:column;align-items:flex-start}
 }
 @media print{
-body>*:not(.print-area){display:none!important}
-.print-area{display:block;padding:6px;font-size:11px}
+body>*:not(#main_app){display:none!important}
+.sidebar,.sidebar-overlay,.topbar,.container,.notif-modal,.loading-overlay,.no-print{display:none!important}
+.print-area{display:block!important;padding:10px;font-size:11px;background:#fff;color:#000}
 .rep-page{page-break-after:always}.rep-page:last-child{page-break-after:auto}
 @page{size:A4;margin:1cm}
-.no-print{display:none!important}
 }
 
 /* ════════════════════════════════════════════════════════════════════
@@ -598,20 +598,13 @@ body.guest-mode .admin-only,body.guest-mode .coordinator-only{display:none!impor
   th,td{padding:8px}
 }
 
-/* ─── چاپ ─── */
+/* ─── چاپ: استایل محتوای گزارش ─── */
 @media print{
-  .sidebar,.topbar,.sidebar-overlay,.no-print{display:none!important}
-  .main-area{margin:0}
-  .container{max-width:100%;padding:0}
-  .card{box-shadow:none;border:1px solid #ddd}
-  .print-area{display:block;padding:10px;font-size:11px;background:#fff;color:#000}
-  .rep table{font-size:10px;width:100%;border-collapse:collapse}
-  .rep th,.rep td{border:1px solid #000;padding:3px 5px;color:#000}
-  .rep h4{font-size:12px;color:#000}
-  .rep .sum{font-size:11px;color:#000}
-  .rep-page{page-break-after:always}
-  .rep-page:last-child{page-break-after:auto}
-  @page{size:A4;margin:1cm}
+  .print-area .rep table{font-size:10px;width:100%;border-collapse:collapse}
+  .print-area .rep th,.print-area .rep td{border:1px solid #000;padding:3px 5px;color:#000}
+  .print-area .rep h4{font-size:12px;color:#000}
+  .print-area .rep h3{font-size:14px;color:#000}
+  .print-area .rep .sum{font-size:11px;color:#000}
 }
 
 
