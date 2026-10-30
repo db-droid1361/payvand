@@ -3114,16 +3114,20 @@ function createEventAction(eventId,dateStr){
 var act_subTaskList=[];
 function addSubTask(){
   var idx=act_subTaskList.length;
-  act_subTaskList.push({title:'',assignees:[],hours:1});
+  act_subTaskList.push({title:'',assignees:[],deadline:maxStr,priority:'medium',hours:1});
   var box=$('act_subtasks');
   var div=document.createElement('div');
   div.id='subtask_'+idx;
-  div.style.cssText='padding:10px;border:1px solid var(--c-border);border-radius:8px;margin-bottom:6px';
+  div.style.cssText='padding:10px;border:1px solid var(--c-border);border-radius:8px;margin-bottom:6px;background:var(--c-card-alt)';
   div.innerHTML='<div class="form-row">'+
     '<div class="form-group"><label>عنوان فعالیت:</label><input type="text" id="st_title_'+idx+'" placeholder="مثلاً: خرید کارت تبریک" oninput="act_subTaskList['+idx+'].title=this.value"></div>'+
+    '<div class="form-group" style="flex:0 0 100px"><label>اولویت:</label><select id="st_priority_'+idx+'" onchange="act_subTaskList['+idx+'].priority=this.value"><option value="low">🟢 پایین</option><option value="medium" selected>🟡 متوسط</option><option value="high">🟠 بالا</option><option value="force">🔴 اجباری</option></select></div>'+
+  '</div>'+
+  '<div class="form-row">'+
+    '<div class="form-group"><label>مهلت اجرا (شمسی):</label><input type="text" id="st_deadline_'+idx+'" class="date-picker" value="'+maxStr+'" readonly onchange="act_subTaskList['+idx+'].deadline=this.value"><small style="color:var(--c-warning);font-size:10px">حداکثر یک روز قبل از رویداد</small></div>'+
     '<div class="form-group" style="flex:0 0 80px"><label>مدت (ساعت):</label><input type="number" id="st_hours_'+idx+'" value="1" min="0.5" step="0.5" onchange="act_subTaskList['+idx+'].hours=parseFloat(this.value)||1"></div>'+
   '</div>'+
-  '<div class="form-group"><label>کاربران مسئول:</label><div id="st_users_'+idx+'" style="display:flex;flex-wrap:wrap;gap:4px"></div></div>'+
+  '<div class="form-group"><label>کاربران مسئول:</label><div id="st_users_'+idx+'" style="display:flex;flex-wrap:wrap;gap:4px"></div><small style="color:var(--c-text-muted);font-size:10px">برای هر کاربر انتخاب‌شده: آلارم + پیام + نمایش در تقویم</small></div>'+
   '<button class="btn btn-sm btn-danger" style="margin-top:4px" onclick="act_subTaskList['+idx+']=null;$(\'subtask_'+idx+'\').remove()">حذف</button>';
   box.appendChild(div);
   // پر کردن چک‌باکس کاربران
@@ -3202,26 +3206,68 @@ async function saveEventAction(eventId,dateStr){
     }).select();
     if(mainErr)throw mainErr;
     var mainActId=mainAct&&mainAct[0]?mainAct[0].id:null;
-    // ثبت فعالیت‌های زیرمجموعه
+    // ثبت فعالیت‌های زیرمجموعه + آلارم + پیام برای هر کاربر مسئول
+    var totalNotifs=0;
     for(var si=0;si<validSubs.length;si++){
       var st=validSubs[si];
-      var assigneeId=st.assignees.length>0?st.assignees[0]:personId;
-      const{error:subErr}=await sb.from('program_activities').insert({
-        program_id:progId,
-        title:st.title,
-        description:'',
-        assignee_id:assigneeId,
-        deadline:deadlineISO,
-        status:'pending',
-        priority:priority,
-        parent_activity_id:mainActId,
-        event_id:eventId,
-        estimated_hours:st.hours||1,
-        additional_assignees:st.assignees.length>1?st.assignees.slice(1):null
-      });
-      if(subErr)console.warn('sub insert:',subErr);
+      // مهلت اجرای هر فعالیت زیرمجموعه (فقط تاریخ، بدون ساعت)
+      var subDeadlineISO=deadlineISO;
+      if(st.deadline&&isValidJalaliDate(st.deadline)){
+        var sdlp=parseJalali(st.deadline);
+        var sdlg=jalaliToGregorian(sdlp.jy,sdlp.jm,sdlp.jd);
+        subDeadlineISO=new Date(sdlg[0],sdlg[1]-1,sdlg[2],23,59,59).toISOString();
+      }
+      // برای هر کاربر مسئول: یک فعالیت جداگانه ثبت کن
+      var assignees=st.assignees.length>0?st.assignees:[personId];
+      for(var ai=0;ai<assignees.length;ai++){
+        var assigneeId=assignees[ai];
+        const{data:subData,error:subErr}=await sb.from('program_activities').insert({
+          program_id:progId,
+          title:st.title,
+          description:'',
+          assignee_id:assigneeId,
+          deadline:subDeadlineISO,
+          status:'pending',
+          priority:st.priority||priority,
+          parent_activity_id:mainActId,
+          event_id:eventId,
+          estimated_hours:st.hours||1
+        }).select();
+        if(subErr){console.warn('sub insert:',subErr);continue;}
+        // ─── آلارم (یادآور) برای کاربر مسئول ───
+        if(subData&&subData[0]){
+          try{
+            var subDeadlineJ=normJ(st.deadline||deadline);
+            await sb.rpc('rpc_create_reminder',{
+              p_user_id:assigneeId,
+              p_created_by:currentUser.id,
+              p_title:'📋 فعالیت: '+st.title,
+              p_description:'اقدام مناسبت — مهلت اجرا: '+subDeadlineJ,
+              p_frequency:'once',
+              p_frequency_data:{},
+              p_start_date:subDeadlineISO.slice(0,10),
+              p_end_date:subDeadlineISO.slice(0,10)
+            });
+          }catch(e){console.warn('reminder:',e);}
+        }
+        // ─── پیام به کاربر مسئول ───
+        try{
+          await sendNotificationDB({
+            sender_id:currentUser.id,
+            recipient_id:assigneeId,
+            title:'📋 فعالیت جدید: '+st.title,
+            body:'شما یک فعالیت برای اقدام مناسبت دارید.\n\nعنوان: '+st.title+
+              '\nمهلت اجرا: '+normJ(st.deadline||deadline)+
+              '\nاولویت: '+(st.priority||priority)+
+              '\nاقدام اصلی: '+title,
+            priority:st.priority==='force'?'high':'normal',
+            related_type:'program_activity'
+          });
+          totalNotifs++;
+        }catch(e){console.warn('notification:',e);}
+      }
     }
-    showAlert('اقدام با '+validSubs.length+' فعالیت ثبت شد.','success');
+    showAlert('اقدام با '+validSubs.length+' فعالیت ثبت شد.\n'+totalNotifs+' پیام و آلارم برای کاربران مسئول ارسال شد.','success');
     var overlays=document.querySelectorAll('div[style*="z-index:10001"]');
     overlays.forEach(function(o){o.remove();});
     loadEventActionsInModal(eventId,dateStr);
