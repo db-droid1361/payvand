@@ -879,6 +879,8 @@ button,.btn{-webkit-touch-callout:none}
     <span class="topbar-title" id="topbar_title">داشبورد</span>
   </div>
   <div class="topbar-right">
+    <button class="btn btn-sm btn-info" onclick="quickNotify()" title="ارسال نوتیفیکیشن" style="padding:6px 10px;min-height:32px">📢</button>
+    <button class="btn btn-sm btn-success" onclick="showSection('dashboard')" title="داشبورد" style="padding:6px 10px;min-height:32px">🏠</button>
     <div class="theme-switcher">
       <button class="theme-btn active" data-theme="day" title="تم روز">☀️</button>
       <button class="theme-btn" data-theme="night" title="تم شب">🌙</button>
@@ -904,10 +906,15 @@ button,.btn{-webkit-touch-callout:none}
   <div id="dashboard_content"><p>در حال بارگذاری...</p></div>
   <!-- تقویم ماهانه در داشبورد -->
   <hr style="margin:20px 0;border:0;border-top:1px solid var(--c-border)">
-  <div class="form-row" style="align-items:flex-end">
-    <div class="form-group" style="flex:0 0 auto"><label>ماه:</label><select id="dash_cal_month"><option value="1">فروردین</option><option value="2">اردیبهشت</option><option value="3">خرداد</option><option value="4">تیر</option><option value="5">مرداد</option><option value="6">شهریور</option><option value="7">مهر</option><option value="8">آبان</option><option value="9">آذر</option><option value="10">دی</option><option value="11">بهمن</option><option value="12">اسفند</option></select></div>
-    <div class="form-group" style="flex:0 0 auto;width:100px"><label>سال:</label><input type="number" id="dash_cal_year" value="1405"></div>
-    <div class="form-group" style="flex:0 0 auto"><button class="btn btn-info btn-sm" onclick="renderDashboardCalendar()">نمایش تقویم</button></div>
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+    <h3 style="margin:0">📅 تقویم ماهانه</h3>
+    <div style="display:flex;align-items:center;gap:6px">
+      <button class="btn btn-sm btn-secondary" onclick="dashCalNav(-1)">‹ ماه قبل</button>
+      <select id="dash_cal_month" style="width:auto"><option value="1">فروردین</option><option value="2">اردیبهشت</option><option value="3">خرداد</option><option value="4">تیر</option><option value="5">مرداد</option><option value="6">شهریور</option><option value="7">مهر</option><option value="8">آبان</option><option value="9">آذر</option><option value="10">دی</option><option value="11">بهمن</option><option value="12">اسفند</option></select>
+      <input type="number" id="dash_cal_year" value="1405" style="width:80px">
+      <button class="btn btn-sm btn-secondary" onclick="dashCalNav(1)">ماه بعد ›</button>
+      <button class="btn btn-sm btn-info" onclick="dashCalToday()">امروز</button>
+    </div>
   </div>
   <div id="dash_monthly_summary" class="report-summary" style="margin-bottom:12px"></div>
   <div id="dash_calendar_container"></div>
@@ -942,10 +949,15 @@ button,.btn{-webkit-touch-callout:none}
 <!-- تقویم رویدادها و آپلود اکسل -->
 <div id="section-calendar" class="card hidden">
   <h2>تقویم ماهانه خوداظهاری</h2>
-  <div class="form-row">
+  <div class="form-row" style="align-items:flex-end">
     <div class="form-group"><label>انتخاب پرسنل:</label><select id="cal_person" class="person-dropdown"></select></div>
-    <div class="form-group"><label>ماه:</label><select id="cal_month"><option value="1">فروردین</option><option value="2">اردیبهشت</option><option value="3">خرداد</option><option value="4">تیر</option><option value="5">مرداد</option><option value="6">شهریور</option><option value="7">مهر</option><option value="8">آبان</option><option value="9">آذر</option><option value="10">دی</option><option value="11">بهمن</option><option value="12">اسفند</option></select></div>
-    <div class="form-group"><label>سال:</label><input type="number" id="cal_year" value="1405"></div>
+    <div class="form-group" style="display:flex;align-items:flex-end;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-sm btn-secondary" onclick="calNav(-1)">‹ قبل</button>
+      <select id="cal_month" style="width:auto"><option value="1">فروردین</option><option value="2">اردیبهشت</option><option value="3">خرداد</option><option value="4">تیر</option><option value="5">مرداد</option><option value="6">شهریور</option><option value="7">مهر</option><option value="8">آبان</option><option value="9">آذر</option><option value="10">دی</option><option value="11">بهمن</option><option value="12">اسفند</option></select>
+      <input type="number" id="cal_year" value="1405" style="width:80px">
+      <button class="btn btn-sm btn-secondary" onclick="calNav(1)">بعد ›</button>
+      <button class="btn btn-sm btn-info" onclick="calToday()">امروز</button>
+    </div>
   </div>
   <div id="monthly_summary" class="report-summary"></div>
   <div id="calendar_container"></div>
@@ -2735,6 +2747,22 @@ function openDailyLog(dateStr,personId){
   resetDailyLogForm();
   syncLog();
 }
+function calNav(dir){
+  var m=parseInt($('cal_month').value,10);
+  var y=parseInt($('cal_year').value,10);
+  m+=dir;
+  if(m>12){m=1;y++;}
+  if(m<1){m=12;y--;}
+  $('cal_month').value=m;
+  $('cal_year').value=y;
+  renderCalendar();
+}
+function calToday(){
+  var t=getTodayJalali().split('/');
+  $('cal_month').value=parseInt(t[1],10);
+  $('cal_year').value=parseInt(t[0],10);
+  renderCalendar();
+}
 async function renderCalendar(){
   var personId=$('cal_person').value;
   var month=parseInt($('cal_month').value,10);
@@ -2768,6 +2796,14 @@ async function renderCalendar(){
       const{data,error}=await sb.from('announcements').select('*').or('expires_at.is.null,expires_at.gte.'+dStart.toISOString()).order('created_at',{ascending:false});
       if(!error)monthAnns=data||[];
     }catch(e){}
+    // بارگذاری رویدادها و تعطیلات این ماه
+    var monthEvents=[];
+    try{
+      const{data,error}=await sb.from('calendar_events').select('*').eq('event_year',year);
+      if(!error)monthEvents=(data||[]).filter(function(e){
+        try{var p=parseJalali(e.date);return p.jy===year&&p.jm===month;}catch(x){return false;}
+      });
+    }catch(e){}
     // ساخت جدول تقویم
     var h='<table style="width:100%;border-collapse:collapse;table-layout:fixed"><thead><tr>';
     ['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه'].forEach(function(d){
@@ -2797,7 +2833,19 @@ async function renderCalendar(){
       // ساخت محتوای سلول با تفکیک بصری: شخصی vs کاری
       var cellBg=var_c_card||'#fff';
       var cellContent='<div style="font-weight:bold;font-size:14px;color:var(--c-text)">'+day+'</div>';
-      var hasPersonal=false,hasWork=false;
+      var hasPersonal=false,hasWork=false,hasEvent=false;
+      // ─── رویدادها و تعطیلات ───
+      var dayEvents=monthEvents.filter(function(e){
+        try{return e.date===ds||normJ(e.date)===ds;}catch(x){return false;}
+      });
+      if(dayEvents.length){
+        hasEvent=true;
+        dayEvents.forEach(function(e){
+          var evIcon=e.is_holiday?'🔴':'📌';
+          var evColor=e.is_holiday?'var(--c-danger)':'var(--c-warning)';
+          cellContent+='<div style="font-size:9px;color:'+evColor+';font-weight:600;margin-top:1px;padding:0 2px;background:'+(e.is_holiday?'var(--c-danger-light)':'var(--c-warning-light)')+';border-radius:2px;cursor:pointer" onclick="event.stopPropagation();showSection(\'events\')">'+evIcon+' '+esc((e.title||'').slice(0,12))+'</div>';
+        });
+      }
       // ─── بخش شخصی (کارکرد + مرخصی) ───
       var personalHtml='';
       if(dl.length){
@@ -2838,11 +2886,11 @@ async function renderCalendar(){
       if(hasPersonal)cellContent+='<div style="margin-top:2px">'+personalHtml+'</div>';
       if(hasPersonal&&hasWork)cellContent+='<div style="border-top:1px dashed var(--c-border);margin:2px 0"></div>';
       if(hasWork)cellContent+='<div style="margin-top:2px">'+workHtml+'</div>';
-      if(!hasPersonal&&!hasWork){
+      if(!hasPersonal&&!hasWork&&!hasEvent){
         cellContent+='<div style="font-size:9px;color:var(--c-text-muted);opacity:.4;margin-top:2px">—</div>';
       }
       var cellClass='day-cell'+(isHol?' holiday':'')+(dl.length?' has-log':'')+(dayTasks.length||dayActs.length?' has-task':'');
-      var cellStyle='border:1px solid var(--c-border);height:100px;vertical-align:top;padding:4px;cursor:pointer;transition:var(--c-transition);background:'+(isHol?var_c_danger_light:var_c_card);
+      var cellStyle='border:1px solid var(--c-border);height:100px;vertical-align:top;padding:4px;cursor:pointer;transition:var(--c-transition);background:'+(hasEvent?'#fff3cd':isHol?var_c_danger_light:var_c_card);
       if(dayActs.length)cellStyle+=';box-shadow:inset 0 0 0 2px var(--c-warning)';
       h+='<td class="'+cellClass+'" data-date="'+ds+'" data-person="'+esc(personId)+'" style="'+cellStyle+'" onclick="openDailyLog(\''+ds+'\',\''+personId+'\')">'+cellContent+'</td>';
       if((first+day)%7===0&&day!==days)h+='</tr><tr>';
@@ -2857,6 +2905,7 @@ async function renderCalendar(){
       '<b>راهنما:</b><br>'+
       '🟢 سبز (بالا) = اطلاعات شخصی: کارکرد، مرخصی<br>'+
       '🔵 آبی (پایین) = اطلاعات کاری: وظایف، فعالیت‌ها<br>'+
+      '🔴/📌 زرد-قرمز = رویدادها و تعطیلات<br>'+
       '<span style="border-top:1px dashed;display:inline-block;width:40px;vertical-align:middle"></span> = خط جداکننده شخصی/کاری<br>'+
       'کلیک روی هر روز = ثبت/ویرایش اظهار آن روز</p>';
   }catch(e){c.innerHTML='<p>خطا: '+esc(e.message)+'</p>';}
@@ -3010,20 +3059,17 @@ function checkDelegateWarning(){
   var sel=$('log_delegate_user');
   if(!sel||!sel.value)return;
   var name=getPersonName(sel.value);
+  var box=$('delegate_box');
+  if(!box)return;
   if(sel.value!==currentUser.id){
-    // نمایش هشدار
-    var box=$('delegate_box');
-    if(box){
-      var existing=box.querySelector('.delegate-alert');
-      if(!existing){
-        existing=document.createElement('div');
-        existing.className='delegate-alert';
-        existing.style.cssText='background:#fee2e2;color:#991b1b;padding:8px 12px;border-radius:6px;margin-top:8px;font-size:12px;border:1px solid #fca5a5';
-        box.querySelector('.form-group').appendChild(existing);
-      }
-      existing.textContent='⚠️ شما در حال ثبت برای «'+name+'» هستید. با ثبت، مسئولیت با شماست و شناسه پرسنلی شما در گزارش ثبت می‌شود.';
+    var existing=box.querySelector('.delegate-alert');
+    if(!existing){
+      existing=document.createElement('div');
+      existing.className='delegate-alert';
+      existing.style.cssText='background:#fee2e2;color:#991b1b;padding:8px 12px;border-radius:6px;margin-top:8px;font-size:12px;border:1px solid #fca5a5';
+      box.querySelector('.form-group').appendChild(existing);
     }
-    // تغییر پرسنل در فرم به کاربر تفویض‌شده
+    existing.textContent='⚠️ شما در حال ثبت برای «'+name+'» هستید. با ثبت، مسئولیت با شماست و شناسه پرسنلی شما در گزارش ثبت می‌شود.';
     $('log_person_id').value=sel.value;
   }else{
     var alert=box.querySelector('.delegate-alert');
@@ -3034,12 +3080,13 @@ function checkDelegateWarning(){
 function updateDelegateBox(){
   var box=$('delegate_box');
   if(!box)return;
-  // فقط ادمین/سوپرادمین/هماهنگ‌کننده می‌توانند تفویض کنند
-  var canDelegate=currentRole==='admin'||currentRole==='super_admin'||
+  // فقط اگر کاربر زیرمجموعه دارد یا هماهنگ‌کننده است، باکس تفویض نمایش داده شود
+  var hasSubordinates=cachedSubordinates.length>0;
+  var isCoordinator=currentRole==='admin'||currentRole==='super_admin'||
     (currentUser.profile&&(currentUser.profile.can_approve_leaves||currentUser.profile.can_schedule_tasks));
+  var canDelegate=hasSubordinates||isCoordinator;
   box.classList.toggle('hidden',!canDelegate);
-  if(canDelegate){
-    // پر کردن dropdown با همه کاربران
+  if(canDelegate&&cachedPersons.length>0){
     var sel=$('log_delegate_user');
     if(sel){
       var o='<option value="">خودم ثبت می‌کنم</option>';
@@ -3392,6 +3439,17 @@ async function rejectLeave(id){
 }
 
 /* ═════ Send notifications ═════ */
+// میانبر ارسال نوتیفیکیشن از topbar
+function quickNotify(){
+  var canSend=currentRole==='admin'||currentRole==='super_admin'||
+    (currentUser.profile&&(currentUser.profile.can_approve_leaves||currentUser.profile.can_schedule_tasks));
+  if(!canSend){
+    // کاربر عادی: فقط نوتیفیکیشن به مدیر
+    showSection('send_notification');
+    return;
+  }
+  showSection('send_notification');
+}
 async function sendNotification(){
   var recipient=val('notif_recipient');  // خالی = broadcast
   var title=val('notif_title'),body=val('notif_body');
@@ -4300,6 +4358,22 @@ async function reportActivityNotDone(id){
 }
 
 // تقویم ماهانه در داشبورد — نمایش همه کارها و اطلاعات
+function dashCalNav(dir){
+  var m=parseInt($('dash_cal_month').value,10);
+  var y=parseInt($('dash_cal_year').value,10);
+  m+=dir;
+  if(m>12){m=1;y++;}
+  if(m<1){m=12;y--;}
+  $('dash_cal_month').value=m;
+  $('dash_cal_year').value=y;
+  renderDashboardCalendar();
+}
+function dashCalToday(){
+  var t=getTodayJalali().split('/');
+  $('dash_cal_month').value=parseInt(t[1],10);
+  $('dash_cal_year').value=parseInt(t[0],10);
+  renderDashboardCalendar();
+}
 async function renderDashboardCalendar(){
   var month=parseInt($('dash_cal_month').value,10);
   var year=parseInt($('dash_cal_year').value,10);
@@ -4997,24 +5071,25 @@ function downloadEventsTemplate(){
     try{
       // دریافت همه رویدادهای موجود
       const{data:existing,error}=await sb.from('calendar_events').select('date,title,description,event_type,is_holiday').order('date');
-      var template=[['تاریخ (شمسی)','عنوان','توضیحات','نوع','تعطیلی']];
+      var template=[['سال','تاریخ (شمسی)','عنوان','توضیحات','نوع','تعطیلی']];
       if(existing&&existing.length>0){
         // اگر رویداد موجود است، همان را به‌عنوان قالب بده
         existing.forEach(function(e){
           var typeLabel={event:'رویداد',holiday:'تعطیلی',meeting:'جلسه',deadline:'مهلت',other:'سایر'}[e.event_type]||e.event_type;
-          template.push([e.date,e.title,e.description||'',typeLabel,e.is_holiday?'بله':'خیر']);
+          var yr=e.date?parseInt(e.date.split('/')[0],10):e.event_year||'';
+          template.push([yr,e.date,e.title,e.description||'',typeLabel,e.is_holiday?'بله':'خیر']);
         });
       }else{
         // اگر هیچ رویدادی موجود نیست، قالب نمونه بده
-        template.push(['1405/01/01','نوروز','آغاز سال نو','تعطیلی','بله']);
-        template.push(['1405/01/02','عید نوروز','روز دوم عید','تعطیلی','بله']);
-        template.push(['1405/01/13','روز طبیعت (سیزده‌بدر)','روز طبیعت','تعطیلی','بله']);
-        template.push(['1405/03/15','جلسه ماهانه','جلسه بررسی عملکرد','جلسه','خیر']);
-        template.push(['1405/06/15','مهلت تحویل گزارش','تحویل گزارش ماهانه','مهلت','خیر']);
-        template.push(['1405/11/22','پیروزی انقلاب','مناسبت ملی','تعطیلی','بله']);
+        template.push([1405,'1405/01/01','نوروز','آغاز سال نو','تعطیلی','بله']);
+        template.push([1405,'1405/01/02','عید نوروز','روز دوم عید','تعطیلی','بله']);
+        template.push([1405,'1405/01/13','روز طبیعت (سیزده‌بدر)','روز طبیعت','تعطیلی','بله']);
+        template.push([1405,'1405/03/15','جلسه ماهانه','جلسه بررسی عملکرد','جلسه','خیر']);
+        template.push([1405,'1405/06/15','مهلت تحویل گزارش','تحویل گزارش ماهانه','مهلت','خیر']);
+        template.push([1405,'1405/11/22','پیروزی انقلاب','مناسبت ملی','تعطیلی','بله']);
       }
       var ws=XLSX.utils.aoa_to_sheet(template);
-      ws['!cols']=[{wch:16},{wch:25},{wch:30},{wch:12},{wch:10}];
+      ws['!cols']=[{wch:8},{wch:16},{wch:25},{wch:30},{wch:12},{wch:10}];
       var wb=XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb,ws,'رویدادها');
       XLSX.writeFile(wb,'تقویم_پیوند_'+getTodayJalali().replace(/\//g,'-')+'.xlsx');
