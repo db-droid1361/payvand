@@ -3827,19 +3827,23 @@ function toggleAbsenceFields(){
 }
 async function saveDailyLog(){
   var id=$('log_id').value,personId=$('log_person_id').value,dateStr=$('log_date').value,status=$('log_status').value,disc=val('log_discrepancy');
-  if(!personId){showAlert('پرسنل را انتخاب کنید.');return;}
-  if(!isValidJalaliDate(dateStr)){showAlert('تاریخ نامعتبر است.');return;}
+  if(!personId){showAlert('پرسنل را انتخاب کنید.','error');return;}
+  if(!isValidJalaliDate(dateStr)){showAlert('تاریخ نامعتبر است.','error');return;}
+  // ─── تعریف ساعات کارکرد استاندارد ───
+  var WORK_START='07:30',WORK_END='16:30';
+  var WORK_START_MIN=timeToMinutes(WORK_START),WORK_END_MIN=timeToMinutes(WORK_END);
+  var pDate=parseJalali(dateStr);
+  var dow=getJalaliDayOfWeek(pDate.jy,pDate.jm,pDate.jd);
+  var isWorkDay=!isHolidayDow(dow); // شنبه تا چهارشنبه = کارکرد، پنجشنبه و جمعه = تعطیل
   // بررسی تفویض
   var delegateUser=$('log_delegate_user')?$('log_delegate_user').value:'';
   var actualPersonId=personId;
   var submittedBy=null;
   var submittedByName=null;
   if(delegateUser&&delegateUser!==currentUser.id){
-    // کاربر دارد برای شخص دیگری ثبت می‌کند
     actualPersonId=delegateUser;
     submittedBy=currentUser.id;
     submittedByName=(currentUser.profile.first_name||'')+' '+(currentUser.profile.last_name||'')+' ('+(currentUser.profile.personnel_id||'')+')';
-    // هشدار نهایی
     if(!confirm('⚠️ هشدار تفویض کارکرد\n\nشما در حال ثبت کارکرد برای «'+getPersonName(delegateUser)+'» هستید.\n\n'+
       'با تأیید این عمل:\n'+
       '۱. شما مسئولیت صحت اطلاعات را می‌پذیرید.\n'+
@@ -3847,17 +3851,96 @@ async function saveDailyLog(){
       '۳. در گزارش‌ها، نام شما به‌عنوان ثبت‌کننده نمایش داده می‌شود.\n\n'+
       'آیا مطمئن هستید؟'))return;
   }
-  if(currentRole==='user'&&!delegateUser&&personId!==currentUser.id){showAlert('شما فقط برای خودتان می‌توانید ثبت کنید. برای ثبت برای شخص دیگر، از بخش تفویض استفاده کنید.');return;}
+  if(currentRole==='user'&&!delegateUser&&personId!==currentUser.id){showAlert('شما فقط برای خودتان می‌توانید ثبت کنید.','error');return;}
   dateStr=normJ(dateStr);
   var d={discrepancy:disc,fields:{}},f=d.fields,s='00:00',e='23:59',fullDay=false;
-  function need(c,m){if(!c){showAlert(m);return false;}return true;}
+  function need(c,m){if(!c){showAlert(m,'error');return false;}return true;}
+  // ─── تابع اعتبارسنجی ساعت شروع قبل از پایان ───
+  function validateTimeOrder(startStr,endStr,label){
+    if(!startStr||!endStr)return true;
+    var sMin=timeToMinutes(startStr),eMin=timeToMinutes(endStr);
+    if(sMin>=eMin){
+      showAlert('⚠️ '+label+': ساعت شروع ('+startStr+') باید قبل از ساعت پایان ('+endStr+') باشد.','error');
+      return false;
+    }
+    return true;
+  }
+  // ─── تابع بررسی تداخل زمانی با رکوردهای موجود ───
+  async function checkTimeOverlap(personId,dateStr,startStr,endStr,currentType){
+    try{
+      var existing=await loadLogs(personId,dateStr,dateStr);
+      var sMin=timeToMinutes(startStr),eMin=timeToMinutes(endStr);
+      for(var i=0;i<existing.length;i++){
+        var l=existing[i];
+        if(l.id===id)continue; // رکورد فعلی را نادیده بگیر
+        if(l.status==='overtime'){
+          var otS=timeToMinutes((l.data&&l.data.fields&&l.data.fields.ot_start)||''),otE=timeToMinutes((l.data&&l.data.fields&&l.data.fields.ot_end)||'');
+          if(otS<eMin&&otE>sMin){
+            showAlert('⚠️ تداخل زمانی: این '+currentType+' با اضافه‌کاری موجود در همین روز (از '+(l.data.fields.ot_start)+' تا '+(l.data.fields.ot_end)+') تداخل دارد.','error');
+            return false;
+          }
+        }else if(l.status==='absence'){
+          var lf=l.data&&l.data.fields;
+          if(lf&&lf.start_time&&lf.end_time){
+            var exS=timeToMinutes(lf.start_time),exE=timeToMinutes(lf.end_time);
+            var exType=ABS_LABEL[l.data.absence_type]||'عدم حضور';
+            if(exS<eMin&&exE>sMin){
+              showAlert('⚠️ تداخل زمانی: این '+currentType+' با '+exType+' موجود در همین روز (از '+lf.start_time+' تا '+lf.end_time+') تداخل دارد.','error');
+              return false;
+            }
+          }
+        }
+      }
+      return true;
+    }catch(e){console.warn('checkTimeOverlap:',e);return true;}
+  }
   if(status==='absence'){
     var t=$('absence_type').value;d.absence_type=t;
-    if(t==='hourly_leave'){s=$('abs_start_time').value;e=$('abs_end_time').value;f.reason=val('abs_reason');if(!need(s&&e,'ساعت شروع و پایان الزامی است.')||!need(f.reason,'علت الزامی است.'))return;f.start_time=s;f.end_time=e;}
-    else if(t==='hourly_mission'){s=$('mh_start_time').value;e=$('mh_end_time').value;f.location=val('mh_location');f.activity=val('mh_activity');if(!need(s&&e,'ساعت الزامی است.')||!need(f.location,'محل الزامی است.'))return;f.start_time=s;f.end_time=e;}
-    else if(t==='out_province_hourly'){s=$('mout_h_start_time').value;e=$('mout_h_end_time').value;f.province=val('mout_h_province');f.location=val('mout_h_location');f.activity=val('mout_h_activity');if(!need(s&&e,'ساعت الزامی است.')||!need(f.province&&f.location,'استان و محل الزامی است.'))return;f.start_time=s;f.end_time=e;}
+    if(t==='hourly_leave'){
+      s=$('abs_start_time').value;e=$('abs_end_time').value;f.reason=val('abs_reason');
+      if(!need(s&&e,'ساعت شروع و پایان الزامی است.')||!need(f.reason,'علت الزامی است.'))return;
+      // ─── اعتبارسنجی: شروع قبل از پایان ───
+      if(!validateTimeOrder(s,e,'مرخصی ساعتی'))return;
+      // ─── اعتبارسنجی: تداخل با رکوردهای موجود ───
+      if(!await checkTimeOverlap(actualPersonId,dateStr,s,e,'مرخصی ساعتی'))return;
+      f.start_time=s;f.end_time=e;
+    }
+    else if(t==='hourly_mission'){
+      s=$('mh_start_time').value;e=$('mh_end_time').value;f.location=val('mh_location');f.activity=val('mh_activity');
+      if(!need(s&&e,'ساعت الزامی است.')||!need(f.location,'محل الزامی است.'))return;
+      if(!validateTimeOrder(s,e,'مأموریت ساعتی'))return;
+      if(!await checkTimeOverlap(actualPersonId,dateStr,s,e,'مأموریت ساعتی'))return;
+      f.start_time=s;f.end_time=e;
+    }
+    else if(t==='out_province_hourly'){
+      s=$('mout_h_start_time').value;e=$('mout_h_end_time').value;f.province=val('mout_h_province');f.location=val('mout_h_location');f.activity=val('mout_h_activity');
+      if(!need(s&&e,'ساعت الزامی است.')||!need(f.province&&f.location,'استان و محل الزامی است.'))return;
+      if(!validateTimeOrder(s,e,'مأموریت خارج از استان (ساعتی)'))return;
+      if(!await checkTimeOverlap(actualPersonId,dateStr,s,e,'مأموریت خارج از استان'))return;
+      f.start_time=s;f.end_time=e;
+    }
     else{fullDay=true;f.desc=val('abs_general_desc');if(t==='other_absence'){f.reason=val('other_reason');if(!need(f.reason,'علت الزامی است.'))return;}else if(t==='daily_leave')f.leave_type=val('leave_type');else if(t==='1day_mission'){f.location=val('m1_location');if(!need(f.location,'محل الزامی است.'))return;}else if(t==='out_province_daily'){f.province=val('mout_daily_province');f.location=val('mout_daily_location');if(!need(f.province&&f.location,'استان و محل الزامی است.'))return;}}
-  }else if(status==='overtime'){s=$('ot_start').value;e=$('ot_end').value;if(!need(s&&e,'ساعت شروع و پایان الزامی است.'))return;f.ot_start=s;f.ot_end=e;f.ot_reason=val('ot_reason');f.ot_location=val('ot_location');f.ot_topic=val('ot_topic');f.ot_description=val('ot_description');if(!need(f.ot_reason&&f.ot_location,'علت و محل الزامی است.'))return;}
+  }else if(status==='overtime'){
+    s=$('ot_start').value;e=$('ot_end').value;
+    if(!need(s&&e,'ساعت شروع و پایان الزامی است.'))return;
+    // ─── اعتبارسنجی: شروع قبل از پایان ───
+    if(!validateTimeOrder(s,e,'اضافه‌کاری'))return;
+    // ─── اعتبارسنجی: اضافه‌کاری نباید در ساعات کارکرد عادی باشد ───
+    var otS=timeToMinutes(s),otE=timeToMinutes(e);
+    if(isWorkDay){
+      // روز کاری: اضافه‌کاری باید قبل از 07:30 یا بعد از 16:30 باشد
+      var overlapsWork=(otS<WORK_END_MIN&&otE>WORK_START_MIN);
+      if(overlapsWork){
+        var inWorkStart=Math.max(otS,WORK_START_MIN),inWorkEnd=Math.min(otE,WORK_END_MIN);
+        showAlert('⚠️ اضافه‌کاری در ساعات کارکرد عادی ('+WORK_START+' تا '+WORK_END+') ثبت نمی‌شود.\n\nبازه تداخل: '+pad2(Math.floor(inWorkStart/60))+':'+pad2(inWorkStart%60)+' تا '+pad2(Math.floor(inWorkEnd/60))+':'+pad2(inWorkEnd%60)+'\n\nاضافه‌کاری فقط قبل از '+WORK_START+' یا بعد از '+WORK_END+' قابل ثبت است.','error');
+        return;
+      }
+    }
+    // ─── اعتبارسنجی: تداخل با مأموریت/مرخصی موجود ───
+    if(!await checkTimeOverlap(actualPersonId,dateStr,s,e,'اضافه‌کاری'))return;
+    f.ot_start=s;f.ot_end=e;f.ot_reason=val('ot_reason');f.ot_location=val('ot_location');f.ot_topic=val('ot_topic');f.ot_description=val('ot_description');
+    if(!need(f.ot_reason&&f.ot_location,'علت و محل الزامی است.'))return;
+  }
   showLoading('ذخیره...');
   try{
     var logObj={id:id||('tmp-'+Date.now()),user_id:actualPersonId,date:dateStr,status:status,data:d};
@@ -4048,12 +4131,30 @@ function setTimepickerValue(targetId,t){var input=$(targetId);if(input)input.val
 function toggleLeaveTimes(){var hourly=$('lv_type').value==='hourly';$('lv_times_box').classList.toggle('hidden',!hourly);$('lv_end_date_box').classList.toggle('hidden',hourly);}
 async function saveLeave(){
   var id=$('lv_id').value,personId=$('lv_person_id').value,startDate=$('lv_start_date').value,type=$('lv_type').value;
-  if(!personId){showAlert('پرسنل را انتخاب کنید.');return;}
-  if(!isValidJalaliDate(startDate)){showAlert('تاریخ شروع نامعتبر است.');return;}
-  if(currentRole==='user'&&personId!==currentUser.id){showAlert('شما فقط برای خودتان می‌توانید ثبت کنید.');return;}
+  if(!personId){showAlert('پرسنل را انتخاب کنید.','error');return;}
+  if(!isValidJalaliDate(startDate)){showAlert('تاریخ شروع نامعتبر است.','error');return;}
+  if(currentRole==='user'&&personId!==currentUser.id){showAlert('شما فقط برای خودتان می‌توانید ثبت کنید.','error');return;}
   var endDate=null,sT=null,eT=null;
-  if(type==='daily'){endDate=$('lv_end_date').value;if(!isValidJalaliDate(endDate)){showAlert('تاریخ پایان نامعتبر است.');return;}if(jalaliToTimestamp(endDate)<jalaliToTimestamp(startDate)){showAlert('تاریخ پایان نباید قبل از شروع باشد.');return;}endDate=normJ(endDate);}
-  else{sT=$('lv_start_time').value;eT=$('lv_end_time').value;if(!sT||!eT){showAlert('ساعت شروع و پایان الزامی است.');return;}if(sT===eT){showAlert('ساعت شروع و پایان یکسان است.');return;}}
+  if(type==='daily'){
+    endDate=$('lv_end_date').value;
+    if(!isValidJalaliDate(endDate)){showAlert('تاریخ پایان نامعتبر است.','error');return;}
+    // ─── اعتبارسنجی: تاریخ شروع نباید بعد از پایان باشد ───
+    if(jalaliToTimestamp(normJ(endDate))<jalaliToTimestamp(normJ(startDate))){
+      showAlert('⚠️ تاریخ شروع ('+normJ(startDate)+') نباید بعد از تاریخ پایان ('+normJ(endDate)+') باشد.','error');
+      return;
+    }
+    endDate=normJ(endDate);
+  }
+  else{
+    sT=$('lv_start_time').value;eT=$('lv_end_time').value;
+    if(!sT||!eT){showAlert('ساعت شروع و پایان الزامی است.','error');return;}
+    // ─── اعتبارسنجی: ساعت شروع نباید بعد از پایان باشد ───
+    var sMin=timeToMinutes(sT),eMin=timeToMinutes(eT);
+    if(sMin>=eMin){
+      showAlert('⚠️ ساعت شروع ('+sT+') نباید بعد از ساعت پایان ('+eT+') باشد.','error');
+      return;
+    }
+  }
   // تعیین وضعیت اولیه: اگر کاربر هماهنگ‌کننده با دسترسی تأیید دارد → coordinator_pending، در غیر این صورت pending
   var initStatus='pending';
   if(currentRole==='user'){
