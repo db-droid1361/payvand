@@ -756,7 +756,6 @@ button,.btn{-webkit-touch-callout:none}
     <div class="nav-group coordinator-admin-only">
       <div class="nav-group-title">هماهنگی و تأیید</div>
       <button class="nav-item" data-target="approvals"><span class="ico">✅</span><span class="lbl">تأیید درخواست‌ها</span><span class="nav-badge hidden" id="admin_approvals_badge">۰</span></button>
-      <button class="nav-item has-delegation hidden" data-target="delegations"><span class="ico">🔁</span><span class="lbl">تفویض‌ها</span><span class="nav-badge hidden" id="delegations_badge">۰</span></button>
       <button class="nav-item admin-only hidden" data-target="send_notification"><span class="ico">📢</span><span class="lbl">ارسال پیام</span></button>
     </div>
     <!-- گروه ۵: گزارش‌ها -->
@@ -777,6 +776,7 @@ button,.btn{-webkit-touch-callout:none}
     <!-- گروه ۷: شخصی -->
     <div class="nav-group">
       <div class="nav-group-title">شخصی</div>
+      <button class="nav-item no-super-admin" data-target="delegations"><span class="ico">🔁</span><span class="lbl">تفویض‌ها</span><span class="nav-badge hidden" id="delegations_badge">۰</span></button>
       <button class="nav-item" data-target="reminders"><span class="ico">🔔</span><span class="lbl">یادآورها</span><span class="nav-badge hidden" id="reminders_badge">۰</span></button>
       <button class="nav-item" data-target="settings"><span class="ico">⚙</span><span class="lbl">تنظیمات</span></button>
     </div>
@@ -1092,7 +1092,21 @@ button,.btn{-webkit-touch-callout:none}
 <!-- ═══ تفویض‌ها ═══ -->
 <div id="section-delegations" class="card hidden">
   <h2>🔁 تفویض‌ها</h2>
-  
+
+  <!-- تفویض کارکرد: من به چه کسانی اجازه ثبت به‌جای خودم می‌دهم -->
+  <div style="background:var(--c-warning-light,#fef3c7);border:1px solid var(--c-warning,#f59e0b);border-radius:12px;padding:16px;margin-bottom:20px">
+    <h3 style="margin:0 0 6px;color:var(--c-warning,#b45309)">📝 مدیریت تفویض کارکرد</h3>
+    <p style="font-size:12px;color:var(--c-text-muted);margin:0 0 12px">کاربرانی که اجازه دارند کارکرد روزانه را به‌نمایندگی از شما ثبت کنند. ابتدا شما تفویض می‌کنید، سپس آن کاربر نام شما را در لیست تفویض خوداظهاری‌اش می‌بیند.</p>
+    <div id="log_delegates_list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
+    <div class="form-row" style="margin:0;align-items:flex-end">
+      <div class="form-group" style="flex:1;margin:0">
+        <label>افزودن کاربر مجاز:</label>
+        <select id="log_delegate_pick"><option value="">— انتخاب کاربر —</option></select>
+      </div>
+      <button class="btn btn-success" onclick="addLogDelegate()">➕ افزودن</button>
+    </div>
+  </div>
+
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
     <!-- تفویض‌شده به من -->
     <div class="card" style="margin:0;padding:16px">
@@ -1107,7 +1121,7 @@ button,.btn{-webkit-touch-callout:none}
       <div id="delegations_given"></div>
     </div>
   </div>
-  
+
   <!-- جزئیات هر تفویض -->
   <div id="delegations_detail"></div>
 </div>
@@ -1580,7 +1594,7 @@ function formatMins(m){return Math.floor(m/60)+' ساعت و '+(m%60)+' دقیق
 
 /* ═════ Supabase Data Layer ═════ */
 async function loadAllPersons(){
-  try{const{data,error}=await sb.from('profiles').select('*').order('first_name');if(error)throw error;cachedPersons=data||[];return cachedPersons;}catch(e){console.error('loadAllPersons:',e);cachedPersons=[];return[];}
+  try{const{data,error}=await sb.from('profiles').select('*').order('first_name');if(error)throw error;cachedPersons=data||[];if(typeof updateDelegateBox==='function')updateDelegateBox();if(typeof updateDelegationVisibility==='function')updateDelegationVisibility();return cachedPersons;}catch(e){console.error('loadAllPersons:',e);cachedPersons=[];return[];}
 }
 async function loadLogs(personId,from,to){
   try{let q=sb.from('daily_logs').select('*');if(personId)q=q.eq('user_id',personId);if(from)q=q.gte('date',from);if(to)q=q.lte('date',to);const{data,error}=await q.order('date',{ascending:false});if(error)throw error;return data||[];}catch(e){console.error('loadLogs:',e);throw e;}
@@ -2477,22 +2491,153 @@ function getDelegationData(){
       });
     }
   }
-  
+
+  // ─── تفویض کارکرد (log_delegates) ───
+  // تفویض‌شده از من: کاربرانی که من در log_delegates خودم اضافه کرده‌ام
+  var myDelegates=currentUser.profile?currentUser.profile.log_delegates:null;
+  if(typeof myDelegates==='string'){try{myDelegates=JSON.parse(myDelegates);}catch(e){myDelegates=[];}}
+  if(Array.isArray(myDelegates)){
+    myDelegates.forEach(function(uid){
+      var p=cachedPersons.filter(function(x){return x.id===uid;})[0];
+      if(!p)return;
+      given.push({
+        type:'log_delegate',
+        from:currentUser.profile.first_name+' '+currentUser.profile.last_name,
+        to:p.first_name+' '+p.last_name,
+        toId:p.id,
+        permissions:['ثبت کارکرد به‌نمایندگی'],
+        detail:'اجازه ثبت کارکرد به‌نمایندگی از شما برای «'+p.first_name+' '+p.last_name+'» ('+p.personnel_id+')',
+        icon:'📝',
+        status:'فعال',
+        id:p.id
+      });
+    });
+  }
+  // تفویض‌شده به من: کاربرانی که من را در log_delegates خود دارند
+  cachedPersons.forEach(function(p){
+    if(p.id===currentUser.id)return;
+    var delegates=p.log_delegates;
+    if(typeof delegates==='string'){try{delegates=JSON.parse(delegates);}catch(e){delegates=[];}}
+    if(Array.isArray(delegates)&&delegates.indexOf(currentUser.id)!==-1){
+      received.push({
+        type:'log_delegate',
+        from:p.first_name+' '+p.last_name,
+        to:currentUser.profile.first_name+' '+currentUser.profile.last_name,
+        toId:currentUser.id,
+        permissions:['ثبت کارکرد به‌نمایندگی'],
+        detail:'شما اجازه دارید کارکرد «'+p.first_name+' '+p.last_name+'» ('+p.personnel_id+') را ثبت کنید',
+        icon:'📝',
+        status:'فعال',
+        id:p.id
+      });
+    }
+  });
+
   return{received:received,given:given};
 }
 function updateDelegationVisibility(){
   var data=getDelegationData();
   var hasAny=data.received.length>0||data.given.length>0;
-  document.querySelectorAll('.has-delegation').forEach(function(el){
-    el.classList.toggle('hidden',!hasAny);
-  });
-  // badge
+  // آیتم منوی تفویض‌ها همیشه قابل‌مشاهده است (در گروه شخصی) تا کاربر بتواند تفویض کارکرد مدیریت کند
+  // badge: تعداد تفویض‌های فعال
   var badge=$('delegations_badge');
   if(badge){
     var total=data.received.length+data.given.length;
     if(total>0){badge.textContent=total;badge.classList.remove('hidden');}
     else badge.classList.add('hidden');
   }
+}
+
+/* ═════ تفویض کارکرد (log_delegates) ═════ */
+// دریافت لیست کاربرانی که من به آنها اجازه ثبت به‌جای خودم داده‌ام
+function getMyLogDelegates(){
+  var raw=currentUser.profile?currentUser.profile.log_delegates:null;
+  if(!raw)return [];
+  if(typeof raw==='string'){try{raw=JSON.parse(raw);}catch(e){return [];}}
+  if(!Array.isArray(raw))return [];
+  return raw;
+}
+// دریافت لیست کاربرانی که به من اجازه ثبت داده‌اند (برای dropdown تفویض)
+function getUsersWhoDelegatedToMe(){
+  if(!cachedPersons.length)return [];
+  var list=[];
+  cachedPersons.forEach(function(p){
+    if(p.id===currentUser.id)return;
+    if(p.role==='super_admin')return;
+    var delegates=p.log_delegates;
+    if(typeof delegates==='string'){try{delegates=JSON.parse(delegates);}catch(e){delegates=[];}}
+    if(Array.isArray(delegates)&&delegates.indexOf(currentUser.id)!==-1)list.push(p);
+  });
+  return list;
+}
+// نمایش لیست تفویض‌شوندگان کارکرد من + dropdown انتخاب
+function renderLogDelegates(){
+  var listBox=$('log_delegates_list');
+  var pickSel=$('log_delegate_pick');
+  if(!listBox||!pickSel)return;
+  var myDelegates=getMyLogDelegates();
+  // لیست چیپ‌های تفویض‌شوندگان فعلی
+  if(!myDelegates.length){
+    listBox.innerHTML='<span style="color:var(--c-text-muted);font-size:13px;padding:6px 0">📭 هیچ کاربری به‌عنوان تفویض‌شونده ثبت نشده. با افزودن کاربر، اجازه می‌دهید به‌جای شما کارکرد ثبت کند.</span>';
+  }else{
+    var html='';
+    myDelegates.forEach(function(uid){
+      var p=cachedPersons.filter(function(x){return x.id===uid;})[0];
+      if(!p)return;
+      var name=esc(p.first_name+' '+p.last_name+' - '+p.personnel_id);
+      html+='<span style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--c-border,#e5e7eb);border-radius:20px;padding:4px 6px 4px 12px;font-size:12px">'+
+        '<span>👤 '+name+'</span>'+
+        '<button class="btn btn-sm btn-danger" style="padding:2px 8px;min-height:auto;font-size:11px;border-radius:12px" onclick="removeLogDelegate(\''+uid+'\')" title="حذف">✕</button>'+
+        '</span>';
+    });
+    listBox.innerHTML=html;
+  }
+  // dropdown انتخاب: همه کاربران به‌جز خودم، سوپرادمین، و کسانی که از قبل اضافه شده‌اند
+  var o='<option value="">— انتخاب کاربر —</option>';
+  cachedPersons.forEach(function(p){
+    if(p.id===currentUser.id)return;
+    if(p.role==='super_admin')return;
+    if(myDelegates.indexOf(p.id)!==-1)return; // قبلاً اضافه شده
+    var roleTag='';
+    if(p.role==='admin')roleTag=' [مدیر]';
+    else if(p.role==='guest')roleTag=' [مهمان]';
+    else if(p.can_approve_leaves||p.can_schedule_tasks)roleTag=' [هماهنگ‌کننده]';
+    o+='<option value="'+p.id+'">'+esc(p.first_name+' '+p.last_name+' - '+p.personnel_id)+roleTag+'</option>';
+  });
+  pickSel.innerHTML=o;
+}
+async function addLogDelegate(){
+  var uid=val('log_delegate_pick');
+  if(!uid){showAlert('یک کاربر انتخاب کنید.','error');return;}
+  var myDelegates=getMyLogDelegates();
+  if(myDelegates.indexOf(uid)!==-1){showAlert('این کاربر قبلاً اضافه شده.','info');return;}
+  myDelegates.push(uid);
+  showLoading('در حال افزودن تفویض...');
+  try{
+    await updateUserProfileDB(currentUser.id,{log_delegates:JSON.stringify(myDelegates)});
+    currentUser.profile.log_delegates=myDelegates;
+    renderLogDelegates();
+    updateDelegateBox(); // به‌روزرسانی dropdown خوداظهاری کاربر مقابل
+    showAlert('کاربر به تفویض‌شوندگان شما اضافه شد. او حالا می‌تواند به‌نمایندگی از شما ثبت کند.','success');
+  }catch(e){showAlert('خطا: '+e.message,'error');}
+  hideLoading();
+}
+async function removeLogDelegate(uid){
+  if(!uid)return;
+  var p=cachedPersons.filter(function(x){return x.id===uid;})[0];
+  var name=p?(p.first_name+' '+p.last_name):'این کاربر';
+  if(!confirm('حذف «'+name+'» از تفویض‌شوندگان شما؟\nاین کاربر دیگر نمی‌تواند به‌نمایندگی از شما ثبت کند.'))return;
+  var myDelegates=getMyLogDelegates();
+  myDelegates=myDelegates.filter(function(x){return x!==uid;});
+  showLoading('در حال حذف تفویض...');
+  try{
+    await updateUserProfileDB(currentUser.id,{log_delegates:JSON.stringify(myDelegates)});
+    currentUser.profile.log_delegates=myDelegates;
+    renderLogDelegates();
+    updateDelegateBox();
+    showAlert('تفویض حذف شد.','success');
+  }catch(e){showAlert('خطا: '+e.message,'error');}
+  hideLoading();
 }
 function renderDelegations(){
   var data=getDelegationData();
@@ -2548,17 +2693,26 @@ function showDelegationDetail(jsonStr){
   try{
     var d=JSON.parse(jsonStr);
     var box=$('delegations_detail');
+    var typeLabel=d.type==='coordinator'?'هماهنگ‌کننده':(d.type==='log_delegate'?'تفویض کارکرد':'دسترسی');
+    // دکمه لغو: فقط برای تفویض‌های «از من» (d.toId !== currentUser.id)
+    var revokeBtn='';
+    if(d.toId&&d.toId!==currentUser.id){
+      if(d.type==='log_delegate'){
+        revokeBtn='<button class="btn btn-sm btn-danger" onclick="removeLogDelegate(\''+esc(d.id)+'\')">لغو تفویض</button>';
+      }else{
+        revokeBtn='<button class="btn btn-sm btn-danger" onclick="revokeDelegation(\''+esc(d.toId)+'\',\''+(d.type==='coordinator'?'coordinator':'permission')+'\')">لغو تفویض</button>';
+      }
+    }
     var html='<div class="card" style="margin:0">'+
       '<h3 style="margin:0 0 12px">'+d.icon+' '+esc(d.detail)+'</h3>'+
       '<table style="margin:0">'+
-      '<tr><td style="width:30%;color:var(--c-text-muted)">نوع:</td><td>'+esc(d.type==='coordinator'?'هماهنگ‌کننده':'دسترسی')+'</td></tr>'+
+      '<tr><td style="width:30%;color:var(--c-text-muted)">نوع:</td><td>'+esc(typeLabel)+'</td></tr>'+
       '<tr><td style="color:var(--c-text-muted)">از:</td><td>'+esc(d.from)+'</td></tr>'+
       '<tr><td style="color:var(--c-text-muted)">به:</td><td>'+esc(d.to)+'</td></tr>'+
       '<tr><td style="color:var(--c-text-muted)">دسترسی‌ها:</td><td>'+(d.permissions?d.permissions.map(esc).join('، '):'—')+'</td></tr>'+
       '<tr><td style="color:var(--c-text-muted)">وضعیت:</td><td>'+esc(d.status)+'</td></tr>'+
       '</table>'+
-      '<div style="margin-top:14px;display:flex;gap:8px">'+
-      (d.toId&&d.toId!==currentUser.id?'<button class="btn btn-sm btn-danger" onclick="revokeDelegation(\''+d.toId+'\','+ (d.type==='coordinator'?'\'coordinator\'':'\'permission\'') +')">لغو تفویض</button>':'')+
+      '<div style="margin-top:14px;display:flex;gap:8px">'+revokeBtn+
       '</div>'+
     '</div>';
     box.innerHTML=html;
@@ -2859,7 +3013,7 @@ function showSection(id,skipHistory){
     if(isSA)checkRecoveryCodeStatus();
   }
   if(id==='reminders'){loadReminders();updateReminderDelegateBox();}
-  if(id==='delegations')renderDelegations();
+  if(id==='delegations'){renderDelegations();renderLogDelegates();}
   if(id==='users'){
     var isAdmin=currentRole==='admin'||currentRole==='super_admin';
     var createForm=$('user_create_form');
@@ -4082,22 +4236,34 @@ function checkDelegateWarning(){
 function updateDelegateBox(){
   var box=$('delegate_box');
   if(!box)return;
-  // ─── تفویض برای همه کاربران (بدون محدودیت نقش) ───
+  // ─── تفویض کارکرد: فقط کاربرانی که به من تفویض کرده‌اند ───
+  // منطق: کاربر A در log_delegates خود، B را اضافه می‌کند → B در لیست A را می‌بیند
   box.classList.remove('hidden');
-  if(cachedPersons.length>0){
-    var sel=$('log_delegate_user');
-    if(sel){
-      var o='<option value="">خودم ثبت می‌کنم</option>';
-      cachedPersons.forEach(function(p){
-        if(p.id===currentUser.id)return; // خودش را نبیند
-        if(p.role==='super_admin')return; // سوپرادمین را نبیند
-        var roleTag='';
-        if(p.role==='admin')roleTag=' [مدیر]';
-        else if(p.role==='guest')roleTag=' [مهمان]';
-        else if(p.can_approve_leaves||p.can_schedule_tasks)roleTag=' [هماهنگ‌کننده]';
-        o+='<option value="'+p.id+'">'+esc(p.first_name+' '+p.last_name+' - '+p.personnel_id)+roleTag+'</option>';
-      });
-      sel.innerHTML=o;
+  var sel=$('log_delegate_user');
+  if(sel && cachedPersons.length>0){
+    var o='<option value="">خودم ثبت می‌کنم</option>';
+    var count=0;
+    cachedPersons.forEach(function(p){
+      // خودم را نبینم
+      if(p.id===currentUser.id)return;
+      // سوپرادمین را نبینم
+      if(p.role==='super_admin')return;
+      // فقط کسانی که من (currentUser.id) را در log_delegates شان دارند
+      var delegates=p.log_delegates;
+      if(typeof delegates==='string'){try{delegates=JSON.parse(delegates);}catch(e){delegates=[];}}
+      if(!Array.isArray(delegates)||delegates.indexOf(currentUser.id)===-1)return;
+      var roleTag='';
+      if(p.role==='admin')roleTag=' [مدیر]';
+      else if(p.role==='guest')roleTag=' [مهمان]';
+      else if(p.can_approve_leaves||p.can_schedule_tasks)roleTag=' [هماهنگ‌کننده]';
+      o+='<option value="'+p.id+'">'+esc(p.first_name+' '+p.last_name+' - '+p.personnel_id)+roleTag+'</option>';
+      count++;
+    });
+    sel.innerHTML=o;
+    // اگر کسی تفویض نکرده، باکس را جمع کن تا گیج‌کننده نباشد
+    if(count===0){
+      // نگه‌داشتن باکس اما با پیام راهنما
+      sel.innerHTML='<option value="">خودم ثبت می‌کنم (کسی به شما تفویض نکرده)</option>';
     }
   }
 }
