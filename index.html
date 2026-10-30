@@ -697,7 +697,8 @@ body.guest-mode .admin-only,body.guest-mode .coordinator-only{display:none!impor
 <div class="main-area" id="main_area">
 <header class="topbar">
   <div class="topbar-left">
-    <button class="topbar-toggle" onclick="toggleSidebar()">☰</button>
+    <button class="topbar-toggle" onclick="toggleSidebar()" title="منو">☰</button>
+    <button class="topbar-toggle" onclick="goBack()" id="btn_back" title="بازگشت" style="display:none">→</button>
     <span class="topbar-title" id="topbar_title">داشبورد</span>
   </div>
   <div class="topbar-right">
@@ -1642,22 +1643,34 @@ function applyRoleBasedUI(){
 }
 
 /* ═══ تم سوییچر + سایدبار toggle ═══ */
+var sectionHistory=[];
+// خواندن متغیرهای CSS تم برای استفاده در JS
+var var_c_card,var_c_text,var_c_text_muted,var_c_primary,var_c_primary_light;
+var var_c_success,var_c_success_light,var_c_danger,var_c_danger_light,var_c_warning,var_c_warning_light,var_c_info,var_c_info_light;
+function refreshThemeVars(){
+  var cs=getComputedStyle(document.documentElement);
+  var_c_card=cs.getPropertyValue('--c-card').trim();
+  var_c_text=cs.getPropertyValue('--c-text').trim();
+  var_c_text_muted=cs.getPropertyValue('--c-text-muted').trim();
+  var_c_primary=cs.getPropertyValue('--c-primary').trim();
+  var_c_primary_light=cs.getPropertyValue('--c-primary-light').trim();
+  var_c_success=cs.getPropertyValue('--c-success').trim();
+  var_c_success_light=cs.getPropertyValue('--c-success-light').trim();
+  var_c_danger=cs.getPropertyValue('--c-danger').trim();
+  var_c_danger_light=cs.getPropertyValue('--c-danger-light').trim();
+  var_c_warning=cs.getPropertyValue('--c-warning').trim();
+  var_c_warning_light=cs.getPropertyValue('--c-warning-light').trim();
+  var_c_info=cs.getPropertyValue('--c-info').trim();
+  var_c_info_light=cs.getPropertyValue('--c-info-light').trim();
+}
 function setTheme(theme){
-  // اعمال data-theme روی html
   var html=document.documentElement;
   html.setAttribute('data-theme',theme);
-  // حفظ guest-mode روی body
   if(currentRole==='guest')document.body.classList.add('guest-mode');
-  // آپدیت دکمه‌های تم سوییچر در topbar
-  document.querySelectorAll('.theme-btn').forEach(function(b){
-    b.classList.toggle('active',b.dataset.theme===theme);
-  });
-  // آپدیت بخش تنظیمات ظاهر سامانه (اگر باز است)
-  document.querySelectorAll('.theme-option').forEach(function(o){
-    o.classList.toggle('selected',o.dataset.theme===theme);
-  });
-  // ذخیره
+  document.querySelectorAll('.theme-btn').forEach(function(b){b.classList.toggle('active',b.dataset.theme===theme);});
+  document.querySelectorAll('.theme-option').forEach(function(o){o.classList.toggle('selected',o.dataset.theme===theme);});
   try{localStorage.setItem('payvand_theme',theme);}catch(e){}
+  setTimeout(refreshThemeVars,50);
 }
 function restoreTheme(){
   var t='day';
@@ -1666,9 +1679,15 @@ function restoreTheme(){
 }
 function toggleSidebar(){
   var sb=$('sidebar'),ma=$('main_area');
-  if(!sb||!ma)return;
+  if(!sb)return;
+  // در موبایل: باز/بسته کردن کشویی
+  if(window.innerWidth<=768){
+    toggleSidebarMobile();
+    return;
+  }
+  // در دسکتاپ: جمع/باز کردن سایدبار
   sb.classList.toggle('collapsed');
-  ma.classList.toggle('sidebar-collapsed');
+  if(ma)ma.classList.toggle('sidebar-collapsed');
   try{localStorage.setItem('payvand_sidebar_collapsed',sb.classList.contains('collapsed')?'1':'0');}catch(e){}
 }
 function restoreSidebarState(){
@@ -1682,6 +1701,19 @@ function toggleSidebarMobile(){
   if(!sb)return;
   sb.classList.toggle('show');
   if(ov)ov.classList.toggle('show',sb.classList.contains('show'));
+}
+// بازگشت به بخش قبلی
+function goBack(){
+  if(sectionHistory.length<2)return;
+  sectionHistory.pop(); // حذف بخش فعلی
+  var prev=sectionHistory[sectionHistory.length-1];
+  showSection(prev,true); // true = بدون ثبت مجدد تاریخچه
+  updateBackButton();
+}
+function updateBackButton(){
+  var btn=$('btn_back');
+  if(!btn)return;
+  btn.style.display=sectionHistory.length>1?'flex':'none';
 }
 
 /* ═════ Notifications Modal ═════ */
@@ -1750,11 +1782,18 @@ async function updateBadges(){
 }
 
 /* ═════ Navigation ═════ */
-function showSection(id){
+function showSection(id,skipHistory){
   closePopups();
   document.querySelectorAll('.container > div.card').forEach(function(c){c.classList.add('hidden');});
   $('section-'+id).classList.remove('hidden');
   document.querySelectorAll('#main_nav .nav-item').forEach(function(b){b.classList.toggle('active',b.dataset.target===id);});
+  // ثبت در تاریخچه (مگر اینکه skipHistory=true باشد — از goBack صدا زده شده)
+  if(!skipHistory){
+    if(sectionHistory.length===0||sectionHistory[sectionHistory.length-1]!==id){
+      sectionHistory.push(id);
+    }
+    updateBackButton();
+  }
   // آپدیت عنوان topbar
   var activeBtn=document.querySelector('#main_nav .nav-item[data-target="'+id+'"]');
   if(activeBtn){
@@ -1914,9 +1953,12 @@ async function renderCalendar(){
   try{
     var days=jalaliMonthLength(year,month),first=getJalaliDayOfWeek(year,month,1);
     var fromStr=fmtJalali(year,month,1),toStr=fmtJalali(year,month,days);
+    // بارگذاری همه داده‌ها برای کل ماه
     var logs=await loadLogs(personId,fromStr,toStr);
-    var tasks=await loadTasksForDate(personId,fromStr);
-    // بارگذاری فعالیت‌های برنامه برای کل ماه
+    var leaves=await loadLeaves(personId);
+    var tasks=[];
+    try{tasks=await loadTasksForDate(personId,fromStr);}catch(e){}
+    // بارگذاری فعالیت‌های برنامه
     var monthProgActs=[];
     try{
       var pStart=parseJalali(fromStr),pEnd=parseJalali(toStr);
@@ -1927,31 +1969,101 @@ async function renderCalendar(){
       const{data,error}=await sb.from('program_activities').select('*,programs!inner(id,title)').eq('assignee_id',personId).gte('deadline',dStart.toISOString()).lte('deadline',dEnd.toISOString());
       if(!error)monthProgActs=data||[];
     }catch(e){}
-    var h='<table style="width:100%;border-collapse:collapse"><thead><tr>';
-    ['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه'].forEach(function(d){h+='<th style="background:var(--primary);color:#fff;padding:8px;border:1px solid #ccc">'+d+'</th>';});
+    // بارگذاری اعلانات فعال برای این ماه
+    var monthAnns=[];
+    try{
+      const{data,error}=await sb.from('announcements').select('*').or('expires_at.is.null,expires_at.gte.'+dStart.toISOString()).order('created_at',{ascending:false});
+      if(!error)monthAnns=data||[];
+    }catch(e){}
+    // ساخت جدول تقویم
+    var h='<table style="width:100%;border-collapse:collapse;table-layout:fixed"><thead><tr>';
+    ['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه'].forEach(function(d){
+      h+='<th style="background:var(--c-primary);color:#fff;padding:8px;border:1px solid var(--c-border);font-size:12px">'+d+'</th>';
+    });
     h+='</tr></thead><tbody><tr>';
-    for(var i=0;i<first;i++)h+='<td style="border:1px solid #ccc;height:80px"></td>';
+    for(var i=0;i<first;i++)h+='<td style="border:1px solid var(--c-border);height:100px"></td>';
     for(var day=1;day<=days;day++){
       var ds=fmtJalali(year,month,day),dow=(first+day-1)%7;
+      var isHol=isHolidayDow(dow);
       var dl=logs.filter(function(l){return l.date===ds;});
+      var dayLeaves=leaves.filter(function(lv){
+        if(lv.status==='rejected'||lv.status==='canceled')return false;
+        if(lv.type==='daily'){
+          return jalaliToTimestamp(ds)>=jalaliToTimestamp(lv.start_date)&&jalaliToTimestamp(ds)<=jalaliToTimestamp(lv.end_date);
+        }
+        return lv.start_date===ds;
+      });
       var dayTasks=tasks?tasks.filter(function(t){return t.task_date===ds;}):[];
       var dayActs=monthProgActs.filter(function(a){
-        var dlDate=new Date(a.deadline);
-        var jDate=gregorianToJalali(dlDate.getFullYear(),dlDate.getMonth()+1,dlDate.getDate());
-        return fmtJalali(jDate[0],jDate[1],jDate[2])===ds;
+        try{
+          var dlDate=new Date(a.deadline);
+          var jDate=gregorianToJalali(dlDate.getFullYear(),dlDate.getMonth()+1,dlDate.getDate());
+          return fmtJalali(jDate[0],jDate[1],jDate[2])===ds;
+        }catch(e){return false;}
       });
-      var labels=[];
-      dl.forEach(function(l){var t=STATUS_LABEL[l.status];if(labels.indexOf(t)===-1)labels.push(t);});
-      var cellClass='day-cell'+(isHolidayDow(dow)?' holiday':'')+(dl.length?' has-log':'')+(dayTasks.length||dayActs.length?' has-task':'');
-      var cellStyle='border:1px solid #ccc;height:90px;vertical-align:top;padding:5px;cursor:pointer;transition:.2s;background:#fff';
-      if(dayActs.length)cellStyle+=';box-shadow:inset 0 0 0 2px #f39c12';
-      h+='<td class="'+cellClass+'" data-date="'+ds+'" data-person="'+esc(personId)+'" style="'+cellStyle+'"><div class="day-number">'+day+'</div><div class="day-status">'+labels.join('، ')+(dayTasks.length?'<br>📋 '+dayTasks.length+' وظیفه':'')+(dayActs.length?'<br>⏰ '+dayActs.length+' فعالیت برنامه':'')+'</div></td>';
+      // ساخت محتوای سلول
+      var cellBg=var_c_card||'#fff';
+      var cellContent='<div style="font-weight:bold;font-size:14px;color:var(--c-text)">'+day+'</div>';
+      var hasItems=false;
+      // ۱) کارکرد (logs)
+      if(dl.length){
+        hasItems=true;
+        dl.forEach(function(l){
+          var label=STATUS_LABEL[l.status]||l.status;
+          var icon=l.status==='normal'?'✅':l.status==='overtime'?'⏰':'📋';
+          var desc=describeLog(l);
+          cellContent+='<div style="font-size:10px;margin-top:2px;padding:2px 4px;border-radius:3px;background:'+var_c_success_light+';color:'+var_c_success+';cursor:pointer" onclick="event.stopPropagation();openDailyLog(\''+ds+'\',\''+personId+'\')">'+icon+' '+esc(label)+'</div>';
+        });
+      }
+      // ۲) مرخصی‌ها (leaves)
+      if(dayLeaves.length){
+        hasItems=true;
+        dayLeaves.forEach(function(lv){
+          var used=(lv.used_days||[]).indexOf(ds)!==-1;
+          var typeShort=lv.type==='daily'?'مرخصی روزانه':'مرخصی ساعتی';
+          var bg=used?var_c_success_light:'#fef3c7';
+          var color=used?var_c_success:'#92400e';
+          var icon=used?'✓':'☐';
+          cellContent+='<div style="font-size:10px;margin-top:2px;padding:2px 4px;border-radius:3px;background:'+bg+';color:'+color+';cursor:pointer" onclick="event.stopPropagation();showSection(\'leave_req\')">'+icon+' '+esc(typeShort)+'</div>';
+        });
+      }
+      // ۳) وظایف (tasks)
+      if(dayTasks.length){
+        hasItems=true;
+        dayTasks.forEach(function(t){
+          var stIcon=t.status==='done'?'✅':t.status==='in_progress'?'🔄':'⬜';
+          cellContent+='<div style="font-size:10px;margin-top:2px;padding:2px 4px;border-radius:3px;background:'+var_c_info_light+';color:'+var_c_info+';cursor:pointer" onclick="event.stopPropagation();showSection(\'my_tasks\')">'+stIcon+' '+esc(t.title||'وظیفه').slice(0,20)+'</div>';
+        });
+      }
+      // ۴) فعالیت‌های برنامه
+      if(dayActs.length){
+        hasItems=true;
+        dayActs.forEach(function(a){
+          cellContent+='<div style="font-size:10px;margin-top:2px;padding:2px 4px;border-radius:3px;background:#fff3cd;color:#856404;cursor:pointer" onclick="event.stopPropagation();showSection(\'my_activities\')">🎯 '+esc((a.title||'فعالیت').slice(0,20))+'</div>';
+        });
+      }
+      if(!hasItems){
+        cellContent+='<div style="font-size:10px;color:var(--c-text-muted);opacity:.5;margin-top:4px">—</div>';
+      }
+      var cellClass='day-cell'+(isHol?' holiday':'')+(dl.length?' has-log':'')+(dayTasks.length||dayActs.length?' has-task':'');
+      var cellStyle='border:1px solid var(--c-border);height:100px;vertical-align:top;padding:4px;cursor:pointer;transition:var(--c-transition);background:'+(isHol?var_c_danger_light:var_c_card);
+      if(dayActs.length)cellStyle+=';box-shadow:inset 0 0 0 2px var(--c-warning)';
+      h+='<td class="'+cellClass+'" data-date="'+ds+'" data-person="'+esc(personId)+'" style="'+cellStyle+'" onclick="openDailyLog(\''+ds+'\',\''+personId+'\')">'+cellContent+'</td>';
       if((first+day)%7===0&&day!==days)h+='</tr><tr>';
     }
     var rem=(7-((first+days)%7))%7;
-    for(var k=0;k<rem;k++)h+='<td style="border:1px solid #ccc"></td>';
+    for(var k=0;k<rem;k++)h+='<td style="border:1px solid var(--c-border)"></td>';
     c.innerHTML=h+'</tr></tbody></table>';
-    $('monthly_summary').innerHTML='<h3 style="margin-top:0">خلاصه ماهانه</h3>'+summaryHtml(summarize(logs));
+    // خلاصه ماهانه
+    $('monthly_summary').innerHTML='<h3 style="margin-top:0;color:var(--c-text)">خلاصه ماهانه</h3>'+summaryHtml(summarize(logs));
+    // راهنما
+    c.innerHTML+='<p style="margin-top:10px;font-size:11px;color:var(--c-text-muted);line-height:1.8">'+
+      '<b>راهنما رنگ‌ها:</b><br>'+
+      '✅ سبز = کارکرد عادی &nbsp; ⏰ = اضافه‌کاری &nbsp; 📋 = عدم حضور<br>'+
+      '✓ سبز = مرخصی استفاده‌شده &nbsp; ☐ زرد = مرخصی استفاده‌نشده<br>'+
+      '⬜ آبی = وظیفه در انتظار &nbsp; 🔄 = در حال انجام &nbsp; ✅ = انجام‌شده<br>'+
+      '🎯 زرد = فعالیت برنامه<br>'+
+      'کلیک روی هر روز = ثبت/ویرایش اظهار آن روز</p>';
   }catch(e){c.innerHTML='<p>خطا: '+esc(e.message)+'</p>';}
   hideLoading();
 }
@@ -2478,21 +2590,41 @@ async function createInvitation(){
       }
     }
     await createInvitationDB(inv);
-    // مرحله ۲: ساخت حساب احراز هویت با کلاینت موقت (session ادمین مختل نمی‌شود)
-    var tempClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{
-      auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}
-    });
-    const{data:signData,error:signError}=await tempClient.auth.signUp({email:email,password:password});
-    if(signError){
-      if(signError.message&&signError.message.indexOf('already')!==-1){
-        showAlert('کاربر با این ایمیل قبلاً ثبت شده، اما دعوت‌نامه و hash رمز به‌روز شد.','success');
-      }else if(signError.message&&signError.message.indexOf('INVITATION')!==-1){
-        showAlert('حساب احراز هویت ساخته نشد: دعوت‌نامه یافت نشد.','error');
-      }else{
-        throw signError;
+    // مرحله ۲: ایجاد مستقیم profile با رمز هش‌شده (بدون Supabase Auth)
+    // چون احراز هویت سفارشی است، نیازی به auth.users نداریم
+    var newUserId=crypto.randomUUID?crypto.randomUUID():genSalt(); // تولید UUID
+    // اگر profiles.id از نوع UUID است، یک UUID معتبر تولید کن
+    if(!crypto.randomUUID){
+      // fallback: ساخت UUID v4
+      var arr=new Uint8Array(16);crypto.getRandomValues(arr);
+      arr[6]=(arr[6]&0x0f)|0x40;arr[8]=(arr[8]&0x3f)|0x80;
+      newUserId='';for(var bi=0;bi<16;bi++){
+        if(bi===4||bi===6||bi===8||bi===10)newUserId+='-';
+        newUserId+=arr[bi].toString(16).padStart(2,'0');
       }
+    }
+    // درج profile با تمام فیلدها
+    const{data:profData,error:profError}=await sb.from('profiles').insert({
+      id:newUserId,
+      email:email||pid+'@payvand.local',
+      role:role,
+      first_name:first,
+      last_name:last,
+      personnel_id:pid,
+      status:'active',
+      password_hash:pwdHash,
+      password_salt:pwdSalt,
+      parent_id:parent||null,
+      can_manage_users:false,
+      failed_attempts:0,
+      expires_at:inv.expires_at||null
+    }).select();
+    if(profError){
+      console.warn('profile insert:',profError);
+      // اگر خطا داد (مثلا ID تکراری)، حداقل دعوت‌نامه ساخته شده
+      showAlert('✅ دعوت‌نامه ساخته شد. کد پرسنلی: '+pid+' — رمز را به کاربر بدهید.\nاگر کاربر قبلاً وجود داشت، اطلاعات به‌روز شد.','success');
     }else{
-      showAlert('✅ حساب کاربری ساخته شد. کد پرسنلی: '+pid+' — رمز را به کاربر بدهید.','success');
+      showAlert('✅ کاربر ساخته شد. کد پرسنلی: '+pid+' — رمز را به کاربر بدهید.','success');
     }
     $('inv_first_name').value='';$('inv_last_name').value='';$('inv_personnel_id').value='';$('inv_email').value='';$('inv_password').value='';$('inv_password2').value='';
     $('inv_strength_bar').style.width='0%';$('inv_strength_label').textContent='';
@@ -3921,6 +4053,7 @@ function init(){
   // احراز هویت مستقل از Supabase Auth — session از localStorage بازیابی می‌شود
   // (onAuthStateChange و getSession غیرفعال‌اند چون JWT تولید نمی‌کنیم)
   restoreTheme();
+  setTimeout(refreshThemeVars,100);
   restoreSidebarState();
   restoreSession();
   var t=getTodayJalali().split('/');
