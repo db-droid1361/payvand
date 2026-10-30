@@ -973,6 +973,45 @@ function updateStrengthMeter(inputId,barId,labelId){
 /* ═════ Auth ═════ */
 function showAuthError(msg){var e=$('auth_error');e.textContent=msg;e.style.display=msg?'block':'none';}
 
+// مدیریت session محلی (مستقل از Supabase Auth)
+var SESSION_KEY='payvand_session_v1';
+function saveSession(user){
+  try{
+    localStorage.setItem(SESSION_KEY,JSON.stringify({
+      user:user,ts:Date.now(),expires:Date.now()+8*60*60*1000
+    }));
+  }catch(e){console.warn('saveSession:',e);}
+}
+function restoreSession(){
+  try{
+    var raw=localStorage.getItem(SESSION_KEY);
+    if(!raw)return false;
+    var s=JSON.parse(raw);
+    if(!s||!s.user||!s.expires)return false;
+    if(Date.now()>s.expires){localStorage.removeItem(SESSION_KEY);return false;}
+    // بازیابی currentUser
+    currentUser={id:s.user.id,email:s.user.email};
+    currentUser.profile=s.user;
+    currentRole=s.user.role||'user';
+    if(currentRole==='guest')document.body.classList.add('guest-mode');
+    else document.body.classList.remove('guest-mode');
+    $('auth_screen').classList.add('hidden');
+    $('main_app').classList.remove('hidden');
+    updateUserBox();
+    applyRoleBasedUI();
+    // بارگذاری داده‌ها
+    setTimeout(async function(){
+      try{await loadAllPersons();await loadSubordinates();showSection('dashboard');checkUnreadNotifications();}catch(e){console.warn('restoreSession load:',e);}
+    },100);
+    return true;
+  }catch(e){console.warn('restoreSession:',e);return false;}
+}
+function clearLocalSession(){
+  localStorage.removeItem(SESSION_KEY);
+  currentUser=null;currentRole='user';
+  document.body.classList.remove('guest-mode');
+}
+
 // ═══ ورود: verify هش سفارشی (SHA-256 + brute-force lock) سپس signIn Supabase ═══
 // جریان:
 //   ۱) rpc_get_auth_info → salt + وضعیت قفل + email (بدون hash)
@@ -1037,26 +1076,7 @@ async function handleLogin(e){
         showAuthError('ورود ناموفق: '+(fbData&&fbData.error?fbData.error:'خطای session'));
         btn.disabled=false;btn.textContent='ورود به سیستم';return;
       }
-      // ساخت session محلی
-      var localSession={
-        access_token:'local-'+Date.now()+'-'+Math.random().toString(36).slice(2),
-        refresh_token:'local-refresh',
-        token_type:'bearer',
-        expires_in:8*60*60,
-        expires_at:Date.now()+8*60*60*1000,
-        user:{
-          id:fbData.user.id,
-          email:fbData.user.email,
-          aud:'authenticated',
-          role:'authenticated'
-        }
-      };
-      // ذخیره session محلی در localStorage (supabase-js آن را می‌خواند)
-      try{
-        var storageKey='sb-'+SUPABASE_URL.replace(/^https?:\/\//,'').replace(/\.supabase\.co.*$/,'')+'-auth-token';
-        localStorage.setItem(storageKey,JSON.stringify(localSession));
-      }catch(e){console.warn('localStorage save:',e);}
-      // تنظیم currentUser مستقیم
+      // تنظیم currentUser از داده‌های rpc_create_session
       currentUser={id:fbData.user.id,email:fbData.user.email};
       currentUser.profile={
         id:fbData.user.id,
@@ -1072,9 +1092,15 @@ async function handleLogin(e){
         can_create_programs:fbData.user.can_create_programs,
         parent_id:fbData.user.parent_id,
         expires_at:fbData.user.expires_at,
-        guest_permissions:fbData.user.guest_permissions
+        guest_permissions:fbData.user.guest_permissions,
+        password_hash:fbData.user.password_hash,
+        password_salt:fbData.user.password_salt,
+        recovery_hash:fbData.user.recovery_hash,
+        recovery_salt:fbData.user.recovery_salt
       };
       currentRole=fbData.user.role;
+      // ذخیره session در localStorage برای رفرش
+      saveSession(currentUser.profile);
       // فعال‌سازی حالت مهمان
       if(currentRole==='guest'){document.body.classList.add('guest-mode');}
       else{document.body.classList.remove('guest-mode');}
@@ -1158,7 +1184,7 @@ function hideRecoveryScreen(){
   var p=$('rec_new_password');if(p)p.value='';
   var p2=$('rec_new_password2');if(p2)p2.value='';
 }
-async function logout(){try{await sb.auth.signOut();}catch(e){}location.reload();}
+async function logout(){clearLocalSession();$('main_app').classList.add('hidden');$('auth_screen').classList.remove('hidden');$('recovery_screen').classList.add('hidden');showAuthError('');var btn=$('login_btn');if(btn){btn.disabled=false;btn.textContent='ورود به سیستم';}$('login_form').reset();}
 async function handleAuthState(session){
   if(session&&session.user){
     if(authHandlingUserId===session.user.id&&authHandlingPromise)return authHandlingPromise;
@@ -3458,8 +3484,9 @@ function init(){
   on('btn_reset_pwd_confirm','click',confirmResetPassword);
   on('rec_new_password','input',function(){updateStrengthMeter('rec_new_password','rec_strength_bar','rec_strength_label');});
   if(!SUPABASE_CONFIGURED||!sb){showAuthError('تنظیمات Supabase تکمیل نشده است. مقدار SUPABASE_URL و SUPABASE_ANON_KEY را در ابتدای فایل وارد کنید؛ فقط کلید anon مجاز است.');return;}
-  sb.auth.onAuthStateChange(function(event,session){handleAuthState(session);});
-  sb.auth.getSession().then(function(res){if(res.data&&res.data.session)handleAuthState(res.data.session);});
+  // احراز هویت مستقل از Supabase Auth — session از localStorage بازیابی می‌شود
+  // (onAuthStateChange و getSession غیرفعال‌اند چون JWT تولید نمی‌کنیم)
+  restoreSession();
   var t=getTodayJalali().split('/');
   $('cal_month').value=parseInt(t[1],10);$('cal_year').value=parseInt(t[0],10);
   on('main_nav','click',function(e){var b=e.target.closest('button');if(b&&b.dataset.target){if(b.classList.contains('admin-only')&&!(currentRole==='admin'||currentRole==='super_admin'))return;if(b.classList.contains('coordinator-only')&&!(cachedSubordinates.length>0||currentRole==='admin'||currentRole==='super_admin'))return;showSection(b.dataset.target);}});
