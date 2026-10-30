@@ -991,7 +991,7 @@ body.guest-mode .admin-only,body.guest-mode .coordinator-only{display:none!impor
     <div class="form-group"><label>شماره پرسنلی:</label><input type="text" id="inv_personnel_id" dir="ltr"></div>
   </div>
   <div class="form-row">
-    <div class="form-group"><label>ایمیل (الزامی برای Supabase Auth):</label><input type="email" id="inv_email" dir="ltr"></div>
+    <div class="form-group"><label>ایمیل (اختیاری):</label><input type="email" id="inv_email" dir="ltr"></div>
     <div class="form-group"><label>نقش:</label><select id="inv_role"><option value="user">کاربر</option><option value="guest">👁️ مهمان (دسترسی خواندن محدود)</option><option value="admin">ادمین</option></select></div>
     <div class="form-group"><label>هماهنگ‌کننده (اختیاری):</label><select id="inv_parent" class="coordinator-dropdown"><option value="">—</option></select></div>
   </div>
@@ -2563,7 +2563,7 @@ async function renderNotificationsList(){
 /* ═════ Users management ═════ */
 async function createInvitation(){
   var first=val('inv_first_name'),last=val('inv_last_name'),pid=toEnglishDigits(val('inv_personnel_id')),email=val('inv_email'),role=val('inv_role'),parent=val('inv_parent'),password=val('inv_password'),password2=val('inv_password2');
-  if(!first||!last||!pid||!email){showAlert('نام، نام خانوادگی، شماره پرسنلی و ایمیل الزامی است.');return;}
+  if(!first||!last||!pid){showAlert('نام، نام خانوادگی و شماره پرسنلی الزامی است.');return;}
   if(!password){showAlert('رمز عبور الزامی است.');return;}
   if(password!==password2){showAlert('رمز و تکرار آن یکسان نیستند.');return;}
   if(!isPasswordStrong(password)){showAlert('رمز خیلی کوتاه است. حداقل ۴ کاراکتر وارد کنید.');return;}
@@ -2575,37 +2575,22 @@ async function createInvitation(){
     // هش رمز در سمت کلاینت (SHA-256 + Salt + 5000 دور)
     var pwdSalt=genSalt();
     var pwdHash=hashSecret(password,pwdSalt);
-    // مرحله ۱: ساخت دعوت‌نامه در دیتابیس (با hash رمز)
-    var inv={
-      email:email,personnel_id:pid,first_name:first,last_name:last,role:role,
-      invited_by:currentUser.id,parent_id:parent||null,
-      initial_password_hash:pwdHash,initial_password_salt:pwdSalt
-    };
+    // تولید UUID برای کاربر جدید
+    var newUserId='';
+    if(crypto.randomUUID){newUserId=crypto.randomUUID();}
+    else{var arr=new Uint8Array(16);crypto.getRandomValues(arr);arr[6]=(arr[6]&0x0f)|0x40;arr[8]=(arr[8]&0x3f)|0x80;for(var bi=0;bi<16;bi++){if(bi===4||bi===6||bi===8||bi===10)newUserId+='-';newUserId+=arr[bi].toString(16).padStart(2,'0');}}
+    var expiresAt=null;
     if(role==='guest'){
       var expDate=val('inv_guest_expires');
       if(expDate&&isValidJalaliDate(expDate)){
         var pExp=parseJalali(expDate);var gExp=jalaliToGregorian(pExp.jy,pExp.jm,pExp.jd);
-        inv.expires_at=new Date(gExp[0],gExp[1]-1,gExp[2],23,59,59).toISOString();
+        expiresAt=new Date(gExp[0],gExp[1]-1,gExp[2],23,59,59).toISOString();
       }
     }
-    await createInvitationDB(inv);
-    // مرحله ۲: ایجاد مستقیم profile با رمز هش‌شده (بدون Supabase Auth)
-    // چون احراز هویت سفارشی است، نیازی به auth.users نداریم
-    var newUserId=crypto.randomUUID?crypto.randomUUID():genSalt(); // تولید UUID
-    // اگر profiles.id از نوع UUID است، یک UUID معتبر تولید کن
-    if(!crypto.randomUUID){
-      // fallback: ساخت UUID v4
-      var arr=new Uint8Array(16);crypto.getRandomValues(arr);
-      arr[6]=(arr[6]&0x0f)|0x40;arr[8]=(arr[8]&0x3f)|0x80;
-      newUserId='';for(var bi=0;bi<16;bi++){
-        if(bi===4||bi===6||bi===8||bi===10)newUserId+='-';
-        newUserId+=arr[bi].toString(16).padStart(2,'0');
-      }
-    }
-    // درج profile با تمام فیلدها
-    const{data:profData,error:profError}=await sb.from('profiles').insert({
+    // درج مستقیم در profiles (بدون invitations)
+    var profRow={
       id:newUserId,
-      email:email||pid+'@payvand.local',
+      email:email||(pid+'@payvand.local'),
       role:role,
       first_name:first,
       last_name:last,
@@ -2616,18 +2601,22 @@ async function createInvitation(){
       parent_id:parent||null,
       can_manage_users:false,
       failed_attempts:0,
-      expires_at:inv.expires_at||null
-    }).select();
+      expires_at:expiresAt
+    };
+    const{data:profData,error:profError}=await sb.from('profiles').insert(profRow).select();
     if(profError){
-      console.warn('profile insert:',profError);
-      // اگر خطا داد (مثلا ID تکراری)، حداقل دعوت‌نامه ساخته شده
-      showAlert('✅ دعوت‌نامه ساخته شد. کد پرسنلی: '+pid+' — رمز را به کاربر بدهید.\nاگر کاربر قبلاً وجود داشت، اطلاعات به‌روز شد.','success');
+      console.warn('profile insert error:',profError);
+      if(profError.message&&profError.message.indexOf('row-level security')!==-1){
+        showAlert('خطای دسترسی: RLS روی جدول profiles فعال است. این SQL را در Supabase اجرا کنید:\nALTER TABLE profiles DISABLE ROW LEVEL SECURITY;','error');
+      }else{
+        showAlert('خطا در ایجاد کاربر: '+profError.message,'error');
+      }
     }else{
       showAlert('✅ کاربر ساخته شد. کد پرسنلی: '+pid+' — رمز را به کاربر بدهید.','success');
+      $('inv_first_name').value='';$('inv_last_name').value='';$('inv_personnel_id').value='';$('inv_email').value='';$('inv_password').value='';$('inv_password2').value='';
+      $('inv_strength_bar').style.width='0%';$('inv_strength_label').textContent='';
+      await renderUsers();
     }
-    $('inv_first_name').value='';$('inv_last_name').value='';$('inv_personnel_id').value='';$('inv_email').value='';$('inv_password').value='';$('inv_password2').value='';
-    $('inv_strength_bar').style.width='0%';$('inv_strength_label').textContent='';
-    await renderUsers();
   }catch(e){showAlert('خطا: '+(e.message||'نامشخص'));}
   finally{hideLoading();}
 }
