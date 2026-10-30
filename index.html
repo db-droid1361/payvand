@@ -1385,18 +1385,17 @@ function hashSecret(secret,salt){
 }
 function passwordStrength(pwd){
   pwd=pwd||'';
-  if(pwd.length<6)return {score:0,label:'ضعیف',color:'#ef4444',percent:15};
+  if(pwd.length<4)return {score:0,label:'ضعیف',color:'#ef4444',percent:15};
   var s=0;
-  if(pwd.length>=8)s++;
-  if(pwd.length>=12)s++;
-  if(/[a-z]/.test(pwd)&&/[A-Z]/.test(pwd))s++;
+  if(pwd.length>=4)s++;
+  if(pwd.length>=6)s++;
   if(/\d/.test(pwd))s++;
-  if(/[^a-zA-Z0-9]/.test(pwd))s++;
+  if(/[a-zA-Z]/.test(pwd))s++;
   if(s<2)return {score:1,label:'ضعیف',color:'#ef4444',percent:35};
-  if(s<4)return {score:2,label:'متوسط',color:'#f59e0b',percent:70};
+  if(s<3)return {score:2,label:'متوسط',color:'#f59e0b',percent:70};
   return {score:3,label:'قوی',color:'#10b981',percent:100};
 }
-function isPasswordStrong(pwd){return passwordStrength(pwd).score>=2;}
+function isPasswordStrong(pwd){return passwordStrength(pwd).score>=1;}
 function updateStrengthMeter(inputId,barId,labelId){
   var inp=$(inputId);if(!inp)return;
   var st=passwordStrength(inp.value);
@@ -1509,7 +1508,7 @@ async function handleRecovery(e){
   var p1=pwdEl.value,p2=pwd2El.value;
   if(!code){showRecoveryError('کد بازیابی را وارد کنید.');return;}
   if(p1!==p2){showRecoveryError('رمزها یکسان نیستند.');return;}
-  if(!isPasswordStrong(p1)){showRecoveryError('رمز جدید ضعیف است. حداقل ۸ کاراکتر با حروف بزرگ/کوچک و عدد.');return;}
+  if(!isPasswordStrong(p1)){showRecoveryError('رمز جدید خیلی کوتاه است. حداقل ۴ کاراکتر وارد کنید.');return;}
   var btn=$('rec_btn');btn.disabled=true;btn.innerHTML='در حال تغییر رمز...<span class="auth-loading"></span>';
   try{
     // دریافت recovery_salt سوپرادمین
@@ -2567,7 +2566,7 @@ async function createInvitation(){
   if(!first||!last||!pid||!email){showAlert('نام، نام خانوادگی، شماره پرسنلی و ایمیل الزامی است.');return;}
   if(!password){showAlert('رمز عبور الزامی است.');return;}
   if(password!==password2){showAlert('رمز و تکرار آن یکسان نیستند.');return;}
-  if(!isPasswordStrong(password)){showAlert('رمز ضعیف است. حداقل ۸ کاراکتر با حروف بزرگ/کوچک و عدد.');return;}
+  if(!isPasswordStrong(password)){showAlert('رمز خیلی کوتاه است. حداقل ۴ کاراکتر وارد کنید.');return;}
   if(currentRole!=='admin'&&currentRole!=='super_admin'){showAlert('دسترسی غیرمجاز.');return;}
   // مدیر (بدون تفویض) فقط می‌تواند کاربر عادی بسازد
   if(currentRole==='admin'&&!currentUser.profile.can_manage_users&&role!=='user'){showAlert('مدیر بدون تفویض اختیار فقط می‌تواند کاربر عادی بسازد.');return;}
@@ -2758,7 +2757,7 @@ async function confirmResetPassword(){
   if(!resetPwdTargetId){showAlert('کاربری انتخاب نشده.');return;}
   var p1=val('reset_pwd_new'),p2=val('reset_pwd_new2');
   if(p1!==p2){showAlert('رمز و تکرار آن یکسان نیستند.');return;}
-  if(!isPasswordStrong(p1)){showAlert('رمز ضعیف است. حداقل ۸ کاراکتر با حروف بزرگ/کوچک و عدد.');return;}
+  if(!isPasswordStrong(p1)){showAlert('رمز خیلی کوتاه است. حداقل ۴ کاراکتر وارد کنید.');return;}
   showLoading('بازنشانی رمز...');
   try{
     var newSalt=genSalt();
@@ -3864,7 +3863,7 @@ async function changePassword(){
   var oldPwd=val('cp_old_password'),p1=val('new_password'),p2=val('new_password2');
   if(!oldPwd){showAlert('رمز فعلی را وارد کنید.');return;}
   if(p1!==p2){showAlert('رمز جدید و تکرار آن یکسان نیستند.');return;}
-  if(!isPasswordStrong(p1)){showAlert('رمز جدید ضعیف است. حداقل ۸ کاراکتر با حروف بزرگ/کوچک و عدد.');return;}
+  if(!isPasswordStrong(p1)){showAlert('رمز جدید خیلی کوتاه است. حداقل ۴ کاراکتر وارد کنید.');return;}
   var isSuperAdmin=currentRole==='super_admin';
   var recoveryCode='';
   if(isSuperAdmin){
