@@ -921,8 +921,8 @@ button,.btn{-webkit-touch-callout:none}
     <div class="form-group"><label>تاریخ شمسی:</label><input type="text" id="log_date" class="date-picker" placeholder="انتخاب تاریخ" readonly></div>
     <div class="form-group"><label>وضعیت روز:</label><select id="log_status"><option value="normal">حضور و کارکرد عادی</option><option value="absence">عدم حضور (مرخصی/مأموریت/سایر)</option><option value="overtime">حضور همراه با اضافه‌کاری خارج از کارت</option></select></div>
   </div>
-  <!-- تفویض کارکرد: فقط برای ادمین/سوپرادمین/هماهنگ‌کننده -->
-  <div id="delegate_box" class="form-row hidden" style="background:var(--c-warning-light);padding:12px;border-radius:var(--c-radius-sm);margin-bottom:12px">
+  <!-- تفویض کارکرد: برای همه کاربران -->
+  <div id="delegate_box" class="form-row" style="background:var(--c-warning-light);padding:12px;border-radius:var(--c-radius-sm);margin-bottom:12px">
     <div class="form-group" style="margin:0">
       <label>⚠️ ثبت به نمایندگی از کاربر دیگر (تفویض):</label>
       <select id="log_delegate_user" onchange="checkDelegateWarning()">
@@ -2810,7 +2810,7 @@ function showSection(id,skipHistory){
   if(id==='coordinator_approvals')id='approvals';
   // leave_req → daily_log (در همان بخش قابل دسترسی)
   if(id==='daily_log'){
-    populatePersonDropdown('log_person_id',false);
+    populatePersonDropdown('log_person_id',true);
     if(!currentLogPerson)$('log_person_id').value=currentUser.id;
     currentLogPerson=$('log_person_id').value;
     updateDelegateBox();toggleLogFields();syncLog();
@@ -3931,7 +3931,7 @@ async function saveDailyLog(){
       '۳. در گزارش‌ها، نام شما به‌عنوان ثبت‌کننده نمایش داده می‌شود.\n\n'+
       'آیا مطمئن هستید؟'))return;
   }
-  if(currentRole==='user'&&!delegateUser&&personId!==currentUser.id){showAlert('شما فقط برای خودتان می‌توانید ثبت کنید.','error');return;}
+  // تفویض: همه کاربران می‌توانند برای دیگران ثبت کنند (بدون محدودیت نقش)
   dateStr=normJ(dateStr);
   var d={discrepancy:disc,fields:{}},f=d.fields,s='00:00',e='23:59',fullDay=false;
   function need(c,m){if(!c){showAlert(m,'error');return false;}return true;}
@@ -4062,18 +4062,20 @@ function checkDelegateWarning(){
 function updateDelegateBox(){
   var box=$('delegate_box');
   if(!box)return;
-  // فقط اگر کاربر زیرمجموعه دارد یا هماهنگ‌کننده است، باکس تفویض نمایش داده شود
-  var hasSubordinates=cachedSubordinates.length>0;
-  var isCoordinator=currentRole==='admin'||currentRole==='super_admin'||
-    (currentUser.profile&&(currentUser.profile.can_approve_leaves||currentUser.profile.can_schedule_tasks));
-  var canDelegate=hasSubordinates||isCoordinator;
-  box.classList.toggle('hidden',!canDelegate);
-  if(canDelegate&&cachedPersons.length>0){
+  // ─── تفویض برای همه کاربران (بدون محدودیت نقش) ───
+  box.classList.remove('hidden');
+  if(cachedPersons.length>0){
     var sel=$('log_delegate_user');
     if(sel){
       var o='<option value="">خودم ثبت می‌کنم</option>';
       cachedPersons.forEach(function(p){
-        o+='<option value="'+p.id+'">'+esc(p.first_name+' '+p.last_name+' - '+p.personnel_id)+'</option>';
+        if(p.id===currentUser.id)return; // خودش را نبیند
+        if(p.role==='super_admin')return; // سوپرادمین را نبیند
+        var roleTag='';
+        if(p.role==='admin')roleTag=' [مدیر]';
+        else if(p.role==='guest')roleTag=' [مهمان]';
+        else if(p.can_approve_leaves||p.can_schedule_tasks)roleTag=' [هماهنگ‌کننده]';
+        o+='<option value="'+p.id+'">'+esc(p.first_name+' '+p.last_name+' - '+p.personnel_id)+roleTag+'</option>';
       });
       sel.innerHTML=o;
     }
@@ -4213,7 +4215,7 @@ async function saveLeave(){
   var id=$('lv_id').value,personId=$('lv_person_id').value,startDate=$('lv_start_date').value,type=$('lv_type').value;
   if(!personId){showAlert('پرسنل را انتخاب کنید.','error');return;}
   if(!isValidJalaliDate(startDate)){showAlert('تاریخ شروع نامعتبر است.','error');return;}
-  if(currentRole==='user'&&personId!==currentUser.id){showAlert('شما فقط برای خودتان می‌توانید ثبت کنید.','error');return;}
+  // تفویض: همه کاربران می‌توانند برای دیگران ثبت کنند (بدون محدودیت نقش)
   var endDate=null,sT=null,eT=null;
   if(type==='daily'){
     endDate=$('lv_end_date').value;
