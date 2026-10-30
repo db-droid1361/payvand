@@ -1284,7 +1284,7 @@ button,.btn{-webkit-touch-callout:none}
   </div>
   <div class="form-row">
     <div class="form-group"><label>ایمیل (اختیاری):</label><input type="email" id="inv_email" dir="ltr"></div>
-    <div class="form-group"><label>نقش:</label><select id="inv_role"><option value="user">کاربر</option><option value="guest">👁️ مهمان (دسترسی خواندن محدود)</option><option value="admin">ادمین</option></select></div>
+    <div class="form-group"><label>نقش:</label><select id="inv_role" onchange="onRoleChange()"><option value="user">کاربر</option><option value="coordinator">👥 هماهنگ‌کننده</option><option value="guest">👁️ مهمان (دسترسی خواندن محدود)</option><option value="admin">مدیر</option></select></div>
     <div class="form-group"><label>هماهنگ‌کننده (اختیاری):</label><select id="inv_parent" class="coordinator-dropdown"><option value="">—</option></select></div>
   </div>
   <div class="form-row">
@@ -4671,11 +4671,20 @@ async function createInvitation(){
         expiresAt=new Date(gExp[0],gExp[1]-1,gExp[2],23,59,59).toISOString();
       }
     }
-    // درج مستقیم در profiles (بدون invitations)
+    // ─── مدیریت نقش هماهنگ‌کننده ───
+    // هماهنگ‌کننده = کاربر با دسترسی‌های تأیید مرخصی و تعریف وظیفه
+    var actualRole=role;
+    var canApproveLeaves=false,canScheduleTasks=false;
+    if(role==='coordinator'){
+      actualRole='user'; // در دیتابیس به‌عنوان user ذخیره می‌شود
+      canApproveLeaves=true;
+      canScheduleTasks=true;
+    }
+    // درج مستقیم در profiles
     var profRow={
       id:newUserId,
       email:email||(pid+'@payvand.local'),
-      role:role,
+      role:actualRole,
       first_name:first,
       last_name:last,
       personnel_id:pid,
@@ -4684,6 +4693,8 @@ async function createInvitation(){
       password_salt:pwdSalt,
       parent_id:parent||null,
       can_manage_users:false,
+      can_approve_leaves:canApproveLeaves,
+      can_schedule_tasks:canScheduleTasks,
       failed_attempts:0,
       expires_at:expiresAt
     };
@@ -4738,9 +4749,10 @@ async function renderUsers(){
       var canDelegate=currentRole==='super_admin'&&p.role==='admin';
       h+='<tr><td>'+esc(p.first_name)+'</td><td>'+esc(p.last_name)+'</td><td>'+esc(p.personnel_id)+'</td>'+
         '<td><select onchange="changeRole(\''+p.id+'\',this.value)"'+(canEdit?'':' disabled')+'>'+
-        '<option value="user"'+(p.role==='user'?' selected':'')+'>کاربر</option>'+
+        '<option value="user"'+(p.role==='user'&&!p.can_approve_leaves&&!p.can_schedule_tasks?' selected':'')+'>کاربر</option>'+
+        '<option value="coordinator"'+(p.role==='user'&&(p.can_approve_leaves||p.can_schedule_tasks)?' selected':'')+'>👥 هماهنگ‌کننده</option>'+
         '<option value="guest"'+(p.role==='guest'?' selected':'')+'>👁️ مهمان</option>'+
-        '<option value="admin"'+(p.role==='admin'?' selected':'')+'>ادمین</option>'+
+        '<option value="admin"'+(p.role==='admin'?' selected':'')+'>مدیر</option>'+
         (currentRole==='super_admin'?'<option value="super_admin"'+(p.role==='super_admin'?' selected':'')+'>سوپرادمین</option>':'')+
         '</select>'+
         (p.can_manage_users?' <span style="font-size:10px;background:#dcfce7;color:#166534;padding:2px 6px;border-radius:8px">🎫 تفویض‌شده</span>':'')+
@@ -4761,7 +4773,8 @@ async function renderUsers(){
           '<option value="archived"'+(p.status==='archived'?' selected':'')+'>📦 بایگانی</option>'+
         '</select></td>'+
         '<td>'+
-        '<button class="btn btn-sm btn-info" onclick="viewUserHistory(\''+p.id+'\')">سوابق</button>'+
+        '<button class="btn btn-sm btn-warning" onclick="editUserDetails(\''+p.id+'\')" title="ویرایش اطلاعات">✏️</button>'+
+        '<button class="btn btn-sm btn-info" onclick="viewUserHistory(\''+p.id+'\')" title="سوابق">📋</button>'+
         (canReset?' <button class="btn btn-sm btn-warning" onclick="openResetPwdModal(\''+p.id+'\')" title="بازنشانی رمز">🔑</button>':'')+
         (canDelegate?' <button class="btn btn-sm '+(p.can_manage_users?'btn-success':'btn-secondary')+'" onclick="toggleDelegate(\''+p.id+'\','+(p.can_manage_users?'false':'true')+')" title="'+(p.can_manage_users?'سلب اختیار':'تفویض اختیار')+'">'+(p.can_manage_users?'🎫✓':'🎫')+'</button>':'')+
         (p.role==='guest'?' <button class="btn btn-sm btn-success" onclick="openGuestSettings(\''+p.id+'\')">⚙️</button>':'')+
@@ -4838,28 +4851,107 @@ async function changeParent(userId,parentVal){
   hideLoading();
 }
 async function changeRole(userId,newRole){
-  if(currentRole!=='super_admin'&&newRole==='super_admin'){showAlert('فقط سوپرادمین می‌تواند نقش سوپرادمین بدهد.');return;}
-  // اگر نقش به user تغییر کرد و کاربر زیرمجموعه دارد، هشدار بده
-  if(newRole==='user'){
-    var subs=cachedPersons.filter(function(p){return p.parent_id===userId;});
-    if(subs.length>0){
-      if(!confirm('⚠️ این کاربر '+subs.length+' زیرمجموعه دارد.\nبا تغییر نقش به «کاربر عادی»، دسترسی هماهنگ‌کننده از او سلب می‌شود.\nزیرمجموعه‌ها باید به هماهنگ‌کننده جدید منتقل شوند.\n\nادامه می‌دهید؟'))return;
-      // زیرمجموعه‌ها را بدون هماهنگ‌کننده کن
-      for(var i=0;i<subs.length;i++){
-        await updateUserProfileDB(subs[i].id,{parent_id:null});
-      }
-      await updateUserProfileDB(userId,{role:newRole,can_approve_leaves:false,can_schedule_tasks:false});
+  if(currentRole!=='super_admin'&&newRole==='super_admin'){showAlert('فقط سوپرادمین می‌تواند نقش سوپرادمین بدهد.','error');return;}
+  // ─── مدیریت نقش هماهنگ‌کننده ───
+  if(newRole==='coordinator'){
+    // هماهنگ‌کننده = user با دسترسی‌های تأیید و تعریف وظیفه
+    showLoading('تنظیم به‌عنوان هماهنگ‌کننده...');
+    try{
+      await updateUserProfileDB(userId,{role:'user',can_approve_leaves:true,can_schedule_tasks:true});
+      await recordAudit('update','profiles',userId,{role:'coordinator'});
       await loadAllPersons();await loadSubordinates();applyRoleBasedUI();
-      showAlert('نقش تغییر کرد. '+subs.length+' زیرمجموعه بدون هماهنگ‌کننده شدند.','warning');
+      showAlert('کاربر به‌عنوان هماهنگ‌کننده تنظیم شد.','success');
+      await renderUsers();
+    }catch(e){showAlert('خطا: '+e.message,'error');}
+    hideLoading();
+    return;
+  }
+  // اگر نقش به user تغییر کرد و کاربر دسترسی‌های هماهنگ‌کننده دارد، آن‌ها را سلب کن
+  if(newRole==='user'){
+    var target=cachedPersons.filter(function(p){return p.id===userId;})[0];
+    if(target&&(target.can_approve_leaves||target.can_schedule_tasks)){
+      // تبدیل از هماهنگ‌کننده به کاربر عادی
+      var subs=cachedPersons.filter(function(p){return p.parent_id===userId;});
+      if(subs.length>0){
+        if(!confirm('⚠️ این هماهنگ‌کننده '+subs.length+' زیرمجموعه دارد.\nبا تغییر به «کاربر عادی»، دسترسی‌های هماهنگ‌کننده سلب می‌شود.\n\nادامه می‌دهید؟'))return;
+        for(var i=0;i<subs.length;i++){
+          await updateUserProfileDB(subs[i].id,{parent_id:null});
+        }
+      }
+      showLoading('تغییر به کاربر عادی...');
+      try{
+        await updateUserProfileDB(userId,{role:'user',can_approve_leaves:false,can_schedule_tasks:false});
+        await loadAllPersons();await loadSubordinates();applyRoleBasedUI();
+        showAlert('نقش به کاربر عادی تغییر کرد.'+(subs.length?' '+subs.length+' زیرمجموعه بدون هماهنگ‌کننده شد.':''),'warning');
+        await renderUsers();
+      }catch(e){showAlert('خطا: '+e.message,'error');}
       hideLoading();
       return;
     }
   }
   showLoading('تغییر نقش...');
-  try{await updateUserProfileDB(userId,{role:newRole});if(userId===currentUser.id){currentRole=newRole;currentUser.profile.role=newRole;updateUserBox();applyRoleBasedUI();}showAlert('نقش تغییر کرد.','success');
+  try{
+    await updateUserProfileDB(userId,{role:newRole});
+    await recordAudit('update','profiles',userId,{role:newRole});
+    if(userId===currentUser.id){currentRole=newRole;currentUser.profile.role=newRole;updateUserBox();applyRoleBasedUI();}
+    showAlert('نقش تغییر کرد.','success');
     if(newRole==='guest'){await loadAllPersons();hideLoading();openGuestSettings(userId);return;}
-  }catch(e){showAlert('خطا: '+e.message);}
+    await renderUsers();
+  }catch(e){showAlert('خطا: '+e.message,'error');}
   hideLoading();
+}
+
+// ─── ویرایش اطلاعات کاربر (نام، نام خانوادگی، شماره پرسنلی، ایمیل) ───
+function editUserDetails(userId){
+  var p=cachedPersons.filter(function(x){return x.id===userId;})[0];
+  if(!p){showAlert('کاربر یافت نشد.','error');return;}
+  var isAdmin=currentRole==='admin'||currentRole==='super_admin';
+  var isCoord=isCoordinatorRole()&&!isAdmin;
+  // هماهنگ‌کننده فقط زیرمجموعه‌های خودش را می‌تواند ویرایش کند
+  if(isCoord&&!isAdmin&&p.parent_id!==currentUser.id){showAlert('شما فقط زیرمجموعه‌های خودتان را می‌توانید ویرایش کنید.','error');return;}
+  // ساخت پنجره ویرایش
+  var overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto';
+  overlay.innerHTML='<div style="background:var(--c-modal-bg,#fff);border-radius:16px;padding:24px;max-width:440px;width:100%;box-shadow:var(--c-shadow-lg);color:var(--c-text)">'+
+    '<h3 style="margin:0 0 16px;color:var(--c-primary)">✏️ ویرایش اطلاعات کاربر</h3>'+
+    '<div class="form-group"><label>نام:</label><input type="text" id="ed_first_name" value="'+esc(p.first_name||'')+'"></div>'+
+    '<div class="form-group"><label>نام خانوادگی:</label><input type="text" id="ed_last_name" value="'+esc(p.last_name||'')+'"></div>'+
+    '<div class="form-group"><label>شماره پرسنلی:</label><input type="text" id="ed_personnel_id" dir="ltr" value="'+esc(p.personnel_id||'')+'"></div>'+
+    '<div class="form-group"><label>ایمیل:</label><input type="email" id="ed_email" dir="ltr" value="'+esc(p.email||'')+'"></div>'+
+    '<div style="display:flex;gap:8px;margin-top:16px">'+
+      '<button class="btn btn-success" id="ed_save">💾 ذخیره</button>'+
+      '<button class="btn btn-secondary" id="ed_cancel">انصراف</button>'+
+    '</div>'+
+  '</div>';
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove();});
+  $('ed_cancel').onclick=function(){overlay.remove();};
+  $('ed_save').onclick=async function(){
+    var firstName=val('ed_first_name'),lastName=val('ed_last_name'),pid=toEnglishDigits(val('ed_personnel_id')),email=val('ed_email');
+    if(!firstName||!lastName||!pid){showAlert('نام، نام خانوادگی و شماره پرسنلی الزامی است.','error');return;}
+    showLoading('ذخیره...');
+    try{
+      await updateUserProfileDB(userId,{first_name:firstName,last_name:lastName,personnel_id:pid,email:email||null});
+      await recordAudit('update','profiles',userId,{first_name:firstName,last_name:lastName,personnel_id:pid});
+      showAlert('اطلاعات کاربر به‌روزرسانی شد.','success');
+      overlay.remove();
+      await loadAllPersons();
+      await renderUsers();
+    }catch(e){showAlert('خطا: '+e.message,'error');}
+    hideLoading();
+  };
+}
+
+// وقتی نقش در فرم ایجاد کاربر تغییر می‌کند
+function onRoleChange(){
+  var role=val('inv_role');
+  var parentGroup=$('inv_parent').parentNode;
+  if(role==='coordinator'){
+    // هماهنگ‌کننده نیاز به هماهنگ‌کننده بالادستی ندارد
+    parentGroup.style.display='none';
+  }else{
+    parentGroup.style.display='';
+  }
 }
 async function togglePermission(userId,perm,val){
   // اگر دسترسی can_approve_leaves یا can_schedule_tasks خاموش می‌شود
