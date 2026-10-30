@@ -738,8 +738,8 @@ button,.btn{-webkit-touch-callout:none}
       <button class="nav-item" data-target="program_reports"><span class="ico">📋</span><span class="lbl">گزارش و تاریخچه برنامه‌ها</span></button>
       <button class="nav-item admin-only hidden" data-target="categorized_reports"><span class="ico">📈</span><span class="lbl">گزارش تحلیلی امتیازات</span></button>
     </div>
-    <!-- گروه ۶: مدیریت سامانه (مدیر/سوپرادمین/هماهنگ‌کننده) -->
-    <div class="nav-group system-management">
+    <!-- گروه ۶: مدیریت سامانه (فقط مدیر/سوپرادمین) -->
+    <div class="nav-group admin-only">
       <div class="nav-group-title">مدیریت سامانه</div>
       <button class="nav-item events-access hidden" data-target="events"><span class="ico">📅</span><span class="lbl">رویدادها و تعطیلات</span></button>
       <button class="nav-item" data-target="users"><span class="ico">👥</span><span class="lbl">مدیریت کاربران و نقش‌ها</span></button>
@@ -2009,9 +2009,7 @@ function applyRoleBasedUI(){
   document.querySelectorAll('.coordinator-only').forEach(function(el){el.classList.toggle('hidden',!isCoord);});
   // گروه «هماهنگی و تأیید»: فقط برای هماهنگ‌کننده یا مدیر
   document.querySelectorAll('.coordinator-admin-only').forEach(function(el){el.classList.toggle('hidden',!isCoord&&!isAdmin);});
-  // گروه «مدیریت سامانه»: برای مدیر/سوپرادمین/هماهنگ‌کننده
-  // هماهنگ‌کننده فقط «مدیریت کاربران و نقش‌ها» را می‌بیند (زیرمجموعه‌هایش)
-  document.querySelectorAll('.system-management').forEach(function(el){el.classList.toggle('hidden',!isCoord&&!isAdmin);});
+  // گروه «مدیریت سامانه»: فقط برای مدیر/سوپرادمین (از طریق admin-only مدیریت می‌شود)
   // گروه «کارکرد فردی»: مخفی برای سوپرادمین
   document.querySelectorAll('.no-super-admin').forEach(function(el){el.classList.toggle('hidden',currentRole==='super_admin');});
   // مخفی کردن گروه‌های خالی (اگر همه آیتم‌های یک گروه hidden باشند، گروه را هم hidden کن)
