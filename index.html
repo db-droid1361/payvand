@@ -2,14 +2,30 @@
 <html lang="fa" dir="rtl" data-theme="day">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<meta name="theme-color" content="#1769AA">
 <title>پیوند — سامانه یکپارچه مدیریت فعالیت‌ها و رویدادها</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
 <style>
+/* ═══ CSS Reset استاندارد cross-browser ═══ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-box-sizing:border-box;-moz-box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;-moz-text-size-adjust:100%;text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+body{font-family:'Vazirmatn','Segoe UI',Tahoma,Arial,sans-serif;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
+img,svg{max-width:100%;height:auto;display:block}
+input,select,textarea,button{font-family:inherit;font-size:inherit;line-height:inherit;color:inherit}
+button{cursor:pointer;background:none;border:none;outline:none}
+input[type="text"],input[type="password"],input[type="email"],input[type="number"],select,textarea{width:100%;padding:10px 12px;border:1px solid var(--c-border,var(--border,#e2e8f0));border-radius:8px;background:var(--c-input-bg,var(--card-bg,#fff));color:var(--c-text,var(--text,#1e293b));-webkit-appearance:none;-moz-appearance:none;appearance:none;transition:border-color .2s,box-shadow .2s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--c-primary,var(--accent,#1769AA));box-shadow:0 0 0 3px rgba(23,105,170,.12)}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 9L1 4h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:left 12px center;padding-left:32px}
+table{border-collapse:collapse;width:100%}
+a{color:inherit;text-decoration:none}
+.hidden{display:none!important}
+[hidden]{display:none!important}
+
+/* ═══ متغیرهای قدیمی (برای سازگاری) ═══ */
 :root{--primary:#2c3e50;--secondary:#34495e;--accent:#3498db;--light:#ecf0f1;--danger:#e74c3c;--success:#2ecc71;--warning:#f39c12;--info:#3498db;--purple:#9b59b6;--bg:#f4f6f9;--card-bg:#fff;--text:#2c3e50;--border:#dcdfe6;--role-user:#3498db;--role-admin:#9b59b6;--role-super_admin:#e74c3c}
-*{box-sizing:border-box;font-family:Tahoma,Arial,sans-serif}
-body{margin:0;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6}
 header{background:var(--primary);color:#fff;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;box-shadow:0 2px 4px rgba(0,0,0,.1)}
 header h1{margin:0;font-size:1.2rem}
 .header-sub{font-size:13px;opacity:.9}
