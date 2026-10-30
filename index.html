@@ -784,12 +784,13 @@ button,.btn{-webkit-touch-callout:none}
     <span class="topbar-title" id="topbar_title">داشبورد</span>
   </div>
   <div class="topbar-right">
+    <!-- ─── چراغ وضعیت اتصال دیتابیس ─── -->
+    <div id="db_status_light" style="width:10px;height:10px;border-radius:50%;background:#f59e0b;box-shadow:0 0 6px rgba(245,158,11,.6);margin-left:6px;cursor:help" title="بررسی اتصال..."></div>
     <button class="btn btn-sm btn-info" onclick="quickNotify()" title="ارسال پیام" style="padding:6px 10px;min-height:32px">📢</button>
     <button class="btn btn-sm btn-success" onclick="showSection('dashboard')" title="داشبورد" style="padding:6px 10px;min-height:32px">🏠</button>
     <div class="theme-switcher">
       <button class="theme-btn active" data-theme="day" title="تم روز">☀️</button>
       <button class="theme-btn" data-theme="night" title="تم شب">🌙</button>
-      
     </div>
     <div class="user-box">
       <div class="avatar" id="user_avatar">؟</div>
@@ -3002,13 +3003,32 @@ function getSelectedNotifRecipients(){
 }
 
 /* ═════ Dashboard ═════ */
+// ─── بررسی وضعیت اتصال دیتابیس ───
+async function checkDbConnection(){
+  var light=$('db_status_light');
+  if(!light)return;
+  if(!sb){light.style.background='#ef4444';light.style.boxShadow='0 0 6px rgba(239,68,68,.6)';light.title='دیتابیس متصل نیست';return;}
+  try{
+    const{error}=await sb.from('profiles').select('id').limit(1);
+    if(error){
+      light.style.background='#ef4444';light.style.boxShadow='0 0 6px rgba(239,68,68,.6)';
+      light.title='خطا در اتصال: '+(error.message||'نامشخص');
+    }else{
+      light.style.background='#22c55e';light.style.boxShadow='0 0 6px rgba(34,197,94,.6)';
+      light.title='اتصال به دیتابیس برقرار است ✓';
+    }
+  }catch(e){
+    light.style.background='#ef4444';light.style.boxShadow='0 0 6px rgba(239,68,68,.6)';
+    light.title='خطا در اتصال به دیتابیس';
+  }
+}
+
 async function renderDashboard(){
   var c=$('dashboard_content');
-  c.innerHTML='<p>در حال بارگذاری...</p>';
+  c.innerHTML='<p style="color:var(--c-text-muted)">در حال بارگذاری...</p>';
   try{
     var todayStr=getTodayJalali();
     var month=todayStr.split('/');
-    // ست کردن ماه/سال داشبورد
     if($('dash_cal_month'))$('dash_cal_month').value=parseInt(month[1],10);
     if($('dash_cal_year'))$('dash_cal_year').value=parseInt(month[0],10);
     var monthStart=month[0]+'/'+pad2(parseInt(month[1],10))+'/01';
@@ -3017,27 +3037,23 @@ async function renderDashboard(){
     var pendingLeaves=myLeaves.filter(function(l){return l.status==='pending'||l.status==='coordinator_pending';}).length;
     var myTasks=await loadMyTasks('pending');
     var myActs=await loadActiveActivitiesForCountdown();
-    // محاسبه امتیاز کاربر فعلی
     var myScore=0;
     try{const{data:scoreData,error:scoreError}=await sb.rpc('get_user_score',{target_user:currentUser.id});if(!scoreError&&typeof scoreData==='number')myScore=scoreData;}catch(e){}
+    var displayRole=getDisplayRole();
+    var roleLabel=getDisplayRoleLabel();
 
-    // اگر کاربر هماهنگ‌کننده است، زیرمجموعه‌ها را نشان بده
-    var coordInfo='';
-    if(currentUser.profile.parent_id){
-      var coord=cachedPersons.filter(function(p){return p.id===currentUser.profile.parent_id;})[0];
-      if(coord)coordInfo='<div class="coordinator-info"><b>👥 هماهنگ‌کننده شما:</b> '+esc(coord.first_name+' '+coord.last_name)+' ('+esc(coord.personnel_id)+')</div>';
-    }
-    if(cachedSubordinates.length>0){
-      coordInfo+='<div class="coordinator-info" style="background:linear-gradient(135deg,var(--info) 0%,#2980b9 100%)"><b>📋 شما هماهنگ‌کننده '+cachedSubordinates.length+' کاربر هستید.</b> <button class="btn btn-sm" style="background:#fff;color:var(--info)" onclick="showSection(\'approvals\')">مشاهده تأییدها</button></div>';
-    }
+    // بنر خوش‌آمد با نام و نقش
+    var html='<div style="background:linear-gradient(135deg,var(--c-primary) 0%,var(--c-primary-dark) 100%);color:#fff;padding:18px 22px;border-radius:14px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">'+
+      '<div style="display:flex;align-items:center;gap:12px">'+
+        '<div style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">'+esc((currentUser.profile.first_name[0]||'؟')+(currentUser.profile.last_name[0]||''))+'</div>'+
+        '<div>'+
+          '<div style="font-size:18px;font-weight:700">'+esc(currentUser.profile.first_name+' '+currentUser.profile.last_name)+'</div>'+
+          '<div style="font-size:13px;opacity:.9">👤 '+esc(roleLabel)+' | '+esc(currentUser.profile.personnel_id)+' | امروز: '+esc(todayStr)+'</div>'+
+        '</div>'+
+      '</div>'+
+      '<span class="score-badge '+(myScore>0?'':myScore<0?'negative':'zero')+'" style="font-size:16px">🏆 '+myScore+'</span>'+
+    '</div>';
 
-    var statsHtml='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px">'+
-      '<div class="report-summary"><div style="font-size:12px;color:var(--c-text-muted,#666)">اظهارات این ماه</div><div style="font-size:24px;font-weight:bold;color:var(--accent)">'+myLogs.length+'</div></div>'+
-      '<div class="report-summary"><div style="font-size:12px;color:var(--c-text-muted,#666)">درخواست‌های در جریان</div><div style="font-size:24px;font-weight:bold;color:var(--warning)">'+pendingLeaves+'</div></div>'+
-      '<div class="report-summary"><div style="font-size:12px;color:var(--c-text-muted,#666)">وظایف در انتظار</div><div style="font-size:24px;font-weight:bold;color:var(--purple)">'+myTasks.length+'</div></div>'+
-      '</div>';
-
-    var html='<div style="background:#d6eaf8;padding:14px;border-radius:8px;margin-bottom:20px;border-right:4px solid var(--accent);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px"><div><b>خوش آمدید، '+esc(currentUser.profile.first_name)+'!</b><br>نقش: <span class="role-badge role-'+currentRole+'">'+ROLE_LABEL[currentRole]+'</span></div><div><span class="score-badge '+(myScore>0?'':myScore<0?'negative':'zero')+'">🏆 امتیاز شما: '+myScore+'</span></div></div>';
     // بنر تاریخ انقضا برای مهمان
     if(currentRole==='guest'&&currentUser.profile.expires_at){
       var expDate=new Date(currentUser.profile.expires_at);
@@ -3045,35 +3061,84 @@ async function renderDashboard(){
       var urgent=daysLeft<=7;
       html+='<div class="guest-banner'+(urgent?' urgent':'')+'"><div class="gb-info">'+(urgent?'⏰':'📅')+' حساب مهمان شما در '+daysLeft+' روز ('+expDate.toLocaleDateString('fa-IR')+') منقضی می‌شود.</div></div>';
     }
-    // نوار شمارش معکوس فعالیت‌های در جریان
-    var countdown=await renderCountdownBanner();
-    // mini-banner اعلان‌های مهم
-    var annBanner=await renderAnnouncementsMiniBanner();
-    html+=annBanner+countdown+coordInfo+statsHtml+
-      '<h3>عملیات سریع</h3>'+
-      '<div style="display:flex;gap:10px;flex-wrap:wrap">'+
-      // سوپرادمین: خوداظهاری و مرخصی ندارد
-      (currentRole!=='super_admin'?'<button class="btn" onclick="showSection(\'daily_log\')">ثبت اظهار امروز</button>':'')+
-      (currentRole!=='super_admin'?'<button class="btn btn-warning" onclick="showSection(\'leave_req\')">درخواست مرخصی</button>':'')+
-      '<button class="btn btn-success" onclick="showSection(\'reports\')">گزارش ماهانه</button>'+
-      (currentRole!=='super_admin'?'<button class="btn btn-purple" onclick="showSection(\'my_tasks\')">وظایف من ('+myTasks.length+')</button>':'')+
-      (myActs&&myActs.length?'<button class="btn btn-warning" onclick="showSection(\'my_tasks\')">فعالیت‌های برنامه‌ها ('+myActs.length+')</button>':'')+
-      (currentUser.profile&&(currentUser.profile.can_create_programs||currentRole==='admin'||currentRole==='super_admin')?'<button class="btn btn-info" onclick="showSection(\'programs\')">مدیریت برنامه‌ها</button>':'')+
-      (currentRole==='admin'||currentRole==='super_admin'?'<button class="btn btn-danger" onclick="showSection(\'approvals\')">تأیید مرخصی‌ها</button><button class="btn btn-danger" onclick="showSection(\'send_notification\')">ارسال پیام</button><button class="btn btn-danger" onclick="showSection(\'users\')">مدیریت کاربران</button>':'')+
-      '</div>';
 
-    // اگر ادمین/سوپرادمین، آمار درخواست‌های در انتظار همه را نشان بده
+    // اطلاعات هماهنگ‌کننده
+    var coordInfo='';
+    if(currentUser.profile.parent_id){
+      var coord=cachedPersons.filter(function(p){return p.id===currentUser.profile.parent_id;})[0];
+      if(coord)coordInfo='<div class="coordinator-info"><b>👥 هماهنگ‌کننده شما:</b> '+esc(coord.first_name+' '+coord.last_name)+' ('+esc(coord.personnel_id)+')</div>';
+    }
+    if(cachedSubordinates.length>0){
+      coordInfo+='<div class="coordinator-info" style="background:linear-gradient(135deg,var(--c-info) 0%,#2980b9 100%)"><b>📋 شما هماهنگ‌کننده '+cachedSubordinates.length+' کاربر هستید.</b> <button class="btn btn-sm" style="background:#fff;color:var(--c-info)" onclick="showSection(\'approvals\')">مشاهده تأییدها</button></div>';
+    }
+
+    // نوار شمارش معکوس و اعلان‌ها
+    var countdown=await renderCountdownBanner();
+    var annBanner=await renderAnnouncementsMiniBanner();
+    html+=annBanner+countdown+coordInfo;
+
+    // ─── کارت‌های آماری قابل کلیک ───
+    var totalPending=myTasks.length+(myActs?myActs.length:0);
+    html+='<div class="dash-stats">'+
+      '<div class="dash-stat" onclick="showSection(\'records\')" style="cursor:pointer">'+
+        '<div class="stat-icon blue">📝</div>'+
+        '<div class="stat-info"><div class="num">'+myLogs.length+'</div><div class="lbl">اظهارات این ماه</div></div>'+
+      '</div>'+
+      '<div class="dash-stat" onclick="showSection(\'leave_req\')" style="cursor:pointer">'+
+        '<div class="stat-icon orange">✈️</div>'+
+        '<div class="stat-info"><div class="num">'+pendingLeaves+'</div><div class="lbl">درخواست‌های در جریان</div></div>'+
+      '</div>'+
+      '<div class="dash-stat" onclick="showSection(\'my_tasks\')" style="cursor:pointer">'+
+        '<div class="stat-icon purple">✅</div>'+
+        '<div class="stat-info"><div class="num">'+totalPending+'</div><div class="lbl">وظایف در انتظار</div></div>'+
+      '</div>'+
+      '<div class="dash-stat" onclick="showSection(\'reports\')" style="cursor:pointer">'+
+        '<div class="stat-icon green">📊</div>'+
+        '<div class="stat-info"><div class="num">گزارش</div><div class="lbl">گزارش کارکرد</div></div>'+
+      '</div>'+
+    '</div>';
+
+    // ─── عملیات سریع ───
+    html+='<h3 style="margin:16px 0 10px">⚡ عملیات سریع</h3>'+
+    '<div style="display:flex;gap:10px;flex-wrap:wrap">'+
+      (currentRole!=='super_admin'?'<button class="btn" onclick="showSection(\'daily_log\')">📝 ثبت اظهار امروز</button>':'')+
+      (currentRole!=='super_admin'?'<button class="btn btn-warning" onclick="showSection(\'leave_req\')">✈️ درخواست مرخصی</button>':'')+
+      '<button class="btn btn-success" onclick="showSection(\'reports\')">📊 گزارش ماهانه</button>'+
+      (currentRole!=='super_admin'?'<button class="btn btn-purple" onclick="showSection(\'my_tasks\')">✅ وظایف و فعالیت‌ها ('+totalPending+')</button>':'')+
+      (currentUser.profile&&(currentUser.profile.can_create_programs||currentRole==='admin'||currentRole==='super_admin')?'<button class="btn btn-info" onclick="showSection(\'programs\')">🗂 مدیریت برنامه‌ها</button>':'')+
+      (currentRole==='admin'||currentRole==='super_admin'?'<button class="btn btn-danger" onclick="showSection(\'approvals\')">✅ تأیید درخواست‌ها</button><button class="btn btn-danger" onclick="showSection(\'send_notification\')">📢 ارسال پیام</button><button class="btn btn-danger" onclick="showSection(\'users\')">👥 مدیریت کاربران</button>':'')+
+    '</div>';
+
+    // ─── نمای مدیریتی (فقط مدیر/سوپرادمین) ───
     if(currentRole==='admin'||currentRole==='super_admin'){
       var allLeaves=await loadLeaves();
       var allPending=allLeaves.filter(function(l){return l.status==='pending'||l.status==='manager_pending';});
       var activeUsers=cachedPersons.filter(function(p){return p.status==='active';}).length;
       var allMonthLogs=await loadLogs(null,monthStart,todayStr);
-      html+='<h3>نمای مدیریتی</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:12px 0">'+
-        '<div class="report-summary"><div style="font-size:12px;color:var(--c-text-muted,#666)">کاربران فعال</div><div style="font-size:24px;font-weight:bold">'+activeUsers+'</div></div>'+
-        '<div class="report-summary"><div style="font-size:12px;color:var(--c-text-muted,#666)">اظهارات این ماه (کل)</div><div style="font-size:24px;font-weight:bold">'+allMonthLogs.length+'</div></div>'+
-        '<div class="report-summary"><div style="font-size:12px;color:var(--c-text-muted,#666)">مرخصی‌های در انتظار</div><div style="font-size:24px;font-weight:bold">'+allPending.length+'</div></div></div>';
+      html+='<h3 style="margin:20px 0 10px">📊 نمای مدیریتی</h3>'+
+      '<div class="dash-stats">'+
+        '<div class="dash-stat" onclick="showSection(\'users\')" style="cursor:pointer">'+
+          '<div class="stat-icon blue">👥</div>'+
+          '<div class="stat-info"><div class="num">'+activeUsers+'</div><div class="lbl">کاربران فعال</div></div>'+
+        '</div>'+
+        '<div class="dash-stat" onclick="showSection(\'records\')" style="cursor:pointer">'+
+          '<div class="stat-icon green">📝</div>'+
+          '<div class="stat-info"><div class="num">'+allMonthLogs.length+'</div><div class="lbl">اظهارات این ماه (کل)</div></div>'+
+        '</div>'+
+        '<div class="dash-stat" onclick="showSection(\'approvals\')" style="cursor:pointer">'+
+          '<div class="stat-icon red">⏰</div>'+
+          '<div class="stat-info"><div class="num">'+allPending.length+'</div><div class="lbl">مرخصی‌های در انتظار</div></div>'+
+        '</div>'+
+        '<div class="dash-stat" onclick="showSection(\'program_reports\')" style="cursor:pointer">'+
+          '<div class="stat-icon orange">📋</div>'+
+          '<div class="stat-info"><div class="num">گزارش</div><div class="lbl">گزارش برنامه‌ها</div></div>'+
+        '</div>'+
+      '</div>';
       if(allPending.length){
-        html+='<div style="background:var(--c-warning-light,#fef3c7);padding:14px;border-radius:8px;margin-top:20px;border-right:4px solid var(--warning)"><b>⏰ '+allPending.length+' درخواست مرخصی در انتظار تأیید</b> <button class="btn btn-sm" onclick="showSection(\'approvals\')">مشاهده</button></div>';
+        html+='<div style="background:var(--c-warning-light);padding:14px;border-radius:10px;margin-top:14px;border-right:4px solid var(--c-warning);display:flex;justify-content:space-between;align-items:center">'+
+          '<b>⏰ '+allPending.length+' درخواست مرخصی در انتظار تأیید</b>'+
+          '<button class="btn btn-sm btn-warning" onclick="showSection(\'approvals\')">مشاهده و تأیید ←</button>'+
+        '</div>';
       }
     }
 
@@ -7571,6 +7636,8 @@ function init(){
   on('btn_reset_pwd_confirm','click',confirmResetPassword);
   on('rec_new_password','input',function(){updateStrengthMeter('rec_new_password','rec_strength_bar','rec_strength_label');});
   if(!SUPABASE_CONFIGURED||!sb){showAuthError('تنظیمات Supabase تکمیل نشده است. مقدار SUPABASE_URL و SUPABASE_ANON_KEY را در ابتدای فایل وارد کنید؛ فقط کلید anon مجاز است.');return;}
+  // ─── بررسی وضعیت اتصال دیتابیس ───
+  checkDbConnection();
   // احراز هویت مستقل از Supabase Auth — session از localStorage بازیابی می‌شود
   // (onAuthStateChange و getSession غیرفعال‌اند چون JWT تولید نمی‌کنیم)
   restoreTheme();
