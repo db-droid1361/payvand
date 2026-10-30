@@ -1785,8 +1785,8 @@ function restoreSession(){
     currentUser={id:s.user.id,email:s.user.email};
     currentUser.profile=s.user;
     currentRole=s.user.role||'user';
-    
-    else document.body.classList.remove('guest-mode');document.body.classList.remove('no-log');
+    if(currentRole==='guest'){document.body.classList.add('guest-mode');if(!currentUser.profile.can_log)document.body.classList.add('no-log');else document.body.classList.remove('no-log');}
+    else{document.body.classList.remove('guest-mode');document.body.classList.remove('no-log');}
     $('auth_screen').classList.add('hidden');
     $('main_app').classList.remove('hidden');
     updateUserBox();
@@ -2806,7 +2806,7 @@ function showSection(id,skipHistory){
   if(id==='my_tasks')renderMyTasks();
   if(id==='programs')renderPrograms();
   if(id==='records'){populatePersonDropdown('rec_person');renderRecords();}
-  if(id==='reports')populatePersonDropdown('rep_person');
+  if(id==='reports'){populatePersonDropdown('rep_person');toggleReportDates();}
   if(id==='coordinator_tasks'){populateSubordinateDropdown('ct_assignee');renderCoordinatorTasks();}
   if(id==='approvals')renderApprovals();
   if(id==='send_notification'){populateRecipientDropdown();renderMsgArchive();}
@@ -5086,9 +5086,47 @@ async function renderRecords(){
   }catch(e){c.innerHTML='<p>خطا: '+esc(e.message)+'</p>';}
 }
 function toggleReportDates(){
-  var type=$('rep_type').value,label=document.querySelector('#rep_start_box label');
-  $('rep_end_box').classList.toggle('hidden',type!=='custom');
-  label.textContent={daily:'تاریخ روز:',weekly:'تاریخ شروع هفته:',monthly:'یک روز از ماه:',custom:'تاریخ شروع:'}[type];
+  var type=$('rep_type').value;
+  var label=document.querySelector('#rep_start_box label');
+  var dateInput=$('rep_start_date');
+  var endBox=$('rep_end_box');
+  var todayJ=getTodayJalali();
+  var todayP=parseJalali(todayJ);
+  var todayDow=getJalaliDayOfWeek(todayP.jy,todayP.jm,todayP.jd); // 0=شنبه ... 6=جمعه
+  
+  if(type==='daily'){
+    // ─── روزانه: تاریخ همان روز ───
+    label.textContent='📅 تاریخ روز:';
+    endBox.classList.add('hidden');
+    if(dateInput)dateInput.value=todayJ;
+    dateInput.placeholder='انتخاب تاریخ روز';
+  }else if(type==='weekly'){
+    // ─── هفتگی: روز اول هفته = شنبه ───
+    label.textContent='📅 تاریخ شروع هفته (شنبه):';
+    endBox.classList.add('hidden');
+    // محاسبه شنبه این هفته
+    var saturdayJ=todayJ;
+    if(todayDow>0){
+      // امروز شنبه نیست — به عقب برگرد تا شنبه را پیدا کن
+      saturdayJ=addDaysToJalali(todayJ,-todayDow);
+    }
+    if(dateInput)dateInput.value=saturdayJ;
+    dateInput.placeholder='شنبه اول هفته';
+  }else if(type==='monthly'){
+    // ─── ماهانه: یک روز از ماه ───
+    label.textContent='📅 یک روز از ماه:';
+    endBox.classList.add('hidden');
+    if(dateInput&&!isValidJalaliDate(dateInput.value))dateInput.value=todayJ;
+    dateInput.placeholder='هر روزی از ماه مورد نظر';
+  }else if(type==='custom'){
+    // ─── بازه دلخواه: شروع و پایان ───
+    label.textContent='📅 تاریخ شروع:';
+    endBox.classList.remove('hidden');
+    if(dateInput&&!isValidJalaliDate(dateInput.value))dateInput.value=todayJ;
+    dateInput.placeholder='تاریخ شروع';
+  }
+  // ─── به‌روزرسانی datepicker ───
+  initDatepickers();
 }
 var DAY_NAMES=['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه'];
 var MONTH_NAMES=['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
@@ -5248,7 +5286,7 @@ async function generateReport(){
   if(!isValidJalaliDate(startStr)){showAlert('تاریخ نامعتبر است.','error');return;}
   var p=parseJalali(startStr);
   if(type==='monthly'){start=fmtJalali(p.jy,p.jm,1);end=fmtJalali(p.jy,p.jm,jalaliMonthLength(p.jy,p.jm));period=MONTH_NAMES[p.jm-1]+' '+p.jy;}
-  else{start=normJ(startStr);if(type==='daily')end=start;else if(type==='weekly')end=addDaysToJalali(start,6);else{if(!isValidJalaliDate($('rep_end_date').value)){showAlert('تاریخ پایان نامعتبر است.','error');return;}end=normJ($('rep_end_date').value);if(jalaliToTimestamp(end)<jalaliToTimestamp(start)){showAlert('تاریخ پایان نباید قبل از شروع باشد.','error');return;}}period=start===end?start:start+' تا '+end;}
+  else{start=normJ(startStr);if(type==='daily'){end=start;period='روز '+start+' ('+dayName(start)+')';}else if(type==='weekly'){end=addDaysToJalali(start,6);period='هفته '+start+' تا '+end+' ('+dayName(start)+' تا '+dayName(end)+')';}else{if(!isValidJalaliDate($('rep_end_date').value)){showAlert('تاریخ پایان نامعتبر است.','error');return;}end=normJ($('rep_end_date').value);if(jalaliToTimestamp(end)<jalaliToTimestamp(start)){showAlert('تاریخ پایان نباید قبل از شروع باشد.','error');return;}period=start+' تا '+end;}}
   if(currentRole==='user'){personId=currentUser.id;$('rep_person').value=currentUser.id;}
   // ─── فیلتر مهمان‌ها ───
   var includeGuests=$('rep_include_guests')?$('rep_include_guests').checked:true;
