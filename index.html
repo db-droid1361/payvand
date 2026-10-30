@@ -844,7 +844,7 @@ button,.btn{-webkit-touch-callout:none}
       <button class="nav-item coordinator-only hidden" data-target="coordinator_approvals"><span class="ico">👥</span><span class="lbl">تأییدهای هماهنگ‌کننده</span><span class="nav-badge hidden" id="coord_badge">۰</span></button>
       <button class="nav-item coordinator-only hidden" data-target="coordinator_tasks"><span class="ico">📋</span><span class="lbl">مدیریت وظایف زیرمجموعه</span></button>
       <button class="nav-item admin-only hidden" data-target="approvals"><span class="ico">✅</span><span class="lbl">تأیید مرخصی‌ها</span><span class="nav-badge hidden" id="admin_approvals_badge">۰</span></button>
-      <button class="nav-item admin-only hidden" data-target="send_notification"><span class="ico">📢</span><span class="lbl">ارسال اعلان‌ها</span></button>
+      <button class="nav-item admin-only hidden" data-target="send_notification"><span class="ico">📢</span><span class="lbl">ارسال پیام</span></button>
     </div>
     <!-- گروه ۵: گزارش‌ها و تحلیل -->
     <div class="nav-group">
@@ -879,7 +879,7 @@ button,.btn{-webkit-touch-callout:none}
     <span class="topbar-title" id="topbar_title">داشبورد</span>
   </div>
   <div class="topbar-right">
-    <button class="btn btn-sm btn-info" onclick="quickNotify()" title="ارسال نوتیفیکیشن" style="padding:6px 10px;min-height:32px">📢</button>
+    <button class="btn btn-sm btn-info" onclick="quickNotify()" title="ارسال پیام" style="padding:6px 10px;min-height:32px">📢</button>
     <button class="btn btn-sm btn-success" onclick="showSection('dashboard')" title="داشبورد" style="padding:6px 10px;min-height:32px">🏠</button>
     <div class="theme-switcher">
       <button class="theme-btn active" data-theme="day" title="تم روز">☀️</button>
@@ -1158,7 +1158,7 @@ button,.btn{-webkit-touch-callout:none}
 <!-- مدیریت وظایف زیرمجموعه (توسط هماهنگ‌کننده) -->
 <div id="section-coordinator_tasks" class="card hidden">
   <h2>مدیریت وظایف زیرمجموعه‌ها</h2>
-  <p>تعریف وظیفه/برنامه برای روز خاص برای یک کاربر از زیرمجموعه‌های شما. پس از ایجاد، نوتیفیکیشن خودکار برای کاربر ارسال می‌شود.</p>
+  <p>تعریف وظیفه/برنامه برای روز خاص برای یک کاربر از زیرمجموعه‌های شما. پس از ایجاد، پیام خودکار برای کاربر ارسال می‌شود.</p>
   <div class="form-row">
     <div class="form-group"><label>کاربر:</label><select id="ct_assignee" class="subordinate-dropdown"></select></div>
     <div class="form-group"><label>تاریخ وظیفه:</label><input type="text" id="ct_date" class="date-picker" placeholder="انتخاب تاریخ" readonly></div>
@@ -1182,20 +1182,25 @@ button,.btn{-webkit-touch-callout:none}
   <div id="approvals_list_container" class="table-wrap"></div>
 </div>
 
-<!-- ارسال نوتیفیکیشن (ادمین) -->
+<!-- ارسال پیام + آرشیو -->
 <div id="section-send_notification" class="card hidden">
-  <h2>ارسال نوتیفیکیشن</h2>
-  <p>نوتیفیکیشن به کاربران ارسال کنید. کاربران هنگام ورود باید آن را ببینند و تأیید کنند.</p>
+  <h2>📨 ارسال پیام</h2>
+  <p>پیام به کاربران ارسال کنید. کاربران هنگام ورود باید آن را ببینند و تأیید کنند.</p>
   <div class="form-row">
     <div class="form-group"><label>گیرنده:</label><select id="notif_recipient"><option value="">همه کاربران (broadcast)</option></select></div>
     <div class="form-group"><label>اولویت:</label><select id="notif_priority"><option value="low">پایین</option><option value="normal" selected>معمول</option><option value="high">بالا (اجباری)</option></select></div>
   </div>
   <div class="form-group"><label>عنوان (الزامی):</label><input type="text" id="notif_title"></div>
   <div class="form-group"><label>متن (الزامی):</label><textarea id="notif_body"></textarea></div>
-  <button class="btn btn-danger" id="btn_send_notification">ارسال نوتیفیکیشن</button>
-  <hr style="margin:20px 0;border:0;border-top:1px solid #eee">
-  <h3>نوتیفیکیشن‌های اخیر</h3>
-  <div id="notifications_list_container" class="table-wrap"></div>
+  <button class="btn btn-danger" id="btn_send_notification">ارسال پیام</button>
+  <hr style="margin:20px 0;border:0;border-top:1px solid var(--c-border)">
+  <h3>📋 آرشیو پیام‌ها</h3>
+  <div class="form-row">
+    <div class="form-group"><label>دسته‌بندی:</label><select id="msg_archive_group" onchange="renderMsgArchive()"><option value="day">روزانه</option><option value="week">هفتگی</option><option value="month" selected>ماهانه</option><option value="year">سالانه</option></select></div>
+    <div class="form-group"><label>فیلتر گیرنده:</label><select id="msg_archive_filter" onchange="renderMsgArchive()"><option value="">همه</option></select></div>
+    <div class="form-group" style="display:flex;align-items:flex-end"><button class="btn btn-sm btn-info" onclick="renderMsgArchive()">به‌روزرسانی</button></div>
+  </div>
+  <div id="msg_archive_container"></div>
 </div>
 
 <!-- گزارش‌های دسته‌بندی‌شده (ادمین) -->
@@ -1407,11 +1412,11 @@ button,.btn{-webkit-touch-callout:none}
 </div><!-- app-layout -->
 </div><!-- main_app -->
 
-<!-- Modal نوتیفیکیشن‌های ناخوانده -->
+<!-- Modal پیام‌های ناخوانده -->
 <div id="notif_modal" class="notif-modal hidden">
   <div class="notif-modal-box">
     <div class="notif-modal-header">
-      <div>📢 شما نوتیفیکیشن‌های ناخوانده دارید</div>
+      <div>📢 شما پیام‌های ناخوانده دارید</div>
     </div>
     <div class="notif-modal-body" id="notif_modal_body"></div>
   </div>
@@ -2479,13 +2484,13 @@ function showNotificationsModal(){
       '<h4>'+esc(n.title)+'</h4>'+
       '<div class="notif-meta">از: '+esc(n.sender_id?getPersonName(n.sender_id):'سیستم')+' | '+new Date(n.created_at).toLocaleDateString('fa-IR')+(n.priority==='high'?' | <span class="badge badge-high">اولویت بالا</span>':'')+'</div>'+
       '<div class="notif-body">'+esc(n.body)+'</div>'+
-      // پاسخ‌ها و توضیحات (گردش)
+      // پاسخ‌ها و توضیحات (گردش) — فیلد کشویی
       '<div id="notif_thread_'+n.id+'" style="margin-top:8px"></div>'+
       '<div class="notif-actions" style="flex-wrap:wrap;gap:6px">'+
         '<button class="btn btn-success btn-sm" onclick="dismissNotification(\''+n.id+'\')">✅ تأیید و بستن</button>'+
         '<button class="btn btn-info btn-sm" onclick="showReplyBox(\''+n.id+'\')">💬 پاسخ</button>'+
         '<button class="btn btn-warning btn-sm" onclick="showForwardBox(\''+n.id+'\')">↗ فوروارد</button>'+
-        '<button class="btn btn-secondary btn-sm" onclick="loadNotifThread(\''+n.id+'\')">📜 گردش</button>'+
+        '<button class="btn btn-secondary btn-sm" onclick="toggleThread(\''+n.id+'\')">📜 گردش</button>'+
         (n.related_type==='task'?'<button class="btn btn-info btn-sm" onclick="location.hash=\'#my_tasks\';dismissNotification(\''+n.id+'\')">رفتن به وظیفه</button>':'')+
         (n.related_type==='program_activity'?'<button class="btn btn-info btn-sm" onclick="showSection(\'my_activities\');dismissNotification(\''+n.id+'\')">رفتن به فعالیت</button>':'')+
         (n.related_type==='leave'?'<button class="btn btn-info btn-sm" onclick="showSection(\'leave_req\');dismissNotification(\''+n.id+'\')">مشاهده درخواست</button>':'')+
@@ -2531,12 +2536,12 @@ function showForwardBox(notifId){
 async function sendReply(parentNotifId){
   var text=$('reply_text_'+parentNotifId).value.trim();
   if(!text){showAlert('پاسخ خالی است.','error');return;}
-  // پیدا کردن نوتیفیکیشن اصلی
+  // پیدا کردن پیام اصلی
   var orig=unreadNotifications.filter(function(n){return n.id===parentNotifId;})[0];
-  if(!orig){showAlert('نوتیفیکیشن یافت نشد.','error');return;}
-  // دریافت گیرنده: فرستنده اصلی نوتیفیکیشن
+  if(!orig){showAlert('پیام یافت نشد.','error');return;}
+  // دریافت گیرنده: فرستنده اصلی پیام
   var replyTo=orig.sender_id;
-  if(!replyTo){showAlert('امکان پاسخ به نوتیفیکیشن سیستمی وجود ندارد.','error');return;}
+  if(!replyTo){showAlert('امکان پاسخ به پیام سیستمی وجود ندارد.','error');return;}
   showLoading('ارسال پاسخ...');
   try{
     await sendNotificationDB({
@@ -2555,13 +2560,13 @@ async function sendReply(parentNotifId){
   }catch(e){showAlert('خطا: '+e.message);}
   hideLoading();
 }
-// فوروارد نوتیفیکیشن
+// فوروارد پیام
 async function forwardNotif(notifId){
   var toUserId=$('forward_to_'+notifId).value;
   var note=$('forward_note_'+notifId).value.trim();
   if(!toUserId){showAlert('کاربر را انتخاب کنید.','error');return;}
   var orig=unreadNotifications.filter(function(n){return n.id===notifId;})[0];
-  if(!orig){showAlert('نوتیفیکیشن یافت نشد.','error');return;}
+  if(!orig){showAlert('پیام یافت نشد.','error');return;}
   var toName=getPersonName(toUserId);
   if(!confirm('فوروارد به «'+toName+'»؟'))return;
   showLoading('فوروارد...');
@@ -2582,13 +2587,22 @@ async function forwardNotif(notifId){
   }catch(e){showAlert('خطا: '+e.message);}
   hideLoading();
 }
-// نمایش گردش (ترد) نوتیفیکیشن
+// نمایش/مخفی گردش (کشویی)
+function toggleThread(notifId){
+  var div=$('notif_thread_'+notifId);
+  if(!div)return;
+  if(div.innerHTML&&div.innerHTML.indexOf('در حال بارگذاری')===-1&&div.innerHTML.indexOf('ثبت نشده')===-1){
+    div.innerHTML='';return;
+  }
+  loadNotifThread(notifId);
+}
+// نمایش گردش (ترد) پیام
 async function loadNotifThread(notifId){
   var threadDiv=$('notif_thread_'+notifId);
   if(!threadDiv)return;
   threadDiv.innerHTML='<p style="color:var(--c-text-muted);font-size:12px">در حال بارگذاری گردش...</p>';
   try{
-    // دریافت همه پاسخ‌ها و فورواردهای این نوتیفیکیشن
+    // دریافت همه پاسخ‌ها و فورواردهای این پیام
     const{data,error}=await sb.from('notifications').select('*').or('parent_id.eq.'+notifId+',id.eq.'+notifId).order('created_at',{ascending:true});
     if(error)throw error;
     var thread=data||[];
@@ -2695,7 +2709,7 @@ function showSection(id,skipHistory){
   if(id==='coordinator_approvals')renderCoordinatorApprovals();
   if(id==='coordinator_tasks'){populateSubordinateDropdown('ct_assignee');renderCoordinatorTasks();}
   if(id==='approvals')renderApprovals();
-  if(id==='send_notification'){populateRecipientDropdown();renderNotificationsList();}
+  if(id==='send_notification'){populateRecipientDropdown();renderMsgArchive();}
   if(id==='categorized_reports'){populatePersonDropdown('catrep_user');}
   if(id==='scoring_config')renderScoringRules();
   if(id==='settings'){
@@ -2842,7 +2856,7 @@ async function renderDashboard(){
       '<button class="btn btn-purple" onclick="showSection(\'my_tasks\')">وظایف من ('+myTasks.length+')</button>'+
       (myActs&&myActs.length?'<button class="btn btn-warning" onclick="showSection(\'my_activities\')">فعالیت‌های برنامه‌ها ('+myActs.length+')</button>':'')+
       (currentUser.profile&&(currentUser.profile.can_create_programs||currentRole==='admin'||currentRole==='super_admin')?'<button class="btn btn-info" onclick="showSection(\'programs\')">مدیریت برنامه‌ها</button>':'')+
-      (currentRole==='admin'||currentRole==='super_admin'?'<button class="btn btn-danger" onclick="showSection(\'approvals\')">تأیید مرخصی‌ها</button><button class="btn btn-danger" onclick="showSection(\'send_notification\')">ارسال نوتیفیکیشن</button><button class="btn btn-danger" onclick="showSection(\'users\')">مدیریت کاربران</button>':'')+
+      (currentRole==='admin'||currentRole==='super_admin'?'<button class="btn btn-danger" onclick="showSection(\'approvals\')">تأیید مرخصی‌ها</button><button class="btn btn-danger" onclick="showSection(\'send_notification\')">ارسال پیام</button><button class="btn btn-danger" onclick="showSection(\'users\')">مدیریت کاربران</button>':'')+
       '</div>';
 
     // اگر ادمین/سوپرادمین، آمار درخواست‌های در انتظار همه را نشان بده
@@ -2935,14 +2949,17 @@ function showDayDetail(dateStr,personId){
       if(dayEvents.length===0){
         html+='<p style="color:var(--c-text-muted);font-size:13px;padding:8px 0">مناسبتی برای این روز ثبت نشده.</p>';
       }else{
+        var todayTs2=jalaliToTimestamp(getTodayJalali());
         dayEvents.forEach(function(ev){
           var evColor=ev.is_holiday?'var(--c-danger)':'var(--c-warning)';
           var evBg=ev.is_holiday?'var(--c-danger-light)':'var(--c-warning-light)';
+          var isPast=jalaliToTimestamp(dateStr)<todayTs2;
           html+='<div style="padding:12px;border-radius:10px;background:'+evBg+';border-right:3px solid '+evColor+';margin-bottom:8px">'+
             '<div style="font-weight:600;font-size:14px;color:'+evColor+'">'+(ev.is_holiday?'🔴 ':'📌 ')+esc(ev.title)+'</div>'+
             (ev.description?'<div style="font-size:12px;color:var(--c-text-muted);margin-top:4px">'+esc(ev.description)+'</div>':'')+
+            (isPast?'<div style="font-size:11px;color:var(--c-danger);margin-top:4px">⏰ رویداد گذشته — امکان اقدام وجود ندارد</div>':'')+
             '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'+
-              '<button class="btn btn-sm btn-info" onclick="createEventAction(\''+ev.id+'\',\''+dateStr+'\')">➕ ساخت اقدام</button>'+
+              (!isPast?'<button class="btn btn-sm btn-info" onclick="createEventAction(\''+ev.id+'\',\''+dateStr+'\')">➕ ساخت اقدام</button>':'')+
             '</div>'+
             // اقدامات این رویداد
             '<div id="event_acts_'+ev.id+'" style="margin-top:8px"></div>'+
@@ -3056,6 +3073,13 @@ async function saveManualEvent(dateStr,year){
   hideLoading();
 }
 function createEventAction(eventId,dateStr){
+  // جلوگیری از اقدام روی رویدادهای گذشته
+  var todayTs=jalaliToTimestamp(getTodayJalali());
+  var eventTs=jalaliToTimestamp(dateStr);
+  if(eventTs<todayTs){
+    showAlert('⚠️ امکان تعریف اقدام برای رویدادهای گذشته وجود ندارد.','warning');
+    return;
+  }
   var personId=$('cal_person')?$('cal_person').value:currentUser.id;
   // محاسبه آخرین مهلت اجرا = یک روز قبل از رویداد
   var p=parseJalali(dateStr);
@@ -3805,8 +3829,8 @@ async function createTask(){
   try{
     var task={creator_id:currentUser.id,assignee_id:assigneeId,title:title,description:val('ct_description'),task_date:normJ(dateStr),priority:val('ct_priority'),status:'pending'};
     await createTaskInDB(task);
-    // نوتیفیکیشن خودکار توسط trigger ساخته می‌شود
-    showAlert('وظیفه ایجاد شد. نوتیفیکیشن به کاربر ارسال شد.','success');
+    // پیام خودکار توسط trigger ساخته می‌شود
+    showAlert('وظیفه ایجاد شد. پیام به کاربر ارسال شد.','success');
     $('ct_title').value='';$('ct_description').value='';$('ct_date').value='';
     await renderCoordinatorTasks();
     await updateBadges();
@@ -3917,17 +3941,92 @@ async function rejectLeave(id){
   hideLoading();
 }
 
-/* ═════ Send notifications ═════ */
-// میانبر ارسال نوتیفیکیشن از topbar
+/* ═════ Send messages ═════ */
 function quickNotify(){
-  var canSend=currentRole==='admin'||currentRole==='super_admin'||
-    (currentUser.profile&&(currentUser.profile.can_approve_leaves||currentUser.profile.can_schedule_tasks));
-  if(!canSend){
-    // کاربر عادی: فقط نوتیفیکیشن به مدیر
-    showSection('send_notification');
-    return;
-  }
   showSection('send_notification');
+}
+// آرشیو پیام‌ها با دسته‌بندی روزانه/هفتگی/ماهانه/سالانه
+var msgArchiveData=[];
+async function renderMsgArchive(){
+  var c=$('msg_archive_container');
+  if(!c)return;
+  c.innerHTML='<p style="color:var(--c-text-muted)">در حال بارگذاری...</p>';
+  try{
+    const{data,error}=await sb.from('notifications').select('*').order('created_at',{ascending:false}).limit(500);
+    if(error)throw error;
+    msgArchiveData=data||[];
+    var filterRecipient=$('msg_archive_filter')?$('msg_archive_filter').value:'';
+    if(filterRecipient){
+      msgArchiveData=msgArchiveData.filter(function(m){
+        return m.recipient_id===filterRecipient||(m.recipient_id===null&&filterRecipient==='broadcast');
+      });
+    }
+    var groupBy=$('msg_archive_group')?$('msg_archive_group').value:'month';
+    var groups={};
+    var monthNames=['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
+    msgArchiveData.forEach(function(m){
+      var d=new Date(m.created_at);
+      var key='';
+      if(groupBy==='day'){key=d.getFullYear()+'/'+pad2(d.getMonth()+1)+'/'+pad2(d.getDate());}
+      else if(groupBy==='week'){key='هفته '+getWeekNumber(d)+' - '+d.getFullYear();}
+      else if(groupBy==='month'){var j=gregorianToJalali(d.getFullYear(),d.getMonth()+1,d.getDate());key=monthNames[j[1]-1]+' '+j[0];}
+      else if(groupBy==='year'){var jy=gregorianToJalali(d.getFullYear(),d.getMonth()+1,d.getDate());key='سال '+jy[0];}
+      if(!groups[key])groups[key]=[];
+      groups[key].push(m);
+    });
+    var html='';
+    var keys=Object.keys(groups);
+    if(keys.length===0){c.innerHTML='<p style="color:var(--c-text-muted)">پیامی یافت نشد.</p>';return;}
+    keys.forEach(function(key){
+      var msgs=groups[key];
+      html+='<div style="margin-bottom:16px"><div style="background:var(--c-primary-light);padding:8px 12px;border-radius:8px;font-weight:700;font-size:14px;color:var(--c-primary);margin-bottom:6px;cursor:pointer" onclick="var d=this.nextElementSibling;d.style.display=d.style.display==\'none\'?\'block\':\'none\'">📁 '+esc(key)+' ('+msgs.length+' پیام)</div><div style="display:block">';
+      msgs.forEach(function(m){
+        var sender=m.sender_id?getPersonName(m.sender_id):'سیستم';
+        var recipient=m.recipient_id?getPersonName(m.recipient_id):'همه';
+        var pb=m.priority==='high'?'<span class="badge badge-high">اولویت بالا</span>':'';
+        var ti=m.related_type==='reply'?'💬':m.related_type==='forward'?'↗':'📢';
+        html+='<div style="padding:8px 12px;border-radius:6px;background:var(--c-card);margin-bottom:4px;border:1px solid var(--c-border);cursor:pointer" onclick="showMsgDetail(\''+m.id+'\')"><div style="display:flex;justify-content:space-between"><div><b>'+ti+' '+esc(m.title)+'</b> '+pb+'</div><small style="color:var(--c-text-muted)">'+new Date(m.created_at).toLocaleString('fa-IR')+'</small></div><div style="font-size:12px;color:var(--c-text-muted)">از: '+esc(sender)+' | به: '+esc(recipient)+'</div><div style="font-size:13px;margin-top:4px">'+esc((m.body||'').slice(0,80))+(m.body&&m.body.length>80?'...':'')+'</div></div>';
+      });
+      html+='</div></div>';
+    });
+    c.innerHTML=html;
+    var filterSel=$('msg_archive_filter');
+    if(filterSel){var fo='<option value="">همه</option><option value="broadcast">عمومی</option>';cachedPersons.forEach(function(p){fo+='<option value="'+p.id+'">'+esc(p.first_name+' '+p.last_name)+'</option>';});filterSel.innerHTML=fo;}
+  }catch(e){c.innerHTML='<p>خطا: '+esc(e.message)+'</p>';}
+}
+function getWeekNumber(d){
+  d=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+  var dayNum=d.getUTCDay()||7;d.setUTCDate(d.getUTCDate()+4-dayNum);
+  var yearStart=new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  return Math.ceil((((d-yearStart)/86400000)+1)/7);
+}
+function showMsgDetail(msgId){
+  var overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto';
+  overlay.innerHTML='<div id="msg_detail_box" style="background:var(--c-card);border-radius:12px;padding:20px;max-width:560px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:var(--c-shadow-lg)"></div>';
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove();});
+  var box=$('msg_detail_box');
+  box.innerHTML='<p style="color:var(--c-text-muted)">در حال بارگذاری...</p>';
+  (async function(){
+    try{
+      const{data,error}=await sb.from('notifications').select('*').or('id.eq.'+msgId+',parent_id.eq.'+msgId).order('created_at',{ascending:true});
+      if(error)throw error;
+      var thread=data||[];
+      if(thread.length===0){box.innerHTML='<p>پیام یافت نشد.</p>';return;}
+      var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="margin:0">📜 سابقه کامل پیام</h3><button class="btn btn-sm btn-secondary" onclick="this.closest(\'div[style*=fixed]\').remove()">بستن</button></div>';
+      html+='<div style="font-size:11px;color:var(--c-text-muted);margin-bottom:8px">'+thread.length+' پیام در این مکالمه</div>';
+      thread.forEach(function(msg){
+        var sender=msg.sender_id?getPersonName(msg.sender_id):'سیستم';
+        var recipient=msg.recipient_id?getPersonName(msg.recipient_id):'همه';
+        var isOrig=msg.id===msgId;var isReply=msg.related_type==='reply';var isFwd=msg.related_type==='forward';
+        var icon=isOrig?'📢':isReply?'💬':isFwd?'↗':'📋';
+        var bg=isOrig?'var(--c-primary-light)':isReply?'var(--c-success-light)':'var(--c-warning-light)';
+        html+='<div style="padding:12px;border-radius:8px;background:'+bg+';margin-bottom:8px"><div style="font-weight:600;font-size:14px">'+icon+' '+esc(msg.title)+'</div><div style="font-size:11px;color:var(--c-text-muted);margin:2px 0">از: '+esc(sender)+' | به: '+esc(recipient)+' | '+new Date(msg.created_at).toLocaleString('fa-IR')+'</div><div style="font-size:13px;margin-top:6px;white-space:pre-wrap">'+esc(msg.body)+'</div>'+(msg.priority==='high'?'<span class="badge badge-high" style="margin-top:4px">اولویت بالا</span>':'')+'</div>';
+      });
+      box.innerHTML=html;
+    }catch(e){box.innerHTML='<p>خطا: '+esc(e.message)+'</p>';}
+  })();
 }
 async function sendNotification(){
   var recipient=val('notif_recipient');  // خالی = broadcast
@@ -3940,7 +4039,7 @@ async function sendNotification(){
       recipient_id:recipient||null,
       title:title,body:body,priority:val('notif_priority')
     });
-    showAlert('نوتیفیکیشن ارسال شد.','success');
+    showAlert('پیام ارسال شد.','success');
     $('notif_title').value='';$('notif_body').value='';
     await renderNotificationsList();
   }catch(e){showAlert('خطا: '+e.message);}
@@ -3950,7 +4049,7 @@ async function renderNotificationsList(){
   var c=$('notifications_list_container');
   try{
     var notifs=await loadAllNotifications();
-    if(!notifs.length){c.innerHTML='<p>نوتیفیکیشنی ارسال نشده است.</p>';return;}
+    if(!notifs.length){c.innerHTML='<p>پیامی ارسال نشده است.</p>';return;}
     var h='<table><tr><th>گیرنده</th><th>عنوان</th><th>اولویت</th><th>تاریخ</th></tr>';
     notifs.forEach(function(n){
       h+='<tr><td>'+(n.recipient_id?esc(getPersonName(n.recipient_id)):'همه')+'</td><td>'+esc(n.title)+'</td><td><span class="badge badge-'+(n.priority==='high'?'high':n.priority==='low'?'low':'normal-priority')+'">'+(n.priority==='high'?'بالا':n.priority==='low'?'پایین':'معمول')+'</span></td><td>'+new Date(n.created_at).toLocaleDateString('fa-IR')+'</td></tr>';
@@ -4123,7 +4222,7 @@ async function changeParent(userId,parentVal){
         if(rc.to==='user')msg+='  این کاربر دیگر زیرمجموعه ندارد و دسترسی هماهنگ‌کننده از او سلب شد.\n';
       });
       showAlert(msg,'warning');
-      // ارسال نوتیفیکیشن به مدیر
+      // ارسال پیام به مدیر
       try{
         var admins=cachedPersons.filter(function(p){return p.role==='admin'||p.role==='super_admin';});
         for(var ai=0;ai<admins.length;ai++){
@@ -4665,7 +4764,7 @@ async function saveActivity(programId){
     }else{
       const{error}=await sb.from('program_activities').insert({program_id:programId,title:title,description:desc,assignee_id:assignee,deadline:deadline,priority:priority});
       if(error)throw error;
-      showAlert('فعالیت اضافه شد. نوتیفیکیشن به مسئول پیگیری ارسال شد.','success');
+      showAlert('فعالیت اضافه شد. پیام به مسئول پیگیری ارسال شد.','success');
     }
     closeActivityForm(programId);
     await renderPrograms();
