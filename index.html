@@ -181,7 +181,7 @@ tr{page-break-inside:avoid}
 
 /* Guest mode: پنهان‌کردن دکمه‌های ایجاد/ویرایش/حذف */
 body.guest-mode .btn-success,body.guest-mode .btn-danger,body.guest-mode .btn-warning,
-body.guest-mode .btn-purple,body.guest-mode #btn_save_log,body.guest-mode #btn_reset_log,
+body.guest-mode .btn-purple,body.guest-mode #btn_reset_log,
 body.guest-mode #btn_save_leave,body.guest-mode #btn_reset_leave,
 body.guest-mode #btn_create_program,body.guest-mode #btn_reset_program,
 body.guest-mode #btn_create_task,body.guest-mode #btn_send_notification,
@@ -189,6 +189,8 @@ body.guest-mode #btn_save_ann,body.guest-mode #btn_reset_ann,
 body.guest-mode #btn_upload_events,body.guest-mode #btn_create_invitation,
 body.guest-mode #btn_save_scoring,body.guest-mode #btn_change_password,
 body.guest-mode .announcement_admin_box,body.guest-mode #btn_export{display:none!important}
+/* مهمان بدون can_log: دکمه ثبت اظهار هم مخفی */
+body.guest-mode.no-log #btn_save_log{display:none!important}
 
 /* Guest expiration banner */
 .guest-banner{background:linear-gradient(135deg,#fef3c7 0%,#fde68a 100%);border:2px solid var(--warning);border-radius:10px;padding:14px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
@@ -1679,8 +1681,8 @@ function restoreSession(){
     currentUser={id:s.user.id,email:s.user.email};
     currentUser.profile=s.user;
     currentRole=s.user.role||'user';
-    if(currentRole==='guest')document.body.classList.add('guest-mode');
-    else document.body.classList.remove('guest-mode');
+    if(currentRole==='guest'){document.body.classList.add('guest-mode');if(!currentUser.profile.can_log)document.body.classList.add('no-log');else document.body.classList.remove('no-log');if(!currentUser.profile.can_log)document.body.classList.add('no-log');else document.body.classList.remove('no-log');}
+    else document.body.classList.remove('guest-mode');document.body.classList.remove('no-log');
     $('auth_screen').classList.add('hidden');
     $('main_app').classList.remove('hidden');
     updateUserBox();
@@ -1695,7 +1697,7 @@ function restoreSession(){
 function clearLocalSession(){
   localStorage.removeItem(SESSION_KEY);
   currentUser=null;currentRole='user';
-  document.body.classList.remove('guest-mode');
+  document.body.classList.remove('guest-mode');document.body.classList.remove('no-log');
 }
 
 // ═══ ورود: تک RPC (هش در سرور محاسبه می‌شود — بدون mismatch) ═══
@@ -1720,8 +1722,8 @@ async function handleLogin(e){
     currentUser.profile=loginData.user;
     currentRole=loginData.user.role;
     saveSession(loginData.user);
-    if(currentRole==='guest'){document.body.classList.add('guest-mode');}
-    else{document.body.classList.remove('guest-mode');}
+    if(currentRole==='guest'){document.body.classList.add('guest-mode');if(!currentUser.profile.can_log)document.body.classList.add('no-log');else document.body.classList.remove('no-log');}
+    else{document.body.classList.remove('guest-mode');document.body.classList.remove('no-log');}
     $('auth_screen').classList.add('hidden');
     $('main_app').classList.remove('hidden');
     try{await loadAllPersons();await loadSubordinates();showSection('dashboard');setTimeout(checkUnreadNotifications,500);generateReminderAlerts();setTimeout(checkActiveAlerts,1500);}catch(e){console.warn('post-login:',e);}
@@ -1842,9 +1844,9 @@ async function handleAuthState(session){
       }
       // فعال‌سازی حالت مهمان
       if(currentRole==='guest'){
-        document.body.classList.add('guest-mode');
+        document.body.classList.add('guest-mode');if(!currentUser.profile.can_log)document.body.classList.add('no-log');else document.body.classList.remove('no-log');
       }else{
-        document.body.classList.remove('guest-mode');
+        document.body.classList.remove('guest-mode');document.body.classList.remove('no-log');
       }
       $('auth_screen').classList.add('hidden');$('main_app').classList.remove('hidden');
       updateUserBox();applyRoleBasedUI();
@@ -1919,7 +1921,7 @@ function refreshThemeVars(){
 function setTheme(theme){
   var html=document.documentElement;
   html.setAttribute('data-theme',theme);
-  if(currentRole==='guest')document.body.classList.add('guest-mode');
+  if(currentRole==='guest'){document.body.classList.add('guest-mode');if(!currentUser.profile.can_log)document.body.classList.add('no-log');else document.body.classList.remove('no-log');if(!currentUser.profile.can_log)document.body.classList.add('no-log');else document.body.classList.remove('no-log');}
   document.querySelectorAll('.theme-btn').forEach(function(b){b.classList.toggle('active',b.dataset.theme===theme);});
   document.querySelectorAll('.theme-option').forEach(function(o){o.classList.toggle('selected',o.dataset.theme===theme);});
   try{localStorage.setItem('payvand_theme',theme);}catch(e){}
@@ -3274,7 +3276,8 @@ async function renderUsers(){
         '<label><input type="checkbox" '+(p.can_approve_leaves?'checked':'')+' onchange="togglePermission(\''+p.id+'\',\'can_approve_leaves\',this.checked)"'+(canEdit?'':' disabled')+'> تأیید مرخصی</label> '+
         '<label><input type="checkbox" '+(p.can_schedule_tasks?'checked':'')+' onchange="togglePermission(\''+p.id+'\',\'can_schedule_tasks\',this.checked)"'+(canEdit?'':' disabled')+'> تعریف وظیفه</label> '+
         '<label><input type="checkbox" '+(p.can_create_programs?'checked':'')+' onchange="togglePermission(\''+p.id+'\',\'can_create_programs\',this.checked)"'+(canEdit?'':' disabled')+'> ساخت برنامه</label> '+
-        '<label><input type="checkbox" '+(p.can_manage_events?'checked':'')+' onchange="togglePermission(\''+p.id+'\',\'can_manage_events\',this.checked)"'+(canEdit?'':' disabled')+'> 📅 رویدادها</label>'+
+        '<label><input type="checkbox" '+(p.can_manage_events?'checked':'')+' onchange="togglePermission(\''+p.id+'\',\'can_manage_events\',this.checked)"'+(canEdit?'':' disabled')+'> 📅 رویدادها</label> '+
+        (p.role==='guest'?'<label><input type="checkbox" '+(p.can_log?'checked':'')+' onchange="togglePermission(\''+p.id+'\',\'can_log\',this.checked)"'+(canEdit?'':' disabled')+'> 📝 ثبت کارکرد</label>':'')+
         '</td>'+
         '<td><select onchange="changeUserStatus(\''+p.id+'\',this.value)"'+(canEdit?'':' disabled')+' style="background:'+(p.status==='active'?'#d5f5e3':p.status==='inactive'?'#fef3c7':'#e2e8f0')+'">'+
           '<option value="active"'+(p.status==='active'?' selected':'')+'>✅ فعال</option>'+
