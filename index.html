@@ -181,16 +181,12 @@ tr{page-break-inside:avoid}
 .priority-tag.low{background:#95a5a6}
 @keyframes pulse-red{0%,100%{box-shadow:0 0 0 0 rgba(231,76,60,.4)}50%{box-shadow:0 0 0 6px rgba(231,76,60,0)}}
 
-/* Guest mode: پنهان‌کردن دکمه‌های ایجاد/ویرایش/حذف */
-body.guest-mode .btn-success,body.guest-mode .btn-danger,body.guest-mode .btn-warning,
-body.guest-mode .btn-purple,body.guest-mode #btn_reset_log,
-body.guest-mode #btn_save_leave,body.guest-mode #btn_reset_leave,
-body.guest-mode #btn_create_program,body.guest-mode #btn_reset_program,
-body.guest-mode #btn_create_task,body.guest-mode #btn_send_notification,
-body.guest-mode #btn_save_ann,body.guest-mode #btn_reset_ann,
-body.guest-mode #btn_upload_events,body.guest-mode #btn_create_invitation,
-body.guest-mode #btn_save_scoring,body.guest-mode #btn_change_password,
-body.guest-mode .announcement_admin_box,body.guest-mode #btn_export{display:none!important}
+/* Guest mode: مهمان می‌تواند بخواند و بنویسد؛ فقط عملیات مدیریتی مخفی می‌مانند */
+body.guest-mode #btn_send_notification,
+body.guest-mode #btn_upload_events,
+body.guest-mode #btn_create_invitation,
+body.guest-mode #btn_save_scoring,
+body.guest-mode .announcement_admin_box{display:none!important}
 /* مهمان بدون can_log: دکمه ثبت اظهار هم مخفی */
 body.guest-mode.no-log #btn_save_log{display:none!important}
 
@@ -1298,7 +1294,7 @@ button,.btn{-webkit-touch-callout:none}
   </div>
   <div class="form-row">
     <div class="form-group"><label>ایمیل (اختیاری):</label><input type="email" id="inv_email" dir="ltr"></div>
-    <div class="form-group"><label>نقش:</label><select id="inv_role" onchange="onRoleChange()"><option value="user">کاربر</option><option value="coordinator">👥 هماهنگ‌کننده</option><option value="guest">👁️ مهمان (دسترسی خواندن محدود)</option><option value="admin">مدیر</option></select></div>
+    <div class="form-group"><label>نقش:</label><select id="inv_role" onchange="onRoleChange()"><option value="user">کاربر</option><option value="coordinator">👥 هماهنگ‌کننده</option><option value="guest">👁️ مهمان (دسترسی خواندن و نوشتن)</option><option value="admin">مدیر</option></select></div>
     <div class="form-group"><label>هماهنگ‌کننده (اختیاری):</label><select id="inv_parent" class="coordinator-dropdown"><option value="">—</option></select></div>
   </div>
   <div class="form-row">
@@ -5343,11 +5339,11 @@ function viewUserHistory(userId){
 var GUEST_SECTIONS=[
   {id:'announcements',label:'📌 تابلوی اعلانات'},
   {id:'calendar',label:'📅 تقویم ماهانه'},
-  {id:'daily_log',label:'📝 فرم خوداظهاری (فقط خواندن)'},
-  {id:'leave_req',label:'✈️ درخواست مرخصی (فقط خواندن)'},
+  {id:'daily_log',label:'📝 فرم خوداظهاری'},
+  {id:'leave_req',label:'✈️ درخواست مرخصی'},
   {id:'records',label:'📋 سوابق'},
   {id:'reports',label:'📊 گزارش‌گیری'},
-  {id:'programs',label:'🗂 برنامه‌ها (فقط خواندن)'},
+  {id:'programs',label:'🗂 برنامه‌ها'},
   {id:'my_activities',label:'🎯 فعالیت‌های برنامه‌ها'},
   {id:'my_tasks',label:'✅ وظایف من'}
 ];
@@ -5369,7 +5365,7 @@ async function openGuestSettings(userId){
     '<p style="font-size:13px;color:var(--secondary);margin-bottom:16px">'+esc(p.first_name+' '+p.last_name)+' ('+esc(p.personnel_id)+')</p>'+
     '<div class="form-group"><label>📅 تاریخ انقضای حساب (شمسی):</label>'+
     '<input type="text" id="guest_expires" class="date-picker" placeholder="خالی = دائمی" value="'+expiryStr+'" readonly></div>'+
-    '<div class="form-group"><label>👁️ بخش‌های قابل دسترسی (فقط خواندن):</label>'+
+    '<div class="form-group"><label>👁️ بخش‌های قابل دسترسی (خواندن و نوشتن):</label>'+
     '<div style="background:var(--c-bg-alt,#f9f9f9);padding:10px;border-radius:8px;border:1px solid var(--border)">'+
     GUEST_SECTIONS.map(function(s){
       var checked=currentPerms.indexOf(s.id)!==-1?'checked':'';
