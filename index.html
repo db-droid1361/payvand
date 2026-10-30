@@ -3070,12 +3070,20 @@ function populateAssigneeDropdown(dropdownId){
 }
 function populatePersonDropdown(dropdownId,autoFirst){
   var select=$(dropdownId),cur=select.value;
-  var all=(dropdownId==='rec_person'||dropdownId==='rep_person'||currentRole==='admin'||currentRole==='super_admin'||dropdownId==='cal_person');
+  var isAdmin=currentRole==='admin'||currentRole==='super_admin';
+  // rec_person: کاربر عادی خودش + تفویض‌شوندگانش را می‌بیند (کسانی که به او تفویض کرده‌اند)
+  var all=(dropdownId==='rep_person'||isAdmin||dropdownId==='cal_person');
+  // برای rec_person: مدیر همه را می‌بیند؛ کاربر عادی فقط خودش + تفویض‌شوندگان
   // برای تقویم: کاربر عادی هم خودش را می‌بیند هم تفویض‌شده‌ها
   var persons;
   if(dropdownId==='cal_person'){
     // کاربر فعلی + همه (برای انتخاب تفویض‌شده‌ها)
     persons=cachedPersons;
+  }else if(dropdownId==='rec_person'&&!isAdmin){
+    // کاربر عادی: خودش + کسانی که به او تفویض کرده‌اند
+    var delegators=getUsersWhoDelegatedToMe();
+    var me=cachedPersons.filter(function(p){return p.id===currentUser.id;});
+    persons=me.concat(delegators);
   }else if(all){
     persons=cachedPersons;
   }else{
@@ -3106,15 +3114,18 @@ function populatePersonDropdown(dropdownId,autoFirst){
     else if(cur&&persons.some(function(p){return p.id===cur;}))select.value=cur;
     else if(persons.length)select.value=persons[0].id;
   }else{
-    var o='<option value="">'+(all?'همه':'انتخاب...')+'</option>';
+    // برای rec_person کاربر عادی: «همه» یعنی همه قابل‌دسترسی‌ها (من + تفویض‌شوندگان)
+    var allLabel=all?'همه':(dropdownId==='rec_person'?'همه (من + تفویض‌شوندگان)':'انتخاب...');
+    var o='<option value="">'+allLabel+'</option>';
     persons.forEach(function(p){
-      var icon=p.id===currentUser.id?' 👤':'';
+      var icon=p.id===currentUser.id?' 👤':' 🔄';
       o+='<option value="'+esc(p.id)+'">'+esc(p.first_name+' '+p.last_name+' - '+p.personnel_id)+icon+'</option>';
     });
     select.innerHTML=o;
     if(cur&&persons.some(function(p){return p.id===cur;}))select.value=cur;
     else if(autoFirst&&persons.length)select.value=persons[0].id;
-    else if(!all&&persons.length)select.value=persons[0].id;
+    // rec_person: پیش‌فرض «همه» باشد تا کاربر همه سوابق قابل‌دسترسی‌اش را ببیند
+    else if(!all&&persons.length&&dropdownId!=='rec_person')select.value=persons[0].id;
   }
 }
 function populateSubordinateDropdown(dropdownId){
@@ -4062,13 +4073,20 @@ async function editLog(id){
       setTimepickerValue('ot_start',f.ot_start||'');setTimepickerValue('ot_end',f.ot_end||'');
     }
     toggleLogFields();
-    $('section-daily_log').scrollIntoView();
+    // هدایت به بخش خوداظهاری برای ویرایش (کاربر ممکن است از بخش سوابق آمده باشد)
+    showSection('daily_log');
+    setTimeout(function(){var sec=$('section-daily_log');if(sec)sec.scrollIntoView({behavior:'smooth'});},100);
   }catch(e){showAlert('خطا: '+e.message);}
 }
 async function deleteLog(id){
   if(!confirm('حذف این اظهار؟'))return;
   showLoading('حذف...');
-  try{await deleteLogFromDB(id);await recordAudit('delete','daily_logs',id,{});if($('log_id').value===id)resetDailyLogForm();await renderDailyLogsList();showAlert('حذف شد.','success');}catch(e){showAlert('خطا: '+e.message);}
+  try{await deleteLogFromDB(id);await recordAudit('delete','daily_logs',id,{});if($('log_id').value===id)resetDailyLogForm();await renderDailyLogsList();
+    // به‌روزرسانی لیست سوابق اگر در حال نمایش است
+    var recSec=$('section-records');
+    if(recSec&&!recSec.classList.contains('hidden'))renderRecords();
+    showAlert('حذف شد.','success');
+  }catch(e){showAlert('خطا: '+e.message);}
   hideLoading();
 }
 function toggleLogFields(){var st=$('log_status').value;['normal','absence','overtime'].forEach(function(k){$('fields_'+k).classList.toggle('hidden',k!==st);});toggleAbsenceFields();}
@@ -4105,7 +4123,7 @@ async function saveDailyLog(){
       '۳. در گزارش‌ها، نام شما به‌عنوان ثبت‌کننده نمایش داده می‌شود.\n\n'+
       'آیا مطمئن هستید؟'))return;
   }
-  // تفویض: همه کاربران می‌توانند برای دیگران ثبت کنند (بدون محدودیت نقش)
+  // تفویض: فقط کاربرانی که در log_delegates طرف مقابل هستند می‌توانند ثبت کنند (در updateDelegateBox فیلتر می‌شود)
   dateStr=normJ(dateStr);
   var d={discrepancy:disc,fields:{}},f=d.fields,s='00:00',e='23:59',fullDay=false;
   function need(c,m){if(!c){showAlert(m,'error');return false;}return true;}
@@ -4207,6 +4225,9 @@ async function saveDailyLog(){
     showAlert(submittedBy?'کارکرد برای '+getPersonName(actualPersonId)+' ثبت شد. شناسه شما در گزارش ذخیده شد.':'اظهار ثبت شد.'+cleanupWarning,cleanupWarning?'error':'success');
     resetDailyLogForm();
     await renderDailyLogsList();
+    // به‌روزرسانی لیست سوابق اگر در حال نمایش است
+    var recSec=$('section-records');
+    if(recSec&&!recSec.classList.contains('hidden'))renderRecords();
   }catch(e){showAlert('خطا در ذخیره: '+e.message);}
   hideLoading();
 }
@@ -5602,15 +5623,56 @@ async function extendGuest(userId,days){
 async function renderRecords(){
   var personId=$('rec_person').value,search=val('rec_search').toLowerCase(),type=$('rec_type_filter').value;
   var from=$('rec_from').value,to=$('rec_to').value,vf=isValidJalaliDate(from),vt=isValidJalaliDate(to);
-  if(currentRole==='user'){personId=currentUser.id;$('rec_person').value=currentUser.id;}
   var c=$('records_list_container');c.innerHTML='<p>در حال بارگذاری...</p>';
   try{
     var fromNorm=vf?normJ(from):null,toNorm=vt?normJ(to):null;
-    var all=await loadLogs(personId,fromNorm,toNorm);
-    var list=all.filter(function(l){if(type&&l.status!==type)return false;if(search&&(JSON.stringify(l.data)+describeLog(l)).toLowerCase().indexOf(search)===-1)return false;return true;});
+    // تعیین کاربران مجاز برای مشاهده/ویرایش
+    var isAdmin=currentRole==='admin'||currentRole==='super_admin';
+    var delegators=getUsersWhoDelegatedToMe();
+    var allowedIds=[currentUser.id].concat(delegators.map(function(p){return p.id;}));
+    // بررسی دسترسی کاربر انتخاب‌شده
+    if(personId&&!isAdmin&&allowedIds.indexOf(personId)===-1){
+      c.innerHTML='<p>دسترسی غیرمجاز: این کاربر به شما تفویض نکرده است.</p>';return;
+    }
+    // بارگذاری لاگ‌ها
+    var all;
+    if(personId){
+      all=await loadLogs(personId,fromNorm,toNorm);
+    }else if(isAdmin){
+      all=await loadLogs(null,fromNorm,toNorm);
+    }else{
+      // کاربر عادی در حالت «همه»: ترکیب لاگ‌های خودش + تفویض‌شوندگان
+      all=[];
+      for(var i=0;i<allowedIds.length;i++){
+        var logs=await loadLogs(allowedIds[i],fromNorm,toNorm);
+        all=all.concat(logs);
+      }
+    }
+    // مرتب‌سازی بر اساس تاریخ (نزولی)
+    all.sort(function(a,b){return jalaliToTimestamp(b.date)-jalaliToTimestamp(a.date);});
+    // فیلتر نهایی
+    var list=all.filter(function(l){
+      if(type&&l.status!==type)return false;
+      if(search&&(JSON.stringify(l.data)+describeLog(l)).toLowerCase().indexOf(search)===-1)return false;
+      return true;
+    });
     if(!list.length){c.innerHTML='<p>رکوردی یافت نشد.</p>';return;}
-    var h='<table><tr><th>پرسنل</th><th>تاریخ</th><th>وضعیت</th><th>جزئیات</th><th>مغایرت</th></tr>';
-    list.forEach(function(l){h+='<tr><td>'+esc(getPersonName(l.user_id))+'</td><td>'+esc(l.date)+'</td><td>'+statusBadge(l.status)+'</td><td>'+esc(describeLog(l))+'</td><td>'+esc((l.data&&l.data.discrepancy)||'-')+'</td></tr>';});
+    // تابع کمکی برای بررسی اجازه ویرایش/حذف یک لاگ
+    function canEditLog(userId){
+      if(isAdmin)return true;
+      return allowedIds.indexOf(userId)!==-1;
+    }
+    var h='<table><tr><th>پرسنل</th><th>تاریخ</th><th>وضعیت</th><th>جزئیات</th><th>مغایرت</th><th>عملیات</th></tr>';
+    list.forEach(function(l){
+      var canEdit=canEditLog(l.user_id);
+      var isDelegated=l.user_id!==currentUser.id;
+      var personName=esc(getPersonName(l.user_id))+(isDelegated&&!isAdmin?' <span style="font-size:10px;color:var(--c-info)">🔄 تفویض</span>':'');
+      var actions=canEdit?
+        '<button class="btn btn-sm btn-warning" onclick="editLog(\''+esc(l.id)+'\')" title="ویرایش">✏️</button> '+
+        '<button class="btn btn-sm btn-danger" onclick="deleteLog(\''+esc(l.id)+'\')" title="حذف">🗑</button>'
+        :'—';
+      h+='<tr><td>'+personName+'</td><td>'+esc(l.date)+'</td><td>'+statusBadge(l.status)+'</td><td>'+esc(describeLog(l))+'</td><td>'+esc((l.data&&l.data.discrepancy)||'-')+'</td><td style="white-space:nowrap">'+actions+'</td></tr>';
+    });
     c.innerHTML=h+'</table>';
   }catch(e){c.innerHTML='<p>خطا: '+esc(e.message)+'</p>';}
 }
