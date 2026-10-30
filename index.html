@@ -824,47 +824,44 @@ button,.btn{-webkit-touch-callout:none}
       <button class="nav-item" data-target="announcements"><span class="ico">📌</span><span class="lbl">تابلوی اعلانات</span><span class="nav-badge hidden" id="announcements_badge">۰</span></button>
       <button class="nav-item" data-target="calendar"><span class="ico">📅</span><span class="lbl">تقویم ماهانه</span></button>
     </div>
-    <!-- گروه ۲: کارکرد و حضور -->
-    <div class="nav-group">
-      <div class="nav-group-title">کارکرد و حضور</div>
-      <button class="nav-item" data-target="daily_log"><span class="ico">📝</span><span class="lbl">فرم خوداظهاری</span></button>
-      <button class="nav-item" data-target="leave_req"><span class="ico">✈️</span><span class="lbl">درخواست مرخصی</span></button>
-      <button class="nav-item" data-target="records"><span class="ico">📋</span><span class="lbl">سوابق</span></button>
+    <!-- گروه ۲: کارکرد فردی (مخفی برای سوپرادمین) -->
+    <div class="nav-group no-super-admin">
+      <div class="nav-group-title">کارکرد فردی</div>
+      <button class="nav-item" data-target="daily_log"><span class="ico">📝</span><span class="lbl">خوداظهاری و مرخصی</span></button>
+      <button class="nav-item" data-target="records"><span class="ico">📋</span><span class="lbl">سوابق کارکرد</span></button>
     </div>
     <!-- گروه ۳: وظایف و برنامه‌ها -->
     <div class="nav-group">
       <div class="nav-group-title">وظایف و برنامه‌ها</div>
-      <button class="nav-item" data-target="my_tasks"><span class="ico">✅</span><span class="lbl">وظایف من</span><span class="nav-badge hidden" id="tasks_badge">۰</span></button>
-      <button class="nav-item" data-target="my_activities"><span class="ico">🎯</span><span class="lbl">فعالیت‌های برنامه‌ها</span><span class="nav-badge hidden" id="activities_badge">۰</span></button>
+      <button class="nav-item" data-target="my_tasks"><span class="ico">✅</span><span class="lbl">وظایف و فعالیت‌های من</span><span class="nav-badge hidden" id="tasks_badge">۰</span></button>
       <button class="nav-item" data-target="programs"><span class="ico">🗂</span><span class="lbl">مدیریت برنامه‌ها</span><span class="nav-badge hidden" id="programs_badge">۰</span></button>
     </div>
-    <!-- گروه ۴: مدیریت ارتباطات -->
-    <div class="nav-group">
-      <div class="nav-group-title">مدیریت ارتباطات</div>
-      <button class="nav-item has-delegation hidden" data-target="delegations"><span class="ico">🔁</span><span class="lbl">تفویض‌ها</span><span class="nav-badge hidden" id="delegations_badge">۰</span></button>
-      <button class="nav-item coordinator-only hidden" data-target="coordinator_approvals"><span class="ico">👥</span><span class="lbl">تأییدهای هماهنگ‌کننده</span><span class="nav-badge hidden" id="coord_badge">۰</span></button>
+    <!-- گروه ۴: هماهنگی و تأیید (هماهنگ‌کننده + مدیر) -->
+    <div class="nav-group coordinator-admin-only">
+      <div class="nav-group-title">هماهنگی و تأیید</div>
+      <button class="nav-item" data-target="approvals"><span class="ico">✅</span><span class="lbl">تأیید درخواست‌ها</span><span class="nav-badge hidden" id="admin_approvals_badge">۰</span></button>
       <button class="nav-item coordinator-only hidden" data-target="coordinator_tasks"><span class="ico">📋</span><span class="lbl">مدیریت وظایف زیرمجموعه</span></button>
-      <button class="nav-item admin-only hidden" data-target="approvals"><span class="ico">✅</span><span class="lbl">تأیید مرخصی‌ها</span><span class="nav-badge hidden" id="admin_approvals_badge">۰</span></button>
+      <button class="nav-item has-delegation hidden" data-target="delegations"><span class="ico">🔁</span><span class="lbl">تفویض‌ها</span><span class="nav-badge hidden" id="delegations_badge">۰</span></button>
       <button class="nav-item admin-only hidden" data-target="send_notification"><span class="ico">📢</span><span class="lbl">ارسال پیام</span></button>
     </div>
-    <!-- گروه ۵: گزارش‌ها و تحلیل -->
+    <!-- گروه ۵: گزارش‌ها -->
     <div class="nav-group">
-      <div class="nav-group-title">گزارش‌ها و تحلیل</div>
-      <button class="nav-item" data-target="reports"><span class="ico">📊</span><span class="lbl">گزارش‌گیری</span></button>
+      <div class="nav-group-title">گزارش‌ها</div>
+      <button class="nav-item" data-target="reports"><span class="ico">📊</span><span class="lbl">گزارش کارکرد</span></button>
       <button class="nav-item" data-target="program_reports"><span class="ico">📋</span><span class="lbl">گزارش و تاریخچه برنامه‌ها</span></button>
-      <button class="nav-item admin-only hidden" data-target="categorized_reports"><span class="ico">📈</span><span class="lbl">گزارش‌های تحلیلی</span></button>
+      <button class="nav-item admin-only hidden" data-target="categorized_reports"><span class="ico">📈</span><span class="lbl">گزارش تحلیلی امتیازات</span></button>
     </div>
-    <!-- گروه ۶: مدیریت سامانه -->
-    <div class="nav-group">
+    <!-- گروه ۶: مدیریت سامانه (مدیر/سوپرادمین) -->
+    <div class="nav-group admin-only">
       <div class="nav-group-title">مدیریت سامانه</div>
       <button class="nav-item events-access hidden" data-target="events"><span class="ico">📅</span><span class="lbl">رویدادها و تعطیلات</span></button>
-      <button class="nav-item admin-only hidden" data-target="users"><span class="ico">👥</span><span class="lbl">مدیریت کاربران</span></button>
-      <button class="nav-item admin-only hidden" data-target="scoring_config"><span class="ico">⭐</span><span class="lbl">تنظیمات امتیازدهی</span></button>
-      <button class="nav-item admin-only hidden" data-target="audit_log"><span class="ico">📜</span><span class="lbl">تاریخچه تغییرات</span></button>
+      <button class="nav-item" data-target="users"><span class="ico">👥</span><span class="lbl">مدیریت کاربران و نقش‌ها</span></button>
+      <button class="nav-item" data-target="scoring_config"><span class="ico">⭐</span><span class="lbl">تنظیمات امتیازدهی</span></button>
+      <button class="nav-item" data-target="audit_log"><span class="ico">📜</span><span class="lbl">تاریخچه تغییرات</span></button>
     </div>
-    <!-- گروه ۷: تنظیمات شخصی -->
+    <!-- گروه ۷: شخصی -->
     <div class="nav-group">
-      <div class="nav-group-title">تنظیمات شخصی</div>
+      <div class="nav-group-title">شخصی</div>
       <button class="nav-item" data-target="reminders"><span class="ico">🔔</span><span class="lbl">یادآورها</span><span class="nav-badge hidden" id="reminders_badge">۰</span></button>
       <button class="nav-item" data-target="settings"><span class="ico">⚙</span><span class="lbl">تنظیمات</span></button>
     </div>
@@ -991,7 +988,10 @@ button,.btn{-webkit-touch-callout:none}
 </div>
 
 <div id="section-daily_log" class="card hidden">
-  <h2>فرم خوداظهاری روزانه</h2>
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+    <h2 style="margin:0">📝 فرم خوداظهاری روزانه</h2>
+    <button class="btn btn-sm btn-info" onclick="showSection('leave_req')">✈️ درخواست مرخصی مستقل ←</button>
+  </div>
   <div class="form-row">
     <div class="form-group"><label>پرسنل:</label><select id="log_person_id" class="person-dropdown"></select></div>
     <div class="form-group"><label>تاریخ شمسی:</label><input type="text" id="log_date" class="date-picker" placeholder="انتخاب تاریخ" readonly></div>
@@ -1059,15 +1059,33 @@ button,.btn{-webkit-touch-callout:none}
 
 <!-- وظایف من -->
 <div id="section-my_tasks" class="card hidden">
-  <h2>وظایف من</h2>
-  <p>وظایفی که هماهنگ‌کننده یا ادمین برای شما تعریف کرده‌اند. لطفاً پس از انجام، گزارش اقدام را ثبت کنید.</p>
-  <div class="form-row">
-    <div class="form-group"><label>فیلتر وضعیت:</label><select id="my_tasks_filter"><option value="pending">در انتظار</option><option value="in_progress">در حال انجام</option><option value="all">همه</option><option value="done">انجام‌شده</option></select></div>
+  <h2>✅ وظایف و فعالیت‌های من</h2>
+  <p>تمام کارهای محول‌شده به شما — شامل وظایف مستقل و فعالیت‌های برنامه‌ها. پس از انجام، گزارش اقدام را ثبت کنید.</p>
+  <!-- زبانه‌های تغییر نمای وظایف/فعالیت‌ها -->
+  <div class="form-row" style="margin-bottom:12px">
+    <div class="form-group" style="flex:0 0 auto">
+      <label>نوع:</label>
+      <select id="my_tasks_type" onchange="renderMyTasks()">
+        <option value="all">همه (وظایف + فعالیت‌ها)</option>
+        <option value="tasks">فقط وظایف مستقل</option>
+        <option value="activities">فقط فعالیت‌های برنامه‌ها</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>فیلتر وضعیت:</label>
+      <select id="my_tasks_filter" onchange="renderMyTasks()">
+        <option value="pending">در انتظار اقدام</option>
+        <option value="in_progress">در حال انجام</option>
+        <option value="all">همه</option>
+        <option value="done">انجام‌شده</option>
+        <option value="overdue">گذشته از مهلت</option>
+      </select>
+    </div>
   </div>
   <div id="my_tasks_container"></div>
 </div>
 
-<!-- فعالیت‌های برنامه‌ها (برای همه کاربران) -->
+<!-- فعالیت‌های برنامه‌ها (بخش پنهان — ادغام‌شده در وظایف من) -->
 <div id="section-my_activities" class="card hidden">
   <h2>فعالیت‌های برنامه‌های من</h2>
   <p>فعالیت‌هایی که به‌عنوان مسئول پیگیری/اجرا به شما اختصاص داده شده‌اند. لطفاً پیش از پایان مهلت، گزارش اقدام را ثبت کنید.</p>
@@ -1151,10 +1169,43 @@ button,.btn{-webkit-touch-callout:none}
   <div id="delegations_detail"></div>
 </div>
 
+<!-- ═══ تأیید درخواست‌ها (یکپارچه — هماهنگ‌کننده + مدیر) ═══ -->
+<div id="section-approvals" class="card hidden">
+  <h2>✅ تأیید درخواست‌ها</h2>
+  <p id="approvals_role_notice">درخواست‌های مرخصی بر اساس نقش شما نمایش داده می‌شوند. هماهنگ‌کننده‌ها تأیید اولیه و مدیران تأیید نهایی انجام می‌دهند.</p>
+  <div class="form-row">
+    <div class="form-group"><label>فیلتر مرحله:</label><select id="approval_filter" onchange="renderApprovals()">
+      <option value="pending">در انتظار اقدام من</option>
+      <option value="all">همه درخواست‌ها</option>
+      <option value="approved">تأییدشده</option>
+      <option value="rejected">ردشده</option>
+      <option value="partial">جزئی</option>
+    </select></div>
+    <div class="form-group"><label>نقش نمایش:</label><select id="approval_role_view" onchange="renderApprovals()">
+      <option value="auto">خودکار (بر اساس نقش من)</option>
+      <option value="coordinator">نمای هماهنگ‌کننده (تأیید اولیه)</option>
+      <option value="admin">نمای مدیر (تأیید نهایی)</option>
+    </select></div>
+  </div>
+  <!-- بخش تأیید اولیه (هماهنگ‌کننده) -->
+  <div id="coordinator_approvals_section" class="hidden" style="margin-bottom:20px">
+    <h3 style="margin:0 0 10px">👥 درخواست‌های در انتظار تأیید اولیه شما</h3>
+    <p style="font-size:12px;color:var(--c-text-muted);margin-bottom:10px">این درخواست‌ها از زیرمجموعه‌های شما رسیده. پس از تأیید اولیه، به مدیر ارسال می‌شود.</p>
+    <div id="coordinator_approvals_container"></div>
+  </div>
+  <!-- بخش تأیید نهایی (مدیر) -->
+  <div id="admin_approvals_section">
+    <h3 style="margin:0 0 10px">🔑 درخواست‌های در انتظار تأیید نهایی</h3>
+    <p style="font-size:12px;color:var(--c-text-muted);margin-bottom:10px">برای مرخصی‌های روزانه چندروزه، می‌توانید هر روز را جداگانه تأیید/رد کنید.</p>
+    <div id="approvals_list_container" class="table-wrap"></div>
+  </div>
+</div>
+
+<!-- بخش پنهان coordinator_approvals (ادغام‌شده در approvals) -->
 <div id="section-coordinator_approvals" class="card hidden">
   <h2>تأیید اولیه درخواست‌های مرخصی</h2>
-  <p>درخواست‌های مرخصی زیرمجموعه‌های شما که در انتظار تأیید اولیه هستند. تأیید شما نهایی نیست و ادمین باید بعداً تأیید نهایی کند.</p>
-  <div id="coordinator_approvals_container"></div>
+  <p>این بخش ادغام شده است. لطفاً از منوی «تأیید درخواست‌ها» استفاده کنید.</p>
+  <div id="coordinator_approvals_container_old"></div>
 </div>
 
 <!-- مدیریت وظایف زیرمجموعه (توسط هماهنگ‌کننده) -->
@@ -1999,21 +2050,32 @@ function applyRoleBasedUI(){
     return;
   }
   document.querySelectorAll('#main_nav button').forEach(function(b){b.classList.remove('hidden');});
-  // ─── سوپرادمین: خوداظهاری ندارد ───
+  // ─── سوپرادمین: خوداظهاری و مرخصی ندارد ───
   // سوپرادمین فقط مدیریت سامانه را بر عهده دارد و خوداظهاری روزانه ثبت نمی‌کند
   if(currentRole==='super_admin'){
     document.querySelectorAll('#main_nav .nav-item[data-target="daily_log"]').forEach(function(b){b.classList.add('hidden');});
     document.querySelectorAll('#main_nav .nav-item[data-target="leave_req"]').forEach(function(b){b.classList.add('hidden');});
   }
-  document.querySelectorAll('.admin-only').forEach(function(el){el.classList.toggle('hidden',!(currentRole==='admin'||currentRole==='super_admin'));});
+  // admin-only: فقط مدیر و سوپرادمین
+  var isAdmin=currentRole==='admin'||currentRole==='super_admin';
+  document.querySelectorAll('.admin-only').forEach(function(el){el.classList.toggle('hidden',!isAdmin);});
   // events-access: admin/super_admin یا کاربر با can_manage_events
-  var canEvents=currentRole==='admin'||currentRole==='super_admin'||(currentUser.profile&&currentUser.profile.can_manage_events);
+  var canEvents=isAdmin||(currentUser.profile&&currentUser.profile.can_manage_events);
   document.querySelectorAll('.events-access').forEach(function(el){el.classList.toggle('hidden',!canEvents);});
   // تفویض‌ها: فقط اگر کاربر تفویضی دارد (داده یا گرفته)
   updateDelegationVisibility();
-  // coordinator-only: کاربرانی که هماهنگ‌کننده هستند (زیرمجموعه دارند) یا ادمین
-  var isCoordinator=currentRole!=='user'||(currentUser.profile&&(currentUser.profile.can_approve_leaves||currentUser.profile.can_schedule_tasks))||cachedSubordinates.length>0;
-  document.querySelectorAll('.coordinator-only').forEach(function(el){el.classList.toggle('hidden',!isCoordinator);});
+  // ─── نقش هماهنگ‌کننده (واضح و مستقل) ───
+  // هماهنگ‌کننده = کاربری که یکی از این‌ها را دارد:
+  //   ۱. دسترسی تأیید مرخصی (can_approve_leaves)
+  //   ۲. دسترسی تعریف وظیفه (can_schedule_tasks)
+  //   ۳. زیرمجموعه دارد (parent_id دیگران = این کاربر)
+  //   ۴. مدیر یا سوپرادمین (همیشه هماهنگ‌کننده محسوب می‌شوند)
+  var isCoord=isCoordinatorRole();
+  document.querySelectorAll('.coordinator-only').forEach(function(el){el.classList.toggle('hidden',!isCoord);});
+  // گروه «هماهنگی و تأیید»: فقط برای هماهنگ‌کننده یا مدیر
+  document.querySelectorAll('.coordinator-admin-only').forEach(function(el){el.classList.toggle('hidden',!isCoord&&!isAdmin);});
+  // گروه «کارکرد فردی»: مخفی برای سوپرادمین
+  document.querySelectorAll('.no-super-admin').forEach(function(el){el.classList.toggle('hidden',currentRole==='super_admin');});
   // مخفی کردن گروه‌های خالی (اگر همه آیتم‌های یک گروه hidden باشند، گروه را هم hidden کن)
   document.querySelectorAll('#main_nav .nav-group').forEach(function(g){
     var visible=g.querySelectorAll('.nav-item:not(.hidden)').length;
@@ -2711,32 +2773,37 @@ async function dismissNotification(id){
 async function updateBadges(){
   // وظایف من
   var myTasks=await loadMyTasks('pending');
-  var tb=$('tasks_badge');
-  if(myTasks.length>0){tb.textContent=myTasks.length;tb.classList.remove('hidden');}else tb.classList.add('hidden');
-  // فعالیت‌های برنامه‌ها (در انتظار + در حال انجام)
+  // وظایف + فعالیت‌ها در یک badge واحد (چون ادغام شده‌اند)
   var myActs=await loadActiveActivitiesForCountdown();
-  var ab=$('activities_badge');
-  if(myActs.length>0){ab.textContent=myActs.length;ab.classList.remove('hidden');}else ab.classList.add('hidden');
+  var totalPending=myTasks.length+myActs.length;
+  var tb=$('tasks_badge');
+  if(tb){
+    if(totalPending>0){tb.textContent=totalPending;tb.classList.remove('hidden');}
+    else tb.classList.add('hidden');
+  }
   // برنامه‌های فعال
   if(currentUser.profile&&(currentUser.profile.can_create_programs||currentRole==='admin'||currentRole==='super_admin')){
     var myProgs=await loadPrograms();
     var activeProgs=myProgs.filter(function(p){return p.status==='active';});
     var pb=$('programs_badge');
-    if(activeProgs.length>0){pb.textContent=activeProgs.length;pb.classList.remove('hidden');}else pb.classList.add('hidden');
+    if(pb){
+      if(activeProgs.length>0){pb.textContent=activeProgs.length;pb.classList.remove('hidden');}
+      else pb.classList.add('hidden');
+    }
   }
-  // هماهنگ‌کننده: درخواست‌های coordinator_pending
-  if(cachedSubordinates.length>0&&currentUser.profile.can_approve_leaves){
-    var coordLeaves=await loadLeavesForCoordinator();
-    var coordPending=coordLeaves.filter(function(l){return l.status==='coordinator_pending';}).length;
-    var cb=$('coord_badge');
-    if(coordPending>0){cb.textContent=coordPending;cb.classList.remove('hidden');}else cb.classList.add('hidden');
-  }
-  // ادمین: درخواست‌های pending + manager_pending
-  if(currentRole==='admin'||currentRole==='super_admin'){
+  // هماهنگ‌کننده/مدیر: درخواست‌های در انتظار (coordinator_pending + pending + manager_pending)
+  var isCoord=isCoordinatorRole();
+  var isAdmin=currentRole==='admin'||currentRole==='super_admin';
+  if(isCoord||isAdmin){
     var allLeaves=await loadLeaves();
+    var coordPending=allLeaves.filter(function(l){return l.status==='coordinator_pending';}).length;
     var adminPending=allLeaves.filter(function(l){return l.status==='pending'||l.status==='manager_pending';}).length;
+    var totalApprovals=coordPending+adminPending;
     var ab2=$('admin_approvals_badge');
-    if(adminPending>0){ab2.textContent=adminPending;ab2.classList.remove('hidden');}else ab2.classList.add('hidden');
+    if(ab2){
+      if(totalApprovals>0){ab2.textContent=totalApprovals;ab2.classList.remove('hidden');}
+      else ab2.classList.add('hidden');
+    }
   }
 }
 
@@ -2778,14 +2845,23 @@ function showSection(id,skipHistory){
     if(canAccessEvents){adminBox.classList.remove('hidden');noAccess.classList.add('hidden');renderEventsList();}
     else{adminBox.classList.add('hidden');noAccess.classList.remove('hidden');}
   }
-  if(id==='daily_log'){populatePersonDropdown('log_person_id',false);if(!currentLogPerson)$('log_person_id').value=currentUser.id;currentLogPerson=$('log_person_id').value;updateDelegateBox();toggleLogFields();syncLog();}
+  // ─── تغییر مسیر بخش‌های ادغام‌شده ───
+  // my_activities → my_tasks (ادغام‌شده)
+  if(id==='my_activities')id='my_tasks';
+  // coordinator_approvals → approvals (ادغام‌شده)
+  if(id==='coordinator_approvals')id='approvals';
+  // leave_req → daily_log (در همان بخش قابل دسترسی)
+  if(id==='daily_log'){
+    populatePersonDropdown('log_person_id',false);
+    if(!currentLogPerson)$('log_person_id').value=currentUser.id;
+    currentLogPerson=$('log_person_id').value;
+    updateDelegateBox();toggleLogFields();syncLog();
+  }
   if(id==='leave_req'){populatePersonDropdown('lv_person_id',false);$('lv_person_id').value=currentUser.id;renderLeaves();}
   if(id==='my_tasks')renderMyTasks();
-  if(id==='my_activities')renderMyActivities();
   if(id==='programs')renderPrograms();
   if(id==='records'){populatePersonDropdown('rec_person');renderRecords();}
   if(id==='reports')populatePersonDropdown('rep_person');
-  if(id==='coordinator_approvals')renderCoordinatorApprovals();
   if(id==='coordinator_tasks'){populateSubordinateDropdown('ct_assignee');renderCoordinatorTasks();}
   if(id==='approvals')renderApprovals();
   if(id==='send_notification'){populateRecipientDropdown();renderMsgArchive();}
@@ -2906,7 +2982,7 @@ async function renderDashboard(){
       if(coord)coordInfo='<div class="coordinator-info"><b>👥 هماهنگ‌کننده شما:</b> '+esc(coord.first_name+' '+coord.last_name)+' ('+esc(coord.personnel_id)+')</div>';
     }
     if(cachedSubordinates.length>0){
-      coordInfo+='<div class="coordinator-info" style="background:linear-gradient(135deg,var(--info) 0%,#2980b9 100%)"><b>📋 شما هماهنگ‌کننده '+cachedSubordinates.length+' کاربر هستید.</b> <button class="btn btn-sm" style="background:#fff;color:var(--info)" onclick="showSection(\'coordinator_approvals\')">مشاهده تأییدها</button></div>';
+      coordInfo+='<div class="coordinator-info" style="background:linear-gradient(135deg,var(--info) 0%,#2980b9 100%)"><b>📋 شما هماهنگ‌کننده '+cachedSubordinates.length+' کاربر هستید.</b> <button class="btn btn-sm" style="background:#fff;color:var(--info)" onclick="showSection(\'approvals\')">مشاهده تأییدها</button></div>';
     }
 
     var statsHtml='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px">'+
@@ -2935,7 +3011,7 @@ async function renderDashboard(){
       (currentRole!=='super_admin'?'<button class="btn btn-warning" onclick="showSection(\'leave_req\')">درخواست مرخصی</button>':'')+
       '<button class="btn btn-success" onclick="showSection(\'reports\')">گزارش ماهانه</button>'+
       (currentRole!=='super_admin'?'<button class="btn btn-purple" onclick="showSection(\'my_tasks\')">وظایف من ('+myTasks.length+')</button>':'')+
-      (myActs&&myActs.length?'<button class="btn btn-warning" onclick="showSection(\'my_activities\')">فعالیت‌های برنامه‌ها ('+myActs.length+')</button>':'')+
+      (myActs&&myActs.length?'<button class="btn btn-warning" onclick="showSection(\'my_tasks\')">فعالیت‌های برنامه‌ها ('+myActs.length+')</button>':'')+
       (currentUser.profile&&(currentUser.profile.can_create_programs||currentRole==='admin'||currentRole==='super_admin')?'<button class="btn btn-info" onclick="showSection(\'programs\')">مدیریت برنامه‌ها</button>':'')+
       (currentRole==='admin'||currentRole==='super_admin'?'<button class="btn btn-danger" onclick="showSection(\'approvals\')">تأیید مرخصی‌ها</button><button class="btn btn-danger" onclick="showSection(\'send_notification\')">ارسال پیام</button><button class="btn btn-danger" onclick="showSection(\'users\')">مدیریت کاربران</button>':'')+
       '</div>';
@@ -3902,21 +3978,109 @@ function resetLeaveForm(){
 /* ═════ My Tasks ═════ */
 async function renderMyTasks(){
   var c=$('my_tasks_container');
-  var filter=$('my_tasks_filter').value;
+  var filter=$('my_tasks_filter')?$('my_tasks_filter').value:'pending';
+  var typeSel=$('my_tasks_type');
+  var type=typeSel?typeSel.value:'all';
+  c.innerHTML='<p style="color:var(--c-text-muted)">در حال بارگذاری...</p>';
   try{
-    var tasks=await loadMyTasks(filter);
-    if(!tasks.length){c.innerHTML='<p class="notif-empty">وظیفه‌ای یافت نشد.</p>';return;}
+    // ─── بارگذاری وظایف مستقل + فعالیت‌های برنامه‌ها ───
+    var allItems=[];
+    
+    // وظایف مستقل (اگر نوع = all یا tasks)
+    if(type==='all'||type==='tasks'){
+      var tasks=await loadMyTasks('all');
+      tasks.forEach(function(t){
+        allItems.push({
+          kind:'task',
+          id:t.id,
+          title:t.title||'وظیفه',
+          description:t.description||'',
+          status:t.status||'pending',
+          priority:t.priority||'normal',
+          deadline:t.task_date, // تاریخ شمسی
+          deadlineTs:jalaliToTimestamp(t.task_date), // برای مرتب‌سازی
+          source:t.creator_id===currentUser.id?'شما':getPersonName(t.creator_id),
+          sourceLabel:'از',
+          completionNote:t.completion_note||'',
+          raw:t
+        });
+      });
+    }
+    
+    // فعالیت‌های برنامه‌ها (اگر نوع = all یا activities)
+    if(type==='all'||type==='activities'){
+      var acts=await loadMyActivities();
+      acts.forEach(function(a){
+        var dlTs=new Date(a.deadline).getTime();
+        allItems.push({
+          kind:'activity',
+          id:a.id,
+          title:a.title||'فعالیت',
+          description:a.description||'',
+          status:a.status||'pending',
+          priority:a.priority||'medium',
+          deadline:new Date(a.deadline).toLocaleString('fa-IR'),
+          deadlineTs:dlTs,
+          source:a.programs?a.programs.title:'(حذف شده)',
+          sourceLabel:'برنامه',
+          completionNote:a.report_note||'',
+          raw:a
+        });
+      });
+    }
+    
+    // اعمال فیلتر وضعیت
+    var filtered;
+    if(filter==='all')filtered=allItems;
+    else if(filter==='pending')filtered=allItems.filter(function(x){return x.status==='pending'||x.status==='in_progress';});
+    else if(filter==='in_progress')filtered=allItems.filter(function(x){return x.status==='in_progress';});
+    else if(filter==='done')filtered=allItems.filter(function(x){return x.status==='done';});
+    else if(filter==='overdue')filtered=allItems.filter(function(x){return(x.status==='pending'||x.status==='in_progress')&&x.deadlineTs<Date.now();});
+    else filtered=allItems;
+    
+    // مرتب‌سازی: تأخیرها اول، سپس بر اساس مهلت
+    filtered.sort(function(a,b){
+      var aOverdue=(a.status==='pending'||a.status==='in_progress')&&a.deadlineTs<Date.now()?1:0;
+      var bOverdue=(b.status==='pending'||b.status==='in_progress')&&b.deadlineTs<Date.now()?1:0;
+      if(aOverdue!==bOverdue)return bOverdue-aOverdue;
+      return a.deadlineTs-b.deadlineTs;
+    });
+    
+    if(!filtered.length){c.innerHTML='<p class="notif-empty">کاری محول‌شده به شما یافت نشد.</p>';return;}
+    
     var html='';
-    tasks.forEach(function(t){
-      var creatorName=t.creator_id===currentUser.id?'شما':getPersonName(t.creator_id);
-      html+='<div class="task-card'+(t.priority==='high'?' high':'')+(t.status==='done'?' done':'')+'">'+
-        '<h4>📋 '+esc(t.title)+'</h4>'+
-        '<div class="task-meta">📅 '+esc(t.task_date)+' | از: '+esc(creatorName)+' | اولویت: <span class="badge badge-'+(t.priority==='high'?'high':t.priority==='low'?'low':'normal-priority')+'">'+(t.priority==='high'?'بالا':t.priority==='low'?'پایین':'معمول')+'</span> | وضعیت: '+esc(TASK_STATUS[t.status])+'</div>'+
-        (t.description?'<div class="task-desc">'+esc(t.description)+'</div>':'')+
-        (t.completion_note?'<div class="task-desc" style="background:#d5f5e3;padding:8px;border-radius:4px"><b>گزارش انجام:</b> '+esc(t.completion_note)+'</div>':'')+
+    if(type==='all'){
+      var taskCount=allItems.filter(function(x){return x.kind==='task';}).length;
+      var actCount=allItems.filter(function(x){return x.kind==='activity';}).length;
+      html+='<div style="margin-bottom:10px;font-size:12px;color:var(--c-text-muted)">📊 '+taskCount+' وظیفه مستقل + '+actCount+' فعالیت برنامه = '+allItems.length+' مورد کل</div>';
+    }
+    
+    filtered.forEach(function(item){
+      var isForce=item.priority==='force';
+      var isHigh=item.priority==='high';
+      var isOverdue=(item.status==='pending'||item.status==='in_progress')&&item.deadlineTs<Date.now();
+      var kindIcon=item.kind==='task'?'📋':'🎯';
+      var kindLabel=item.kind==='task'?'وظیفه مستقل':'فعالیت برنامه';
+      var priorityTagText=isForce?'🚨 فوری':isHigh?'🟠 بالا':item.priority==='low'?'⚪ پایین':'🔵 متوسط';
+      var statusBadge=item.kind==='task'?'<span class="badge badge-'+(item.status==='done'?'approved':item.status==='cancelled'?'canceled':'overtime')+'">'+esc(TASK_STATUS[item.status]||item.status)+'</span>':activityStatusBadge(item.status);
+      
+      // زمان باقی‌مانده (فقط برای فعالیت‌ها که timestamp دارند)
+      var remHtml='';
+      if(item.kind==='activity'&&item.status!=='done'&&item.status!=='cancelled'){
+        var rem=formatRemaining(item.raw.deadline);
+        remHtml='<div class="task-desc" style="background:'+(isOverdue?'var(--c-danger-light)':isForce?'var(--c-warning-light)':'var(--c-bg-alt)')+';padding:6px 8px;border-radius:4px;font-size:12px"><b>'+(rem.overdue?'⚠️ تأخیر:':'⏰ زمان باقی‌مانده:')+'</b> '+rem.text+'</div>';
+      }
+      
+      html+='<div class="task-card'+(isForce||isHigh?' high':'')+(isOverdue?' high':'')+(item.status==='done'?' done':'')+'" style="'+(isForce?'border-right:4px solid var(--c-danger);background:linear-gradient(135deg,var(--c-card,#fff) 0%,var(--c-danger-light,#fee2e2) 100%)':'')+'">'+
+        '<h4>'+(isForce?'<span class="priority-tag force">🚨 فوری</span> ':'<span class="priority-tag '+(item.priority||'medium')+'" style="margin-left:4px">'+priorityTagText+'</span>')+kindIcon+' '+esc(item.title)+'</h4>'+
+        '<div class="task-meta"><small style="background:var(--c-bg-alt);padding:1px 6px;border-radius:4px">'+kindLabel+'</small> | '+item.sourceLabel+': '+esc(item.source)+' | ⏰ مهلت: '+esc(item.deadline)+' | وضعیت: '+statusBadge+'</div>'+
+        (item.description?'<div class="task-desc">'+esc(item.description)+'</div>':'')+
+        remHtml+
+        (item.completionNote?'<div class="task-desc" style="background:var(--c-success-light,#d5f5e3);padding:8px;border-radius:4px"><b>گزارش انجام:</b> '+esc(item.completionNote)+'</div>':'')+
         '<div class="task-actions">'+
-          (t.status!=='done'&&t.status!=='cancelled'?'<button class="btn btn-success btn-sm" onclick="completeTask(\''+t.id+'\')">ثبت گزارش انجام</button>':'')+
-          (t.status==='pending'?'<button class="btn btn-info btn-sm" onclick="startTask(\''+t.id+'\')">شروع انجام</button>':'')+
+          (item.status!=='done'&&item.status!=='cancelled'?(item.kind==='task'?'<button class="btn btn-success btn-sm" onclick="completeTask(\''+item.id+'\')">✅ ثبت گزارش انجام</button>':'<button class="btn btn-success btn-sm" onclick="reportActivityDone(\''+item.id+'\')">✅ انجام شد</button> <button class="btn btn-danger btn-sm" onclick="reportActivityNotDone(\''+item.id+'\')">❌ انجام نشد</button>'):'')+
+          (item.status==='pending'&&(item.kind==='task')?'<button class="btn btn-info btn-sm" onclick="startTask(\''+item.id+'\')">▶️ شروع انجام</button>':'')+
+          (item.status==='pending'&&item.kind==='activity'?'<button class="btn btn-info btn-sm" onclick="startActivity(\''+item.id+'\')">▶️ شروع انجام</button>':'')+
         '</div></div>';
     });
     c.innerHTML=html;
@@ -4048,11 +4212,47 @@ async function cancelTask(id){
 /* ═════ Admin approvals (تأیید نهایی با قابلیت partial) ═════ */
 async function renderApprovals(){
   var c=$('approvals_list_container');
-  var filter=$('approval_filter').value;
+  var filter=$('approval_filter')?$('approval_filter').value:'pending';
+  var roleView=$('approval_role_view')?$('approval_role_view').value:'auto';
+  var isAdmin=currentRole==='admin'||currentRole==='super_admin';
+  var isCoord=isCoordinatorRole();
+  // تعیین نمای نمایش
+  var showCoord=roleView==='coordinator'||(roleView==='auto'&&isCoord);
+  var showAdmin=roleView==='admin'||(roleView==='auto'&&isAdmin);
+  // اگر نه هماهنگ‌کننده نه مدیر، چیزی نمایش نده
+  if(!showCoord&&!showAdmin){
+    $('coordinator_approvals_section').classList.add('hidden');
+    $('admin_approvals_section').classList.add('hidden');
+    c.innerHTML='<p style="color:var(--c-text-muted)">شما دسترسی به تأیید درخواست‌ها ندارید.</p>';
+    return;
+  }
+  // نمایش/مخفی بخش‌ها
+  $('coordinator_approvals_section').classList.toggle('hidden',!showCoord);
+  $('admin_approvals_section').classList.toggle('hidden',!showAdmin);
+  // به‌روزرسانی یادداشت نقش
+  var notice=$('approvals_role_notice');
+  if(notice){
+    if(showCoord&&showAdmin)notice.textContent='شما هماهنگ‌کننده و مدیر هستید — هر دو نمای تأیید اولیه و نهایی نمایش داده می‌شود.';
+    else if(showCoord)notice.textContent='شما هماهنگ‌کننده هستید — درخواست‌های زیرمجموعه‌های شما برای تأیید اولیه نمایش داده می‌شود.';
+    else notice.textContent='شما مدیر هستید — درخواست‌های در انتظار تأیید نهایی نمایش داده می‌شود.';
+  }
+  // رندر بخش هماهنگ‌کننده
+  if(showCoord){
+    await renderCoordinatorApprovals();
+  }
+  // رندر بخش مدیر
+  if(!showAdmin){
+    c.innerHTML='';
+    return;
+  }
   try{
     var all=await loadLeaves();
-    var list=filter==='all'?all:all.filter(function(l){return l.status===filter;});
-    if(!list.length){c.innerHTML='<p>درخواستی یافت نشد.</p>';return;}
+    // فیلتر هوشمند: pending = در انتظار ادمین (pending + manager_pending)
+    var list;
+    if(filter==='pending')list=all.filter(function(l){return l.status==='pending'||l.status==='manager_pending';});
+    else if(filter==='all')list=all;
+    else list=all.filter(function(l){return l.status===filter;});
+    if(!list.length){c.innerHTML='<p>درخواستی در انتظار تأیید نهایی نیست.</p>';return;}
     var h='<table><tr><th>پرسنل</th><th>نوع</th><th>بازه</th><th>علت</th><th>وضعیت</th><th>یادداشت هماهنگ‌کننده</th><th>عملیات ادمین</th></tr>';
     for(var i=0;i<list.length;i++){
       var l=list[i];
@@ -6502,7 +6702,7 @@ function init(){
   on('btn_reset_leave','click',resetLeaveForm);
   delegate('leave_list_container',function(a,id){if(a==='edit')editLeave(id);else if(a==='delete')deleteLeave(id);});
   on('my_tasks_filter','change',renderMyTasks);
-  on('my_act_filter','change',renderMyActivities);
+  // my_act_filter: ادغام‌شده در my_tasks — دیگر مستقل نیست
   on('btn_create_program','click',createProgram);
   on('btn_reset_program','click',resetProgramForm);
   on('btn_create_task','click',createTask);
