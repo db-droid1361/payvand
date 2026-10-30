@@ -2643,7 +2643,7 @@ async function renderUsers(){
       var canEdit=!isSelf&&(canManageAll||p.role==='user');
       var canReset=!isSelf&&(canManageAll||(currentUser.profile&&currentUser.profile.can_manage_users&&p.role==='user'));
       var canDelegate=currentRole==='super_admin'&&p.role==='admin';
-      h+='<tr><td>'+esc(p.first_name)+(isSelf?' <span style="color:var(--secondary);font-size:11px">(شما)</span>':'')+'</td><td>'+esc(p.last_name)+'</td><td>'+esc(p.personnel_id)+'</td>'+
+      h+='<tr><td>'+esc(p.first_name)+'</td><td>'+esc(p.last_name)+'</td><td>'+esc(p.personnel_id)+'</td>'+
         '<td><select onchange="changeRole(\''+p.id+'\',this.value)"'+(canEdit?'':' disabled')+'>'+
         '<option value="user"'+(p.role==='user'?' selected':'')+'>کاربر</option>'+
         '<option value="guest"'+(p.role==='guest'?' selected':'')+'>👁️ مهمان</option>'+
