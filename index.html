@@ -1223,10 +1223,13 @@ button,.btn{-webkit-touch-callout:none}
 
 <!-- گزارش‌های دسته‌بندی‌شده (ادمین) -->
 <div id="section-categorized_reports" class="card hidden">
-  <h2>گزارش‌های دسته‌بندی‌شده فعالیت‌ها</h2>
-  <p>گزارش جامع از فعالیت‌های همه کاربران بر اساس اولویت، وضعیت و درصد انجام.</p>
+  <h2>گزارش‌های دسته‌بندی‌شده فعالیت‌ها و امتیازها</h2>
+  <p>گزارش جامع از فعالیت‌ها و امتیاز کاربران بر اساس اولویت، وضعیت و درصد انجام — با فیلتر بازه زمانی (امتیازها بر اساس فعالیت‌های درون بازه محاسبه می‌شوند).</p>
   <div class="form-row">
     <div class="form-group"><label>فیلتر کاربر:</label><select id="catrep_user"><option value="">همه کاربران</option></select></div>
+    <div class="form-group"><label>نوع بازه:</label><select id="catrep_type" onchange="toggleCatRepDates()"><option value="daily">روزانه</option><option value="weekly">هفتگی</option><option value="monthly" selected>ماهانه</option><option value="custom">بازه دلخواه</option></select></div>
+    <div class="form-group" id="catrep_start_box"><label>تاریخ شروع:</label><input type="text" id="catrep_start_date" class="date-picker" placeholder="انتخاب تاریخ" readonly></div>
+    <div class="form-group hidden" id="catrep_end_box"><label>تاریخ پایان:</label><input type="text" id="catrep_end_date" class="date-picker" placeholder="انتخاب تاریخ" readonly></div>
   </div>
   <button class="btn" id="btn_gen_catrep">تولید گزارش</button>
   <button class="btn btn-success" id="btn_print_catrep">چاپ گزارش</button>
@@ -2840,7 +2843,7 @@ function showSection(id,skipHistory){
   if(id==='coordinator_tasks'){populateSubordinateDropdown('ct_assignee');renderCoordinatorTasks();}
   if(id==='approvals')renderApprovals();
   if(id==='send_notification'){populateRecipientDropdown();renderMsgArchive();}
-  if(id==='categorized_reports'){populatePersonDropdown('catrep_user');}
+  if(id==='categorized_reports'){populatePersonDropdown('catrep_user');if(!isValidJalaliDate(val('catrep_start_date')))toggleCatRepDates();}
   if(id==='program_reports'){populateProgramReportFilters();renderProgramHistory();}
   if(id==='scoring_config')renderScoringRules();
   if(id==='settings'){
@@ -6806,29 +6809,123 @@ async function renderCountdownBanner(){
 
 /* ═════ Categorized Reports (admin) ═════ */
 var PRIORITY_LABELS={force:'فوری',high:'بالا',medium:'متوسط',low:'پایین'};
+
+// تنظیم فیلد تاریخ گزارش تحلیلی بر اساس نوع بازه (مشابه گزارش کارکرد)
+function toggleCatRepDates(){
+  var type=$('catrep_type').value;
+  var startBox=$('catrep_start_box'),endBox=$('catrep_end_box');
+  var startInput=$('catrep_start_date'),endInput=$('catrep_end_date');
+  var label=startBox.querySelector('label');
+  var todayJ=getTodayJalali();
+  var todayP=parseJalali(todayJ);
+  var todayDow=getJalaliDayOfWeek(todayP.jy,todayP.jm,todayP.jd); // 0=شنبه ... 6=جمعه
+  if(type==='daily'){
+    label.textContent='📅 تاریخ روز:';
+    endBox.classList.add('hidden');
+    if(startInput)startInput.value=todayJ;
+  }else if(type==='weekly'){
+    label.textContent='📅 تاریخ شروع هفته (شنبه):';
+    endBox.classList.add('hidden');
+    var saturdayJ=todayJ;
+    if(todayDow>0)saturdayJ=addDaysToJalali(todayJ,-todayDow);
+    if(startInput)startInput.value=saturdayJ;
+  }else if(type==='monthly'){
+    label.textContent='📅 یک روز از ماه:';
+    endBox.classList.add('hidden');
+    if(startInput&&!isValidJalaliDate(startInput.value))startInput.value=todayJ;
+  }else if(type==='custom'){
+    label.textContent='📅 تاریخ شروع:';
+    endBox.classList.remove('hidden');
+    if(startInput&&!isValidJalaliDate(startInput.value))startInput.value=todayJ;
+    if(endInput&&!isValidJalaliDate(endInput.value))endInput.value=todayJ;
+  }
+}
+
+// محاسبه امتیاز یک کاربر از فعالیت‌های فیلترشده + قوانین امتیازدهی (محلی، درون بازه)
+function computeUserScore(acts,rules){
+  var breakdown={force:{done_on_time:0,done_late:0,not_done:0,cancelled:0},high:{done_on_time:0,done_late:0,not_done:0,cancelled:0},medium:{done_on_time:0,done_late:0,not_done:0,cancelled:0},low:{done_on_time:0,done_late:0,not_done:0,cancelled:0}};
+  var total=0;
+  acts.forEach(function(a){
+    var pr=a.priority||'medium';
+    if(!breakdown[pr])pr='medium';
+    var st='not_done';
+    if(a.status==='cancelled'){st='cancelled';}
+    else if(a.status==='done'){
+      if(a.reported_at&&a.deadline&&new Date(a.reported_at).getTime()<=new Date(a.deadline).getTime())st='done_on_time';
+      else st='done_late';
+    }else{st='not_done';}
+    breakdown[pr][st]++;
+    var rule=rules.filter(function(r){return r.priority===pr&&r.completion_status===st;})[0];
+    if(rule)total+=parseInt(rule.points,10)||0;
+  });
+  return {total:total,breakdown:breakdown};
+}
+
 async function generateCategorizedReport(){
   var c=$('catrep_area');
   var filterUser=val('catrep_user');
   if(currentRole!=='admin'&&currentRole!=='super_admin'){c.innerHTML='<p>دسترسی غیرمجاز.</p>';return;}
+  // ─── محاسبه بازه زمانی (مشابه گزارش کارکرد) ───
+  var type=val('catrep_type'),startStr=val('catrep_start_date'),endStr=val('catrep_end_date');
+  var startJ,endJ,period;
+  if(!isValidJalaliDate(startStr)){showAlert('تاریخ شروع نامعتبر است.','error');return;}
+  var p=parseJalali(startStr);
+  if(type==='monthly'){startJ=fmtJalali(p.jy,p.jm,1);endJ=fmtJalali(p.jy,p.jm,jalaliMonthLength(p.jy,p.jm));period=MONTH_NAMES[p.jm-1]+' '+p.jy;}
+  else{
+    startJ=normJ(startStr);
+    if(type==='daily'){endJ=startJ;period='روز '+startJ+' ('+dayName(startJ)+')';}
+    else if(type==='weekly'){endJ=addDaysToJalali(startJ,6);period='هفته '+startJ+' تا '+endJ;}
+    else{
+      if(!isValidJalaliDate(endStr)){showAlert('تاریخ پایان نامعتبر است.','error');return;}
+      endJ=normJ(endStr);
+      if(jalaliToTimestamp(endJ)<jalaliToTimestamp(startJ)){showAlert('تاریخ پایان نباید قبل از شروع باشد.','error');return;}
+      period=startJ+' تا '+endJ;
+    }
+  }
+  var startTs=jalaliToTimestamp(startJ);          // نیمه‌شب روز شروع
+  var endTs=jalaliToTimestamp(endJ)+86399999;     // پایان روز پایان (۲۳:۵۹:۵۹.۹۹۹)
   c.innerHTML='<p>در حال تولید گزارش...</p>';
   showLoading('تولید گزارش...');
   try{
+    // بارگذاری قوانین امتیازدهی (برای محاسبه امتیاز درون بازه)
+    if(!cachedScoringRules||!cachedScoringRules.length)await loadScoringRules();
     // بارگذاری همه فعالیت‌ها (priority از خود فعالیت)
     const{data,error}=await sb.from('program_activities').select('*,programs!inner(id,title,status)').order('assignee_id');
     if(error)throw error;
     var allActs=data||[];
     // فیلتر بر اساس کاربر
     if(filterUser)allActs=allActs.filter(function(a){return a.assignee_id===filterUser;});
+    // فیلتر بر اساس بازه زمانی (مهلت فعالیت درون بازه باشد)
+    allActs=allActs.filter(function(a){
+      if(!a.deadline)return false;
+      var dl=new Date(a.deadline).getTime();
+      return dl>=startTs&&dl<=endTs;
+    });
     // گروه‌بندی بر اساس کاربر
     var byUser={};
     allActs.forEach(function(a){
       if(!byUser[a.assignee_id])byUser[a.assignee_id]={acts:[],name:getPersonName(a.assignee_id)};
       byUser[a.assignee_id].acts.push(a);
     });
-    // دریافت امتیاز هر کاربر
     var html='<div class="rep rep-page" style="border:1px solid #000;padding:14px;margin-bottom:14px">';
-    html+='<div style="text-align:center;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:14px"><h2 style="margin:0">📊 گزارش دسته‌بندی‌شده فعالیت‌ها</h2><p style="margin:4px 0 0;font-size:12px">پیوند — سامانه یکپارچه مدیریت فعالیت‌ها و رویدادها</p></div>';
+    html+='<div style="text-align:center;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:14px"><h2 style="margin:0">📊 گزارش تحلیلی فعالیت‌ها و امتیازها</h2><p style="margin:4px 0 0;font-size:12px">پیوند — بازه: '+esc(period)+(filterUser?' | کاربر: '+esc(getPersonName(filterUser)):' | همه کاربران')+'</p></div>';
     var userIds=Object.keys(byUser);
+    // ─── جدول خلاصه امتیاز همه کاربران (مرتب بر اساس امتیاز) ───
+    if(userIds.length){
+      var summaryRows=[];
+      for(var i=0;i<userIds.length;i++){
+        var uid=userIds[i];var u=byUser[uid];var sc=computeUserScore(u.acts,cachedScoringRules);
+        summaryRows.push({name:u.name,acts:u.acts.length,score:sc.total});
+      }
+      summaryRows.sort(function(a,b){return b.score-a.score;});
+      html+='<h3 style="margin:0 0 8px">🏆 جدول امتیازها (مرتب بر اساس امتیاز)</h3>';
+      html+='<table style="margin-bottom:18px"><thead><tr><th>رتبه</th><th>کاربر</th><th>تعداد فعالیت</th><th>امتیاز بازه</th></tr></thead><tbody>';
+      summaryRows.forEach(function(r,idx){
+        html+='<tr><td style="text-align:center;font-weight:700">'+(idx+1)+'</td><td>'+esc(r.name)+'</td><td style="text-align:center">'+r.acts+'</td><td style="text-align:center;font-weight:700'+(r.score>0?';color:#196f3d':r.score<0?';color:#922b21':'')+'">'+r.score+'</td></tr>';
+      });
+      html+='</tbody></table>';
+    }
+    // ─── جزئیات هر کاربر ───
     for(var i=0;i<userIds.length;i++){
       var uid=userIds[i];
       var u=byUser[uid];
@@ -6842,23 +6939,15 @@ async function generateCategorizedReport(){
       var doneOnTime=acts.filter(function(a){return a.status==='done'&&a.reported_at&&new Date(a.reported_at).getTime()<=new Date(a.deadline).getTime();}).length;
       var doneLate=done-doneOnTime;
       var completionPct=total>0?Math.round((done/total)*100):0;
-      // شمارش به اولویت (از خود فعالیت)
       var byPriority={force:0,high:0,medium:0,low:0};
-      acts.forEach(function(a){
-        var pr=a.priority||'medium';
-        byPriority[pr]=(byPriority[pr]||0)+1;
-      });
-      // شمارش به اولویت و وضعیت (از خود فعالیت)
+      acts.forEach(function(a){var pr=a.priority||'medium';byPriority[pr]=(byPriority[pr]||0)+1;});
       var forceDone=acts.filter(function(a){return a.priority==='force'&&a.status==='done';}).length;
       var forceTotal=byPriority.force;
-      // محاسبه امتیاز (با تابع get_user_score)
-      var score=0;
-      try{
-        const{data:scoreData,error:scoreError}=await sb.rpc('get_user_score',{target_user:uid});
-        if(!scoreError&&typeof scoreData==='number')score=scoreData;
-      }catch(e){}
+      // محاسبه امتیاز درون بازه (محلی، از قوانین امتیازدهی)
+      var sc=computeUserScore(acts,cachedScoringRules);
+      var score=sc.total;
       html+='<div style="background:var(--c-bg-alt,#f9f9f9);border:1px solid #ddd;padding:14px;border-radius:8px;margin-bottom:14px">';
-      html+='<h3 style="margin:0 0 10px">'+esc(u.name)+' <span class="score-badge '+(score>0?'':score<0?'negative':'zero')+'">🏆 امتیاز: '+score+'</span></h3>';
+      html+='<h3 style="margin:0 0 10px">'+esc(u.name)+' <span class="score-badge '+(score>0?'':score<0?'negative':'zero')+'">🏆 امتیاز بازه: '+score+'</span></h3>';
       html+='<div class="report-grid">'+
         '<div class="report-stat"><div class="rs-label">کل فعالیت‌ها</div><div class="rs-value">'+total+'</div></div>'+
         '<div class="report-stat success"><div class="rs-label">انجام‌شده</div><div class="rs-value">'+done+'</div></div>'+
@@ -6880,11 +6969,34 @@ async function generateCategorizedReport(){
       html+='<div style="margin:10px 0;font-size:12px"><b>جزئیات انجام:</b> به‌موقع: '+doneOnTime+' | با تأخیر: '+doneLate;
       if(forceTotal>0)html+=' | فوری انجام‌شده: '+forceDone+'/'+forceTotal;
       html+='</div>';
+      // ─── جدول تفکیک امتیاز (اولویت × وضعیت) ───
+      var statuses=[{k:'done_on_time',l:'✅ به‌موقع'},{k:'done_late',l:'⏰ با تأخیر'},{k:'not_done',l:'❌ انجام‌نشده'},{k:'cancelled',l:'🚫 لغو'}];
+      var priorities=['force','high','medium','low'];
+      html+='<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12px;font-weight:600">📊 تفکیک امتیاز (اولویت × وضعیت)</summary>';
+      html+='<table style="margin-top:8px"><thead><tr><th>اولویت</th>';
+      statuses.forEach(function(s){html+='<th>'+s.l+'</th>';});
+      html+='<th>جمع</th></tr></thead><tbody>';
+      priorities.forEach(function(pr){
+        var rowTotal=0;
+        var prLabel=PRIORITY_LABELS[pr];
+        html+='<tr><td><span class="priority-tag '+pr+'">'+prLabel+'</span></td>';
+        statuses.forEach(function(s){
+          var cnt=sc.breakdown[pr][s.k];
+          var rule=cachedScoringRules.filter(function(r){return r.priority===pr&&r.completion_status===s.k;})[0];
+          var pts=rule?parseInt(rule.points,10)||0:0;
+          var cellPts=cnt*pts;
+          rowTotal+=cellPts;
+          html+='<td style="text-align:center">'+cnt+(cellPts?' <span style="font-size:10px;color:'+(cellPts>0?'#196f3d':'#922b21')+'">('+cellPts+')</span>':'')+'</td>';
+        });
+        html+='<td style="text-align:center;font-weight:700'+(rowTotal>0?';color:#196f3d':rowTotal<0?';color:#922b21':'')+'">'+rowTotal+'</td></tr>';
+      });
+      html+='</tbody></table></details>';
       html+='</div>';
     }
-    if(!userIds.length)html+='<p>فعالیتی یافت نشد.</p>';
+    if(!userIds.length)html+='<p>فعالیتی در این بازه یافت نشد.</p>';
     html+='</div>';
     c.innerHTML=html;
+    showAlert('گزارش برای بازه «'+period+'» تولید شد.','success');
   }catch(e){
     c.innerHTML='<p>خطا: '+esc(e.message)+'</p>';
   }
