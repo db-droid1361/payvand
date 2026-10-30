@@ -233,9 +233,7 @@ body.guest-mode.no-log #btn_save_log{display:none!important}
 .progress-fill.low{background:linear-gradient(90deg,var(--danger),#c0392b)}
 
 @media (max-width:768px){
-.form-row{flex-direction:column}.form-row .form-group{min-width:100%}
-table{font-size:12px}.nav button{flex:1 0 45%}
-header{flex-direction:column;align-items:flex-start}
+/* (قوانین legacy حذف شد — چیدمان موبایل استاندارد در بخش پایه اعمال شده) */
 }
 @media print{
 body>*:not(#main_app){display:none!important}
@@ -537,19 +535,123 @@ tr:hover td{background:var(--c-table-hover)}
 /* ─── مهمان ─── */
 body.guest-mode .admin-only,body.guest-mode .coordinator-only{display:none!important}
 
-/* ─── موبایل ─── */
+/* ═══════════════════════════════════════════════════════════════
+   چیدمان استاندارد موبایل — منوی کشویی + نوار بالا فشرده و لمس‌پسند
+   ═══════════════════════════════════════════════════════════════ */
+.auth-screen,.app-layout{min-height:100vh;min-height:100dvh}
+
+/* --- تبلت و موبایل (≤768px) --- */
 @media(max-width:768px){
-  .sidebar{transform:translateX(100%);width:280px}
-  .sidebar.show{transform:translateX(0)}
-  .sidebar.collapsed{transform:translateX(100%);width:280px}
-  .main-area,.main-area.sidebar-collapsed{margin-right:0}
-  .topbar-title{display:none}
-  .form-row{flex-direction:column}
+  /* جلوگیری از زوم خودکار iOS روی فیلدها */
+  input,select,textarea{font-size:16px!important}
+
+  /* سایدبار: دراور کشویی استاندارد از راست */
+  .sidebar{
+    width:min(300px,85vw)!important;
+    transform:translateX(100%);
+    transition:transform .28s cubic-bezier(.4,0,.2,1);
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+    box-shadow:-8px 0 32px rgba(0,0,0,.18);
+  }
+  .sidebar.show,.sidebar.collapsed.show{transform:translateX(0)!important}
+  /* در موبایل حالت collapsed بی‌معنی است؛ همیشه نمایش کامل متن */
+  .sidebar.collapsed{width:min(300px,85vw)!important;transform:translateX(100%)}
+  .sidebar.collapsed .brand-text,.sidebar.collapsed .nav-item .lbl{display:inline!important}
+  .sidebar.collapsed .nav-item{justify-content:flex-start!important;padding:11px 20px!important}
+  .sidebar.collapsed .nav-group-title{font-size:11px!important;text-align:right!important;padding:14px 20px 4px!important}
+  .sidebar.collapsed .nav-group-title::before{content:none!important}
+
+  /* اورلری تیره پشت دراور */
+  .sidebar-overlay{background:rgba(0,0,0,.5);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+
+  /* محدوده اصلی: تمام عرض */
+  .main-area,.main-area.sidebar-collapsed{margin-right:0!important}
+
+  /* نوار بالا: فشرده، استاندارد، لمس‌پسند */
+  .topbar{
+    height:56px;padding:0 10px;gap:4px;
+    padding-left:max(10px,env(safe-area-inset-left));
+    padding-right:max(10px,env(safe-area-inset-right));
+  }
+  .topbar-left{gap:2px;flex:1;min-width:0}
+  .topbar-right{gap:4px;flex-shrink:0}
+  /* عنوان صفحه روی موبایل نمایش داده شود و فضای باقی‌مانده را بگیرد */
+  .topbar-title{font-size:15px;font-weight:700;display:block!important;flex:1;min-width:0;text-align:right}
+  /* اهداف لمسی استاندارد (حداقل ۴۰px) */
+  .topbar-toggle{width:40px;height:40px;font-size:22px;border-radius:10px;padding:0}
+  .theme-toggle-icon{width:40px;height:40px;font-size:18px;padding:0}
+  .icon-btn{width:40px;height:40px;font-size:18px;padding:0}
+
+  /* باکس کاربر: فقط آواتار + دکمه خروج (نام مخفی برای صرفه‌جویی فضا) */
+  .user-box{padding:0;gap:2px;max-width:none;background:transparent}
+  .user-box .user-info{display:none}
+  .user-box .avatar{width:32px;height:32px;font-size:12px}
+  /* لوگو و چراغ وضعیت روی موبایل مخفی شوند */
+  .payvand-logo-topbar{display:none}
+  #db_status_light{display:none}
+
+  /* محتوای اصلی */
+  .container{padding:12px 12px 24px;padding-bottom:max(24px,env(safe-area-inset-bottom))}
+  .card{padding:16px 14px;border-radius:12px;margin-bottom:14px}
+  .card h2{font-size:17px;margin-bottom:12px}
+  .card h3{font-size:14px}
+
+  /* فرم‌ها: چینش ستونی */
+  .form-row{flex-direction:column;gap:10px}
   .form-row .form-group{min-width:100%}
-  .container{padding:14px}
-  .card{padding:16px;border-radius:10px}
+  .form-group{margin-bottom:12px}
+  .form-group label{font-size:13px}
+
+  /* دکمه‌ها: لمس‌پسند (حداقل ۴۴px ارتفاع) */
+  .btn{padding:11px 16px;font-size:14px;min-height:44px;border-radius:10px}
+  .btn-sm{padding:8px 12px;min-height:36px;font-size:12px;border-radius:8px}
+
+  /* جداول: اسکرول افقی تمیز */
+  .table-wrap{margin:0 -12px;border-radius:10px;-webkit-overflow-scrolling:touch}
+  .table-wrap table{min-width:560px}
   table{font-size:12px}
-  th,td{padding:8px}
+  th{font-size:11px;padding:8px 6px}
+  td{padding:8px 6px}
+
+  /* تقویم: سلول‌ها فشرده اما خوانا */
+  .day-cell{height:58px!important;padding:2px!important;font-size:10px;overflow:hidden}
+  .day-cell>div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .day-number{font-size:14px}
+  #calendar_container table th{font-size:10px;padding:4px 2px}
+
+  /* مودال‌ها: تمام‌عرض با حاشیه امن */
+  .notif-modal{padding:10px;align-items:flex-start;padding-top:20px}
+  .notif-modal-box{max-height:calc(100dvh - 24px);border-radius:14px}
+  .notif-modal-header{padding:12px 14px;font-size:14px}
+  .notif-modal-body{padding:14px}
+
+  /* انتخابگر تاریخ/ساعت */
+  .datepicker-popup{width:min(340px,calc(100vw - 24px))!important;max-height:88vh;-webkit-overflow-scrolling:touch}
+  .time-picker-popup{width:min(280px,calc(100vw - 24px))!important}
+}
+
+/* --- موبایل بسیار کوچک (≤480px) --- */
+@media(max-width:480px){
+  .datepicker-popup,.time-picker-popup{right:auto!important;left:0!important;width:calc(100vw - 16px)!important}
+  .tp-grid{max-height:140px}
+  .auth-screen{padding:12px}
+  .auth-card{padding:22px 18px;border-radius:14px}
+  .dash-stats,.report-grid{grid-template-columns:1fr 1fr!important}
+  .dash-stat{padding:14px 12px;gap:10px}
+  .dash-stat .stat-icon{width:38px;height:38px;font-size:18px}
+  .dash-stat .stat-info .num{font-size:20px}
+}
+
+/* --- بهبود لمسی سراسری --- */
+.btn{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+button,.btn{-webkit-touch-callout:none}
+.loading-overlay{backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+@media(hover:none){.btn:hover{transform:none;box-shadow:none}.dash-stat:hover{transform:none}}
+.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.nav-item:focus-visible{outline:2px solid var(--c-primary);outline-offset:2px}
+/* ناحیه امن (notch / home indicator) */
+@supports(padding:max(0px)){
+  .sidebar{padding-right:env(safe-area-inset-right)}
 }
 
 /* ─── چاپ: استایل محتوای گزارش ─── */
@@ -576,88 +678,8 @@ body.guest-mode .admin-only,body.guest-mode .coordinator-only{display:none!impor
   --secondary:var(--c-text-muted);--primary:var(--c-primary);
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   PATCH — Cross-Browser + Mobile + Beauty
-   ═══════════════════════════════════════════════════════════════ */
-.auth-screen,.app-layout{min-height:100vh;min-height:100dvh}
-@media(max-width:768px){input,select,textarea{font-size:16px!important}}
-@media(max-width:768px){
-  .sidebar{width:min(320px,85vw)!important;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
-  .sidebar.show,.sidebar.collapsed.show{transform:translateX(0)!important}
-  .sidebar.collapsed{width:min(320px,85vw)!important;transform:translateX(100%)}
-  .sidebar.collapsed .brand-text,.sidebar.collapsed .nav-item .lbl{display:inline!important}
-  .sidebar.collapsed .nav-item{justify-content:flex-start!important;padding:10px 20px!important}
-  .sidebar.collapsed .nav-group-title{font-size:11px!important;text-align:right!important;padding:12px 20px 4px!important}
-  .sidebar.collapsed .nav-group-title::before{content:none!important}
-  .sidebar-overlay{background:rgba(0,0,0,.55);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
-  .topbar{height:56px;padding:0 10px;gap:6px}
-  .topbar-right{gap:6px}
-  .user-box{padding:4px 6px;gap:6px}
-  .user-box .user-info{display:none}
-  .user-box .avatar{width:30px;height:30px;font-size:12px}
-  /* theme-switcher removed */
-  /* theme-btn removed - using theme-toggle-icon */
-  .topbar-toggle{padding:6px;font-size:18px}
-  .user-box .btn{padding:6px 10px;font-size:11px}
-  .day-cell{height:62px!important;padding:2px!important;font-size:10px;overflow:hidden}
-  .day-cell>div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  #calendar_container table th{font-size:10px;padding:4px 2px}
-  .table-wrap{margin:0 -8px;border-radius:8px;-webkit-overflow-scrolling:touch}
-  .table-wrap table{min-width:560px}
-  th,td{padding:7px 6px;font-size:11px}
-  th{font-size:10px}
-  .btn{padding:10px 14px;font-size:13px;min-height:40px}
-  .btn-sm{padding:7px 10px;min-height:34px;font-size:12px}
-  .notif-modal{padding:10px;align-items:flex-start;padding-top:16px}
-  .notif-modal-box{max-height:calc(100dvh - 20px)}
-  .notif-modal-header{padding:12px 14px;font-size:13px}
-  .notif-modal-body{padding:14px}
-}
-.datepicker-popup{width:min(340px,calc(100vw - 24px))!important;max-height:90vh;-webkit-overflow-scrolling:touch}
-.time-picker-popup{width:min(280px,calc(100vw - 24px))!important}
-@media(max-width:480px){
-  .datepicker-popup,.time-picker-popup{right:auto!important;left:0!important;width:calc(100vw - 24px)!important}
-  .tp-grid{max-height:140px}
-  .auth-screen{padding:12px}
-  .auth-card{padding:22px 18px;border-radius:12px}
-  .dash-stats,.report-grid{grid-template-columns:1fr 1fr!important}
-}
-.btn{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
-button,.btn{-webkit-touch-callout:none}
-.loading-overlay{backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
-@media(hover:none){.btn:hover{transform:none;box-shadow:none}.dash-stat:hover{transform:none}}
-.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.nav-item:focus-visible{outline:2px solid var(--c-primary);outline-offset:2px}
-@supports(padding:max(0px)){
-  .topbar{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}
-  .sidebar{padding-right:env(safe-area-inset-right)}
-  .container{padding-bottom:max(20px,env(safe-area-inset-bottom))}
-}
+/* (بلوک PATCH قدیمی و تم سعادت خالی حذف شد — همگی در چیدمان استاندارد موبایل بالا ادغام شدند) */
 
-/* ═══════════════════════════════════════════════════════════════
-   تم سعادت — بازطراحی کامل UI (سبز طبیعی، zen)
-   ═══════════════════════════════════════════════════════════════ */
-
-/* SVG آیکون‌های اختصاصی سایدبار */
-
-/* سایدبار سعادت */
-
-/* دکمه‌های جسور */
-
-/* کارت‌های قدرتمند */
-
-/* ورودی‌ها */
-
-/* Topbar تیره شیشه‌ای */
-
-/* جداول */
-
-/* صفحه ورود */
-
-/* سایر */
-
-/* موبایل */
-@media(max-width:768px){
-        }
 </style>
 </head>
 <body>
@@ -770,8 +792,8 @@ button,.btn{-webkit-touch-callout:none}
 <div class="main-area" id="main_area">
 <header class="topbar">
   <div class="topbar-left">
-    <button class="topbar-toggle" onclick="toggleSidebar()" title="منو">⋮</button>
-    <button class="topbar-toggle" onclick="goBack()" id="btn_back" title="بازگشت" style="display:none">→</button>
+    <button class="topbar-toggle" onclick="toggleSidebar()" id="btn_menu" title="منو" aria-label="منو">≡</button>
+    <button class="topbar-toggle" onclick="goBack()" id="btn_back" title="بازگشت" aria-label="بازگشت" style="display:none">›</button>
     <span class="topbar-title" id="topbar_title">داشبورد</span>
   </div>
   <div class="topbar-right">
