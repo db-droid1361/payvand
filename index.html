@@ -910,8 +910,8 @@ button,.btn{-webkit-touch-callout:none}
     <h3 style="margin:0">📅 تقویم ماهانه</h3>
     <div style="display:flex;align-items:center;gap:6px">
       <button class="btn btn-sm btn-secondary" onclick="dashCalNav(-1)">‹ ماه قبل</button>
-      <select id="dash_cal_month" style="width:auto"><option value="1">فروردین</option><option value="2">اردیبهشت</option><option value="3">خرداد</option><option value="4">تیر</option><option value="5">مرداد</option><option value="6">شهریور</option><option value="7">مهر</option><option value="8">آبان</option><option value="9">آذر</option><option value="10">دی</option><option value="11">بهمن</option><option value="12">اسفند</option></select>
-      <input type="number" id="dash_cal_year" value="1405" style="width:80px">
+      <select id="dash_cal_month" style="width:auto" onchange="renderDashboardCalendar()"><option value="1">فروردین</option><option value="2">اردیبهشت</option><option value="3">خرداد</option><option value="4">تیر</option><option value="5">مرداد</option><option value="6">شهریور</option><option value="7">مهر</option><option value="8">آبان</option><option value="9">آذر</option><option value="10">دی</option><option value="11">بهمن</option><option value="12">اسفند</option></select>
+      <input type="number" id="dash_cal_year" value="1405" style="width:80px" onchange="renderDashboardCalendar()">
       <button class="btn btn-sm btn-secondary" onclick="dashCalNav(1)">ماه بعد ›</button>
       <button class="btn btn-sm btn-info" onclick="dashCalToday()">امروز</button>
     </div>
@@ -4788,12 +4788,10 @@ async function renderDashboardCalendar(){
 // فراخوانی تقویم داشبورد بعد از render
 var _dashCalTimer;
 function scheduleDashboardCalendar(){
-  clearTimeout(_dashCalTimer);
-  _dashCalTimer=setTimeout(function(){
-    if($('section-dashboard')&&!$('section-dashboard').classList.contains('hidden')){
-      renderDashboardCalendar();
-    }
-  },500);
+  // تقویم داشبورد همیشه بلافاصله بارگذاری شود
+  if($('section-dashboard')&&!$('section-dashboard').classList.contains('hidden')){
+    renderDashboardCalendar();
+  }
 }
 
 // نوار شمارش معکوس در داشبورد
@@ -5254,30 +5252,27 @@ async function uploadEventsExcel(){
             var todayTs=jalaliToTimestamp(todayJalali);
             var resultMsg='';
             if(choice.mode==='replace'){
-            // جایگزینی: حذف رویدادهای قبلی که برنامه/فعالیت روی آنها نیست
-            // فقط برای سال‌های موجود در فایل جدید
+            // جایگزینی: حذف رویدادهای قبلی که برنامه روی آنها نیست
+            var allOldIds=[];
             for(var yi=0;yi<choice.years.length;yi++){
               var yr=choice.years[yi];
-              // دریافت رویدادهای قبلی این سال
               const{data:oldEvents,error:oldErr}=await sb.from('calendar_events').select('id,date,title').eq('event_year',yr);
               if(oldErr)throw oldErr;
-              if(oldEvents&&oldEvents.length){
-                // بررسی هر رویداد: آیا برنامه/فعالیتی روی آن ساخته شده؟
-                var safeToDelete=[];
-                for(var oi=0;oi<oldEvents.length;oi++){
-                  var oe=oldEvents[oi];
-                  var hasProgram=false;
-                  try{
-                    const{data:progCount}=await sb.from('programs').select('id',{"count":"exact",head:true}).eq('event_id',oe.id);
-                    if(progCount)hasProgram=progCount.length>0;
-                  }catch(e){}
-                  if(!hasProgram)safeToDelete.push(oe.id);
-                }
-                if(safeToDelete.length>0){
-                  const{error:delErr}=await sb.from('calendar_events').delete().in('id',safeToDelete);
-                  if(delErr)throw delErr;
-                }
-              }
+              if(oldEvents)oldEvents.forEach(function(e){allOldIds.push(e.id);});
+            }
+            // دریافت همه برنامه‌های مرتبط با رویدادها (یک query)
+            var protectedIds={};
+            if(allOldIds.length>0){
+              try{
+                const{data:protectedProgs}=await sb.from('programs').select('event_id').not('event_id','is',null).in('event_id',allOldIds);
+                if(protectedProgs)protectedProgs.forEach(function(p){if(p.event_id)protectedIds[p.event_id]=true;});
+              }catch(e){}
+            }
+            // حذف رویدادهای بدون برنامه
+            var safeToDelete=allOldIds.filter(function(id){return !protectedIds[id];});
+            if(safeToDelete.length>0){
+              const{error:delErr}=await sb.from('calendar_events').delete().in('id',safeToDelete);
+              if(delErr)throw delErr;
             }
             // درج رویدادهای جدید (بدون تکرار)
             var uniqueEvents=[];
@@ -5309,28 +5304,29 @@ async function uploadEventsExcel(){
             }
           }else if(choice.mode==='update_future'){
             // به‌روزرسانی: فقط روزهای آینده
-            // حذف رویدادهای آینده موجود (بدون برنامه) + درج رویدادهای آینده جدید
-            var futureExisting=[];
-            var futureNew=[];
-            events.forEach(function(ev){
-              if(jalaliToTimestamp(ev.date)>=todayTs){
-                futureNew.push(ev);
-              }
-            });
-            // حذف رویدادهای آینده بدون برنامه
+            var futureNew=events.filter(function(ev){return jalaliToTimestamp(ev.date)>=todayTs;});
+            // دریافت همه رویدادهای آینده (یک query)
+            var allFutureOldIds=[];
             for(var yi3=0;yi3<choice.years.length;yi3++){
-              const{data:oldFut}=await sb.from('calendar_events').select('id,date,title').eq('event_year',choice.years[yi3]);
+              const{data:oldFut}=await sb.from('calendar_events').select('id,date').eq('event_year',choice.years[yi3]);
               if(oldFut){
-                for(var fi=0;fi<oldFut.length;fi++){
-                  if(jalaliToTimestamp(oldFut[fi].date)>=todayTs){
-                    var hasProg=false;
-                    try{const{data:pc}=await sb.from('programs').select('id',{"count":"exact",head:true}).eq('event_id',oldFut[fi].id);if(pc)hasProg=pc.length>0;}catch(e){}
-                    if(!hasProg){
-                      await sb.from('calendar_events').delete().eq('id',oldFut[fi].id);
-                    }
-                  }
-                }
+                oldFut.forEach(function(e){
+                  if(jalaliToTimestamp(e.date)>=todayTs)allFutureOldIds.push(e.id);
+                });
               }
+            }
+            // دریافت برنامه‌های محافظت‌شده (یک query)
+            var protectedFutIds={};
+            if(allFutureOldIds.length>0){
+              try{
+                const{data:pf}=await sb.from('programs').select('event_id').not('event_id','is',null).in('event_id',allFutureOldIds);
+                if(pf)pf.forEach(function(p){if(p.event_id)protectedFutIds[p.event_id]=true;});
+              }catch(e){}
+            }
+            // حذف رویدادهای آینده بدون برنامه
+            var safeFut=allFutureOldIds.filter(function(id){return !protectedFutIds[id];});
+            if(safeFut.length>0){
+              await sb.from('calendar_events').delete().in('id',safeFut);
             }
             // درج رویدادهای آینده جدید (بدون تکرار)
             var seenFut={};
