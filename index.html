@@ -2293,6 +2293,13 @@ async function renderDashboard(){
 }
 
 /* ═════ Calendar ═════ */
+function openDailyLog(dateStr,personId){
+  showSection('daily_log');
+  if(personId)$('log_person_id').value=personId;
+  $('log_date').value=dateStr;
+  resetDailyLogForm();
+  syncLog();
+}
 async function renderCalendar(){
   var personId=$('cal_person').value;
   var month=parseInt($('cal_month').value,10);
