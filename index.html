@@ -3071,15 +3071,15 @@ function populateAssigneeDropdown(dropdownId){
 function populatePersonDropdown(dropdownId,autoFirst){
   var select=$(dropdownId),cur=select.value;
   var isAdmin=currentRole==='admin'||currentRole==='super_admin';
-  // rec_person: کاربر عادی خودش + تفویض‌شوندگانش را می‌بیند (کسانی که به او تفویض کرده‌اند)
-  var all=(dropdownId==='rep_person'||isAdmin||dropdownId==='cal_person');
-  // برای rec_person: مدیر همه را می‌بیند؛ کاربر عادی فقط خودش + تفویض‌شوندگان
+  // rec_person / rep_person: کاربر عادی خودش + تفویض‌شوندگانش را می‌بیند (کسانی که به او تفویض کرده‌اند)
+  var all=(isAdmin||dropdownId==='cal_person');
+  // برای rec_person / rep_person: مدیر همه را می‌بیند؛ کاربر عادی فقط خودش + تفویض‌شوندگان
   // برای تقویم: کاربر عادی هم خودش را می‌بیند هم تفویض‌شده‌ها
   var persons;
   if(dropdownId==='cal_person'){
     // کاربر فعلی + همه (برای انتخاب تفویض‌شده‌ها)
     persons=cachedPersons;
-  }else if(dropdownId==='rec_person'&&!isAdmin){
+  }else if((dropdownId==='rec_person'||dropdownId==='rep_person')&&!isAdmin){
     // کاربر عادی: خودش + کسانی که به او تفویض کرده‌اند
     var delegators=getUsersWhoDelegatedToMe();
     var me=cachedPersons.filter(function(p){return p.id===currentUser.id;});
@@ -3114,8 +3114,9 @@ function populatePersonDropdown(dropdownId,autoFirst){
     else if(cur&&persons.some(function(p){return p.id===cur;}))select.value=cur;
     else if(persons.length)select.value=persons[0].id;
   }else{
-    // برای rec_person کاربر عادی: «همه» یعنی همه قابل‌دسترسی‌ها (من + تفویض‌شوندگان)
-    var allLabel=all?'همه':(dropdownId==='rec_person'?'همه (من + تفویض‌شوندگان)':'انتخاب...');
+    // برای rec_person / rep_person کاربر عادی: «همه» یعنی همه قابل‌دسترسی‌ها (من + تفویض‌شوندگان)
+    var delegLabel='همه (من + تفویض‌شوندگان)';
+    var allLabel=all?'همه':(dropdownId==='rec_person'||dropdownId==='rep_person'?delegLabel:'انتخاب...');
     var o='<option value="">'+allLabel+'</option>';
     persons.forEach(function(p){
       var icon=p.id===currentUser.id?' 👤':' 🔄';
@@ -3124,8 +3125,8 @@ function populatePersonDropdown(dropdownId,autoFirst){
     select.innerHTML=o;
     if(cur&&persons.some(function(p){return p.id===cur;}))select.value=cur;
     else if(autoFirst&&persons.length)select.value=persons[0].id;
-    // rec_person: پیش‌فرض «همه» باشد تا کاربر همه سوابق قابل‌دسترسی‌اش را ببیند
-    else if(!all&&persons.length&&dropdownId!=='rec_person')select.value=persons[0].id;
+    // rec_person / rep_person: پیش‌فرض «همه» باشد تا کاربر همه سوابق قابل‌دسترسی‌اش را ببیند
+    else if(!all&&persons.length&&dropdownId!=='rec_person'&&dropdownId!=='rep_person')select.value=persons[0].id;
   }
 }
 function populateSubordinateDropdown(dropdownId){
@@ -5302,10 +5303,15 @@ function editUserDetails(userId){
   else if(p.role==='super_admin')currentDisplayRole='super_admin';
   else if(p.role==='guest')currentDisplayRole='guest';
   else if(p.role==='user'&&(p.can_approve_leaves||p.can_schedule_tasks))currentDisplayRole='coordinator';
+  // لیست تفویض‌شوندگان کارکرد این کاربر
+  var edDelegates=p.log_delegates;
+  if(typeof edDelegates==='string'){try{edDelegates=JSON.parse(edDelegates);}catch(e){edDelegates=[];}}
+  if(!Array.isArray(edDelegates))edDelegates=[];
   // ساخت پنجره ویرایش
   var overlay=document.createElement('div');
+  overlay.id='edit_user_overlay';
   overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto';
-  overlay.innerHTML='<div style="background:var(--c-modal-bg,#fff);border-radius:16px;padding:24px;max-width:480px;width:100%;box-shadow:var(--c-shadow-lg);color:var(--c-text)">'+
+  overlay.innerHTML='<div style="background:var(--c-modal-bg,#fff);border-radius:16px;padding:24px;max-width:520px;width:100%;box-shadow:var(--c-shadow-lg);color:var(--c-text)">'+
     '<h3 style="margin:0 0 16px;color:var(--c-primary)">✏️ ویرایش اطلاعات کاربر</h3>'+
     '<div class="form-row">'+
       '<div class="form-group"><label>نام:</label><input type="text" id="ed_first_name" value="'+esc(p.first_name||'')+'"></div>'+
@@ -5315,13 +5321,28 @@ function editUserDetails(userId){
       '<div class="form-group"><label>شماره پرسنلی:</label><input type="text" id="ed_personnel_id" dir="ltr" value="'+esc(p.personnel_id||'')+'"></div>'+
       '<div class="form-group"><label>ایمیل:</label><input type="email" id="ed_email" dir="ltr" value="'+esc(p.email||'')+'"></div>'+
     '</div>'+
-    '<div class="form-group"><label>نقش:</label><select id="ed_role">'+
-      '<option value="user"'+(currentDisplayRole==='user'?' selected':'')+'>کاربر</option>'+
-      '<option value="coordinator"'+(currentDisplayRole==='coordinator'?' selected':'')+'>👥 هماهنگ‌کننده</option>'+
-      '<option value="guest"'+(currentDisplayRole==='guest'?' selected':'')+'>👁️ مهمان</option>'+
-      '<option value="admin"'+(currentDisplayRole==='admin'?' selected':'')+'>مدیر</option>'+
-      (currentRole==='super_admin'?'<option value="super_admin"'+(currentDisplayRole==='super_admin'?' selected':'')+'>سوپرادمین</option>':'')+
-    '</select></div>'+
+    // ─── نقش ───
+    '<div class="form-row">'+
+      '<div class="form-group"><label>نقش:</label><select id="ed_role" onchange="onEdRoleChange()">'+
+        '<option value="user"'+(currentDisplayRole==='user'?' selected':'')+'>کاربر</option>'+
+        '<option value="coordinator"'+(currentDisplayRole==='coordinator'?' selected':'')+'>👥 هماهنگ‌کننده</option>'+
+        '<option value="guest"'+(currentDisplayRole==='guest'?' selected':'')+'>👁️ مهمان</option>'+
+        '<option value="admin"'+(currentDisplayRole==='admin'?' selected':'')+'>مدیر</option>'+
+        (currentRole==='super_admin'?'<option value="super_admin"'+(currentDisplayRole==='super_admin'?' selected':'')+'>سوپرادمین</option>':'')+
+      '</select></div>'+
+      // ─── هماهنگ‌کننده (والد) ───
+      '<div class="form-group" id="ed_parent_group"><label>هماهنگ‌کننده (والد):</label><select id="ed_parent"><option value="">— بدون هماهنگ‌کننده —</option></select><small style="display:block;margin-top:4px;color:var(--c-text-muted);font-size:11px">اگر این کاربر هماهنگ‌کننده دارد، اینجا انتخاب کنید. فقط کاربرانی که نقش هماهنگ‌کننده دارند نمایش داده می‌شوند.</small></div>'+
+    '</div>'+
+    // ─── تفویض کارکرد ───
+    '<div class="form-group" style="background:var(--c-warning-light,#fef3c7);border:1px solid var(--c-warning,#f59e0b);border-radius:10px;padding:12px">'+
+      '<label style="color:var(--c-warning,#b45309)">📝 تفویض کارکرد</label>'+
+      '<small style="display:block;margin-bottom:8px;color:var(--c-text-muted);font-size:11px">کاربرانی که اجازه دارند کارکرد روزانه را به‌نمایندگی از این کاربر ثبت کنند.</small>'+
+      '<div id="ed_log_delegates_list" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>'+
+      '<div style="display:flex;gap:6px;align-items:flex-end">'+
+        '<div class="form-group" style="flex:1;margin:0"><label style="font-size:11px">افزودن کاربر مجاز:</label><select id="ed_log_delegate_pick"><option value="">— انتخاب —</option></select></div>'+
+        '<button class="btn btn-sm btn-success" type="button" onclick="addEdLogDelegate()">➕ افزودن</button>'+
+      '</div>'+
+    '</div>'+
     '<div style="display:flex;gap:8px;margin-top:16px">'+
       '<button class="btn btn-success" id="ed_save">💾 ذخیره تغییرات</button>'+
       '<button class="btn btn-secondary" id="ed_cancel">انصراف</button>'+
@@ -5330,15 +5351,24 @@ function editUserDetails(userId){
   document.body.appendChild(overlay);
   overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove();});
   $('ed_cancel').onclick=function(){overlay.remove();};
+  // ذخیره لیست تفویض‌شوندگان در متغیر سراسری برای دسترسی توابع کمکی
+  window._edDelegates=edDelegates.slice();
+  window._edUserId=userId;
+  // مقداردهی dropdown هماهنگ‌کننده
+  renderEdCoordinatorDropdown(p);
+  // مقداردهی لیست تفویض‌شوندگان
+  renderEdLogDelegates();
+  // نمایش/مخفی کردن فیلد هماهنگ‌کننده بر اساس نقش
+  onEdRoleChange();
   $('ed_save').onclick=async function(){
     var firstName=val('ed_first_name'),lastName=val('ed_last_name'),pid=toEnglishDigits(val('ed_personnel_id')),email=val('ed_email');
     var newRole=$('ed_role').value;
+    var newParent=val('ed_parent');
     if(!firstName||!lastName||!pid){showAlert('نام، نام خانوادگی و شماره پرسنلی الزامی است.','error');return;}
     // ─── بررسی تغییر نقش ───
     var roleChanged=(newRole!==currentDisplayRole);
     var roleLabel={user:'کاربر',coordinator:'هماهنگ‌کننده',guest:'مهمان',admin:'مدیر',super_admin:'سوپرادمین'}[newRole]||newRole;
     if(roleChanged){
-      // پاپ‌آپ تأیید تغییر نقش
       var confirmMsg='⚠️ تغییر نقش کاربر\n\n';
       confirmMsg+='نام: '+p.first_name+' '+p.last_name+'\n';
       confirmMsg+='نقش فعلی: '+(ROLE_LABEL[p.role]||currentDisplayRole)+'\n';
@@ -5353,9 +5383,19 @@ function editUserDetails(userId){
       confirmMsg+='\nآیا از تغییر اطمینان دارید؟';
       if(!confirm(confirmMsg))return;
     }
+    // ─── بررسی تغییر هماهنگ‌کننده ───
+    var parentChanged=(newParent!==(p.parent_id||''));
+    if(parentChanged){
+      var coordName=newParent?getPersonName(newParent):'(حذف هماهنگ‌کننده)';
+      if(!confirm('تغییر هماهنگ‌کننده؟\nهماهنگ‌کننده جدید: '+coordName))return;
+    }
+    // ─── بررسی تغییر تفویض‌شوندگان ───
+    var oldDelegates=edDelegates.slice().sort().join(',');
+    var newDelegates=(window._edDelegates||[]).slice().sort().join(',');
+    var delegatesChanged=(oldDelegates!==newDelegates);
     showLoading('ذخیره...');
     try{
-      // ─── ذخیره اطلاعات básica ───
+      // ─── ذخیره اطلاعات پایه ───
       var updates={first_name:firstName,last_name:lastName,personnel_id:pid,email:email||null};
       // ─── ذخیره نقش اگر تغییر کرده ───
       if(roleChanged){
@@ -5378,8 +5418,23 @@ function editUserDetails(userId){
           updates.can_schedule_tasks=false;
         }
       }
+      // ─── ذخیره هماهنگ‌کننده اگر تغییر کرده ───
+      if(parentChanged){
+        updates.parent_id=newParent||null;
+        // اگر هماهنگ‌کننده جدید تعریف شد و خودش هماهنگ‌کننده نیست، تبدیلش کن
+        if(newParent){
+          var coord=cachedPersons.filter(function(x){return x.id===newParent;})[0];
+          if(coord&&coord.role==='user'&&!coord.can_approve_leaves&&!coord.can_schedule_tasks){
+            await updateUserProfileDB(newParent,{can_approve_leaves:true,can_schedule_tasks:true});
+          }
+        }
+      }
+      // ─── ذخیره تفویض‌شوندگان اگر تغییر کرده ───
+      if(delegatesChanged){
+        updates.log_delegates=JSON.stringify(window._edDelegates||[]);
+      }
       await updateUserProfileDB(userId,updates);
-      await recordAudit('update','profiles',userId,{first_name:firstName,last_name:lastName,personnel_id:pid,role:newRole});
+      await recordAudit('update','profiles',userId,{first_name:firstName,last_name:lastName,personnel_id:pid,role:newRole,parent:newParent||null,delegates_changed:delegatesChanged});
       // اگر نقش خودش تغییر کرد
       if(userId===currentUser.id&&roleChanged){
         currentUser.profile.role=updates.role||newRole;
@@ -5389,7 +5444,11 @@ function editUserDetails(userId){
         updateUserBox();
         applyRoleBasedUI();
       }
-      showAlert(roleChanged?('✅ اطلاعات و نقش کاربر به‌روزرسانی شد.\nنقش جدید: '+roleLabel):'اطلاعات کاربر به‌روزرسانی شد.','success');
+      var msg='اطلاعات کاربر به‌روزرسانی شد.';
+      if(roleChanged)msg+=' نقش: '+roleLabel+'.';
+      if(parentChanged)msg+=' هماهنگ‌کننده به‌روز شد.';
+      if(delegatesChanged)msg+=' تفویض‌شوندگان به‌روز شد.';
+      showAlert(msg,'success');
       overlay.remove();
       await loadAllPersons();
       await loadSubordinates();
@@ -5398,6 +5457,84 @@ function editUserDetails(userId){
     }catch(e){showAlert('خطا: '+e.message,'error');}
     hideLoading();
   };
+}
+
+// نمایش/مخفی کردن فیلد هماهنگ‌کننده بر اساس نقش انتخاب‌شده در ویرایش
+function onEdRoleChange(){
+  var role=$('ed_role')?$('ed_role').value:'user';
+  var parentGroup=$('ed_parent_group');
+  if(!parentGroup)return;
+  // هماهنگ‌کننده فقط برای نقش «کاربر» معنا دارد (نه مدیر/سوپرادمین/هماهنگ‌کننده خودش/مهمان)
+  // مهمان هم می‌تواند هماهنگ‌کننده داشته باشد
+  parentGroup.style.display=(role==='user'||role==='guest')?'block':'none';
+}
+
+// پر کردن dropdown هماهنگ‌کننده در ویرایش
+function renderEdCoordinatorDropdown(p){
+  var sel=$('ed_parent');
+  if(!sel)return;
+  // لیست هماهنگ‌کننده‌ها + مدیران (که می‌توانند والد باشند) به‌جز خود کاربر
+  var coordinators=cachedPersons.filter(function(c){
+    if(c.id===p.id)return false; // خودش نباشد
+    if(c.role==='super_admin')return false;
+    // هماهنگ‌کننده‌ها (کاربر با دسترسی) یا مدیرها
+    return c.role==='admin'||(c.role==='user'&&(c.can_approve_leaves||c.can_schedule_tasks));
+  });
+  var o='<option value="">— بدون هماهنگ‌کننده —</option>';
+  coordinators.forEach(function(c){
+    var tag=c.role==='admin'?' [مدیر]':' [هماهنگ‌کننده]';
+    var sel2=(p.parent_id===c.id)?' selected':'';
+    o+='<option value="'+esc(c.id)+'"'+sel2+'>'+esc(c.first_name+' '+c.last_name+' - '+c.personnel_id)+tag+'</option>';
+  });
+  sel.innerHTML=o;
+}
+
+// نمایش لیست تفویض‌شوندگان کارکرد در ویرایش + dropdown افزودن
+function renderEdLogDelegates(){
+  var listBox=$('ed_log_delegates_list');
+  var pickSel=$('ed_log_delegate_pick');
+  if(!listBox||!pickSel)return;
+  var delegates=window._edDelegates||[];
+  if(!delegates.length){
+    listBox.innerHTML='<span style="color:var(--c-text-muted);font-size:12px;padding:4px 0">📭 هیچ تفویض‌شونده‌ای ثبت نشده</span>';
+  }else{
+    var html='';
+    delegates.forEach(function(uid){
+      var p=cachedPersons.filter(function(x){return x.id===uid;})[0];
+      if(!p)return;
+      html+='<span style="display:inline-flex;align-items:center;gap:4px;background:#fff;border:1px solid var(--c-border,#e5e7eb);border-radius:16px;padding:3px 4px 3px 10px;font-size:11px">'+
+        '<span>👤 '+esc(p.first_name+' '+p.last_name)+'</span>'+
+        '<button class="btn btn-sm btn-danger" type="button" style="padding:1px 7px;min-height:auto;font-size:10px;border-radius:10px" onclick="removeEdLogDelegate(\''+uid+'\')">✕</button>'+
+        '</span>';
+    });
+    listBox.innerHTML=html;
+  }
+  // dropdown افزودن: همه کاربران به‌جز خود کاربر، سوپرادمین، و کسانی که از قبل اضافه شده‌اند
+  var o='<option value="">— انتخاب کاربر —</option>';
+  cachedPersons.forEach(function(p){
+    if(p.id===window._edUserId)return; // خود کاربر نباشد
+    if(p.role==='super_admin')return;
+    if(delegates.indexOf(p.id)!==-1)return; // قبلاً اضافه شده
+    var tag='';
+    if(p.role==='admin')tag=' [مدیر]';
+    else if(p.role==='guest')tag=' [مهمان]';
+    else if(p.can_approve_leaves||p.can_schedule_tasks)tag=' [هماهنگ‌کننده]';
+    o+='<option value="'+esc(p.id)+'">'+esc(p.first_name+' '+p.last_name+' - '+p.personnel_id)+tag+'</option>';
+  });
+  pickSel.innerHTML=o;
+}
+function addEdLogDelegate(){
+  var uid=val('ed_log_delegate_pick');
+  if(!uid){showAlert('یک کاربر انتخاب کنید.','error');return;}
+  if(!window._edDelegates)window._edDelegates=[];
+  if(window._edDelegates.indexOf(uid)!==-1){showAlert('قبلاً اضافه شده.','info');return;}
+  window._edDelegates.push(uid);
+  renderEdLogDelegates();
+}
+function removeEdLogDelegate(uid){
+  if(!window._edDelegates)return;
+  window._edDelegates=window._edDelegates.filter(function(x){return x!==uid;});
+  renderEdLogDelegates();
 }
 
 // وقتی نقش در فرم ایجاد کاربر تغییر می‌کند
@@ -5878,17 +6015,44 @@ async function generateReport(){
   var p=parseJalali(startStr);
   if(type==='monthly'){start=fmtJalali(p.jy,p.jm,1);end=fmtJalali(p.jy,p.jm,jalaliMonthLength(p.jy,p.jm));period=MONTH_NAMES[p.jm-1]+' '+p.jy;}
   else{start=normJ(startStr);if(type==='daily'){end=start;period='روز '+start+' ('+dayName(start)+')';}else if(type==='weekly'){end=addDaysToJalali(start,6);period='هفته '+start+' تا '+end+' ('+dayName(start)+' تا '+dayName(end)+')';}else{if(!isValidJalaliDate($('rep_end_date').value)){showAlert('تاریخ پایان نامعتبر است.','error');return;}end=normJ($('rep_end_date').value);if(jalaliToTimestamp(end)<jalaliToTimestamp(start)){showAlert('تاریخ پایان نباید قبل از شروع باشد.','error');return;}period=start+' تا '+end;}}
-  if(currentRole==='user'){personId=currentUser.id;$('rep_person').value=currentUser.id;}
+  // ─── تفویض: کاربر عادی می‌تواند گزارش خودش + تفویض‌شوندگان را ببیند ───
+  var isAdmin=currentRole==='admin'||currentRole==='super_admin';
+  var delegators=getUsersWhoDelegatedToMe();
+  var allowedIds=[currentUser.id].concat(delegators.map(function(p){return p.id;}));
+  // بررسی دسترسی کاربر انتخاب‌شده
+  if(personId&&!isAdmin&&allowedIds.indexOf(personId)===-1){
+    showAlert('دسترسی غیرمجاز: این کاربر به شما تفویض نکرده است.','error');return;
+  }
   // ─── فیلتر مهمان‌ها ───
   var includeGuests=$('rep_include_guests')?$('rep_include_guests').checked:true;
   showLoading('تولید گزارش...');
   try{
-    var persons=personId?cachedPersons.filter(function(x){return x.id===personId;}):cachedPersons;
-    // فیلتر مهمان‌ها اگر گزینه خاموش است
-    if(!includeGuests&&!personId){
-      persons=persons.filter(function(x){return x.role!=='guest';});
+    var persons;
+    if(personId){
+      // کاربر خاص انتخاب شده
+      persons=cachedPersons.filter(function(x){return x.id===personId;});
+    }else if(isAdmin){
+      // مدیر در حالت «همه»: همه کاربران
+      persons=cachedPersons;
+      if(!includeGuests)persons=persons.filter(function(x){return x.role!=='guest';});
+    }else{
+      // کاربر عادی در حالت «همه»: خودش + تفویض‌شوندگان
+      persons=cachedPersons.filter(function(x){return allowedIds.indexOf(x.id)!==-1;});
     }
-    var all=await loadLogs(personId,start,end);
+    // بارگذاری لاگ‌ها
+    var all;
+    if(personId){
+      all=await loadLogs(personId,start,end);
+    }else if(isAdmin){
+      all=await loadLogs(null,start,end);
+    }else{
+      // کاربر عادی در حالت «همه»: ترکیب لاگ‌های خودش + تفویض‌شوندگان
+      all=[];
+      for(var ai=0;ai<allowedIds.length;ai++){
+        var dl=await loadLogs(allowedIds[ai],start,end);
+        all=all.concat(dl);
+      }
+    }
     all.sort(function(a,b){return jalaliToTimestamp(a.date)-jalaliToTimestamp(b.date);});
     
     // ─── انتخاب حالت گزارش ───
