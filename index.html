@@ -744,7 +744,6 @@ button,.btn{-webkit-touch-callout:none}
     <div class="nav-group no-super-admin">
       <div class="nav-group-title">کارکرد فردی</div>
       <button class="nav-item" data-target="daily_log"><span class="ico">📝</span><span class="lbl">خوداظهاری و مرخصی</span></button>
-      <button class="nav-item" data-target="records"><span class="ico">📋</span><span class="lbl">سوابق کارکرد</span></button>
     </div>
     <!-- گروه ۳: وظایف و برنامه‌ها -->
     <div class="nav-group">
@@ -761,7 +760,7 @@ button,.btn{-webkit-touch-callout:none}
     <!-- گروه ۵: گزارش‌ها -->
     <div class="nav-group">
       <div class="nav-group-title">گزارش‌ها</div>
-      <button class="nav-item" data-target="reports"><span class="ico">📊</span><span class="lbl">گزارش کارکرد</span></button>
+      <button class="nav-item" data-target="records"><span class="ico">📊</span><span class="lbl">گزارش و سوابق کارکرد</span></button>
       <button class="nav-item" data-target="program_reports"><span class="ico">📋</span><span class="lbl">گزارش و تاریخچه برنامه‌ها</span></button>
       <button class="nav-item admin-only hidden" data-target="categorized_reports"><span class="ico">📈</span><span class="lbl">گزارش تحلیلی امتیازات</span></button>
     </div>
@@ -1046,27 +1045,18 @@ button,.btn{-webkit-touch-callout:none}
 </div>
 
 <div id="section-records" class="card hidden">
-  <h2>سوابق خوداظهاری</h2>
-  <div class="form-row">
-    <div class="form-group"><label>پرسنل:</label><select id="rec_person" class="person-dropdown"><option value="">همه</option></select></div>
-    <div class="form-group"><label>جست‌وجو:</label><input type="text" id="rec_search" placeholder="محل، علت، شرح..."></div>
-    <div class="form-group"><label>نوع اظهار:</label><select id="rec_type_filter"><option value="">همه</option><option value="normal">عادی</option><option value="absence">عدم حضور</option><option value="overtime">اضافه‌کاری</option></select></div>
-  </div>
-  <div class="form-row">
-    <div class="form-group"><label>از تاریخ:</label><input type="text" id="rec_from" class="date-picker" placeholder="انتخاب تاریخ" readonly></div>
-    <div class="form-group"><label>تا تاریخ:</label><input type="text" id="rec_to" class="date-picker" placeholder="انتخاب تاریخ" readonly></div>
-  </div>
-  <button class="btn" id="btn_clear_rec_dates">پاک کردن بازه</button>
-  <button class="btn" id="btn_print_records">چاپ فهرست</button>
-  <div id="records_list_container" class="table-wrap"></div>
-</div>
-
-<div id="section-reports" class="card hidden">
   <h2>📊 گزارش کارکرد</h2>
+  <p style="font-size:12px;color:var(--c-text-muted);margin-bottom:12px">مشاهده، جست‌وجو، ویرایش و تولید گزارش رسمی کارکرد پرسنل در یک بخش.</p>
+
+  <!-- فیلترهای مشترک -->
   <div class="form-row">
     <div class="form-group"><label>پرسنل:</label><select id="rep_person" class="person-dropdown"><option value="">همه کاربران</option></select></div>
-    <div class="form-group"><label>نوع گزارش:</label><select id="rep_type" onchange="toggleReportDates()"><option value="daily">روزانه</option><option value="weekly">هفتگی</option><option value="monthly" selected>ماهانه</option><option value="custom">بازه دلخواه</option></select></div>
-    <div class="form-group" style="flex:0 0 180px"><label>حالت گزارش:</label><select id="rep_mode"><option value="perperson" selected>👤 نفر به نفر (صفحه مجزا)</option><option value="percategory">📋 دسته‌بندی (عدم حضورها/اضافه‌کاری)</option></select></div>
+    <div class="form-group"><label>جست‌وجو:</label><input type="text" id="rec_search" placeholder="محل، علت، شرح..."></div>
+    <div class="form-group"><label>نوع اظهار:</label><select id="rec_type_filter"><option value="">همه</option><option value="normal">عادی</option><option value="absence">عدم حضور</option><option value="overtime">اضافه‌کاری</option></select></div>
+    <div class="form-group"><label>نوع بازه:</label><select id="rep_type" onchange="toggleReportDates()"><option value="daily">روزانه</option><option value="weekly">هفتگی</option><option value="monthly" selected>ماهانه</option><option value="custom">بازه دلخواه</option></select></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>حالت نمایش:</label><select id="rep_mode" onchange="onRepModeChange()"><option value="table" selected>📋 جدول زنده (با ویرایش/حذف)</option><option value="perperson">👤 نفر به نفر (صفحه مجزا)</option><option value="percategory">📋 دسته‌بندی (عدم حضورها/اضافه‌کاری)</option></select></div>
     <div class="form-group" id="rep_start_box"><label>تاریخ شروع:</label><input type="text" id="rep_start_date" class="date-picker" placeholder="انتخاب تاریخ" readonly></div>
     <div class="form-group hidden" id="rep_end_box"><label>تاریخ پایان:</label><input type="text" id="rep_end_date" class="date-picker" placeholder="انتخاب تاریخ" readonly></div>
   </div>
@@ -1076,17 +1066,25 @@ button,.btn{-webkit-touch-callout:none}
         <input type="checkbox" id="rep_include_guests" checked> 👁️ شامل مهمان‌ها
       </label>
     </div>
-    <div class="form-group" style="flex:0 0 auto;display:flex;align-items:center;gap:6px">
+    <div class="form-group" id="rep_notify_wrap" style="flex:0 0 auto;display:flex;align-items:center;gap:6px">
       <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600">
         <input type="checkbox" id="rep_notify_users"> 📢 اطلاع به کاربران
       </label>
     </div>
+    <div class="form-group" style="flex:0 0 auto">
+      <button class="btn btn-sm" id="btn_clear_rec_dates">پاک کردن بازه</button>
+    </div>
   </div>
+  <!-- دکمه‌های عملیات -->
   <button class="btn btn-info" id="btn_gen_report">📊 تولید گزارش</button>
   <button class="btn btn-success" id="btn_print_report">🖨️ چاپ / PDF</button>
   <button class="btn" id="btn_export_report_csv">📥 خروجی CSV</button>
+  <button class="btn" id="btn_print_records" style="display:none">چاپ فهرست</button>
   <div id="report_area" class="table-wrap" style="margin-top:20px"></div>
 </div>
+
+<!-- بخش reports قدیمی حذف شد — در records ادغام شد -->
+<div id="section-reports" class="card hidden"></div>
 
 <!-- تأییدهای هماهنگ‌کننده -->
 <!-- ═══ تفویض‌ها ═══ -->
@@ -2992,8 +2990,9 @@ function showSection(id,skipHistory){
   if(id==='leave_req'){populatePersonDropdown('lv_person_id',false);$('lv_person_id').value=currentUser.id;renderLeaves();}
   if(id==='my_tasks')renderMyTasks();
   if(id==='programs')renderPrograms();
-  if(id==='records'){populatePersonDropdown('rec_person');renderRecords();}
-  if(id==='reports'){populatePersonDropdown('rep_person');toggleReportDates();}
+  if(id==='records'){populatePersonDropdown('rep_person');toggleReportDates();onRepModeChange();if($('rep_mode').value==='table')renderRecords();}
+  // reports قدیمی حذف شد — در records ادغام شد. آدرس‌دهی به reports به records هدایت شود
+  if(id==='reports'){showSection('records');return;}
   if(id==='coordinator_tasks'){populateSubordinateDropdown('ct_assignee');renderCoordinatorTasks();}
   if(id==='approvals')renderApprovals();
   if(id==='send_notification'){populateRecipientDropdown();renderMsgArchive();}
@@ -5737,9 +5736,11 @@ async function extendGuest(userId,days){
 
 /* ═════ Records & Reports ═════ */
 async function renderRecords(){
-  var personId=$('rec_person').value,search=val('rec_search').toLowerCase(),type=$('rec_type_filter').value;
-  var from=$('rec_from').value,to=$('rec_to').value,vf=isValidJalaliDate(from),vt=isValidJalaliDate(to);
-  var c=$('records_list_container');c.innerHTML='<p>در حال بارگذاری...</p>';
+  if(!currentUser||!currentUser.profile){return;} // امنیت: اگر کاربر لاگین نکرده
+  // استفاده از فیلترهای گزارش کارکرد (ادغام‌شده)
+  var personId=$('rep_person').value,search=val('rec_search').toLowerCase(),type=$('rec_type_filter').value;
+  var from=$('rep_start_date').value,to=$('rep_end_date').value,vf=isValidJalaliDate(from),vt=isValidJalaliDate(to);
+  var c=$('report_area');c.innerHTML='<p>در حال بارگذاری...</p>';
   try{
     var fromNorm=vf?normJ(from):null,toNorm=vt?normJ(to):null;
     // تعیین کاربران مجاز برای مشاهده/ویرایش
@@ -5793,6 +5794,33 @@ async function renderRecords(){
     c.innerHTML=h+'</table>';
   }catch(e){c.innerHTML='<p>خطا: '+esc(e.message)+'</p>';}
 }
+// تعویض حالت نمایش: جدول زنده (با ویرایش) یا گزارش رسمی
+function onRepModeChange(){
+  var mode=$('rep_mode')?$('rep_mode').value:'table';
+  var notifyWrap=$('rep_notify_wrap');
+  var genBtn=$('btn_gen_report');
+  var printRecordsBtn=$('btn_print_records');
+  var printReportBtn=$('btn_print_report');
+  var csvBtn=$('btn_export_report_csv');
+  if(mode==='table'){
+    // حالت جدول زنده: ویرایش/حذف، چاپ فهرست، بدون اطلاع‌رسانی
+    if(notifyWrap)notifyWrap.style.display='none';
+    if(genBtn)genBtn.innerHTML='🔄 بارگذازی/به‌روزرسانی جدول';
+    if(printRecordsBtn)printRecordsBtn.style.display='inline-flex';
+    if(printReportBtn)printReportBtn.style.display='none';
+    if(csvBtn)csvBtn.style.display='none';
+    renderRecords();
+  }else{
+    // حالت گزارش رسمی: تولید گزارش، چاپ/PDF، CSV، اطلاع‌رسانی
+    if(notifyWrap)notifyWrap.style.display='flex';
+    if(genBtn)genBtn.innerHTML='📊 تولید گزارش';
+    if(printRecordsBtn)printRecordsBtn.style.display='none';
+    if(printReportBtn)printReportBtn.style.display='inline-flex';
+    if(csvBtn)csvBtn.style.display='inline-flex';
+  }
+}
+// تابع قدیمی switchWorkTab حذف شد — با onRepModeChange جایگزین شد
+function switchWorkTab(){/* deprecated — kept for compatibility */}
 function toggleReportDates(){
   var type=$('rep_type').value;
   var label=document.querySelector('#rep_start_box label');
@@ -8220,12 +8248,12 @@ function init(){
   on('btn_create_program','click',createProgram);
   on('btn_reset_program','click',resetProgramForm);
   on('btn_create_task','click',createTask);
-  ['rec_person','rec_type_filter','rec_from','rec_to'].forEach(function(k){on(k,'change',renderRecords);});
-  on('rec_search','input',renderRecords);
-  on('btn_clear_rec_dates','click',function(){$('rec_from').value='';$('rec_to').value='';renderRecords();});
-  on('btn_print_records','click',function(){var c=$('records_list_container');if(!c.querySelector('table')){showAlert('موردی برای چاپ نیست.');return;}$('print_area').innerHTML='<div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:20px"><h2>واحد تولید محتوا، رسانه و مستندسازی</h2></div><div>'+c.innerHTML+'</div>';window.print();});
+  ['rec_type_filter'].forEach(function(k){on(k,'change',function(){if($('rep_mode').value==='table')renderRecords();});});
+  on('rec_search','input',function(){if($('rep_mode').value==='table')renderRecords();});
+  on('btn_clear_rec_dates','click',function(){$('rep_start_date').value='';$('rep_end_date').value='';if($('rep_mode').value==='table')renderRecords();});
+  on('btn_print_records','click',function(){var c=$('report_area');if(!c.querySelector('table')){showAlert('موردی برای چاپ نیست.');return;}$('print_area').innerHTML='<div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:20px"><h2>گزارش کارکرد</h2></div><div>'+c.innerHTML+'</div>';window.print();});
   on('rep_type','change',toggleReportDates);
-  on('btn_gen_report','click',generateReport);
+  on('btn_gen_report','click',function(){if($('rep_mode').value==='table')renderRecords();else generateReport();});
   on('btn_print_report','click',printReport);
   on('btn_export_report_csv','click',exportReportCSV);
   on('approval_filter','change',renderApprovals);
