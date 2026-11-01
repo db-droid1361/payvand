@@ -5131,41 +5131,37 @@ async function renderUsers(){
     visibleUsers.forEach(function(p){
       var coord=p.parent_id?getPersonName(p.parent_id):'—';
       var isSelf=(p.id===currentUser.id);
-      // مدیر بدون تفویض نمی‌تواند نقش/وضعیت را تغییر دهد
       var canEdit=!isSelf&&(canManageAll||p.role==='user');
       var canReset=!isSelf&&(canManageAll||(currentUser.profile&&currentUser.profile.can_manage_users&&p.role==='user'));
       var canDelegate=currentRole==='super_admin'&&p.role==='admin';
+      // ─── نقش فقط‌خواندن (badge) ───
+      var roleBadge='';
+      if(p.role==='super_admin')roleBadge='<span class="badge badge-absence">سوپرادمین</span>';
+      else if(p.role==='admin')roleBadge='<span class="badge badge-manager_pending">مدیر</span>';
+      else if(p.role==='guest')roleBadge='<span class="badge badge-partial">مهمان</span>';
+      else if(p.can_approve_leaves||p.can_schedule_tasks)roleBadge='<span class="badge badge-overtime">هماهنگ‌کننده</span>';
+      else roleBadge='<span class="badge badge-normal">کاربر</span>';
+      if(p.can_manage_users)roleBadge+=' <span style="font-size:10px;background:#dcfce7;color:#166534;padding:2px 6px;border-radius:8px">🎫 تفویض‌شده</span>';
+      // ─── دسترسی‌ها فقط‌خواندن (badge‌ها) ───
+      var perms='';
+      if(p.can_approve_leaves)perms+='<span style="font-size:10px;background:var(--c-info-light,#d6eaf8);color:var(--c-info,#1a5276);padding:2px 6px;border-radius:6px;margin:1px">تأیید مرخصی</span> ';
+      if(p.can_schedule_tasks)perms+='<span style="font-size:10px;background:var(--c-info-light,#d6eaf8);color:var(--c-info,#1a5276);padding:2px 6px;border-radius:6px;margin:1px">تعریف وظیفه</span> ';
+      if(p.can_create_programs)perms+='<span style="font-size:10px;background:var(--c-success-light,#d5f5e3);color:var(--c-success,#196f3d);padding:2px 6px;border-radius:6px;margin:1px">ساخت برنامه</span> ';
+      if(p.can_manage_events)perms+='<span style="font-size:10px;background:var(--c-warning-light,#fef3c7);color:var(--c-warning,#b45309);padding:2px 6px;border-radius:6px;margin:1px">📅 رویدادها</span> ';
+      if(p.role==='guest'&&p.can_log)perms+='<span style="font-size:10px;background:var(--c-success-light,#d5f5e3);color:var(--c-success,#196f3d);padding:2px 6px;border-radius:6px;margin:1px">📝 ثبت کارکرد</span> ';
+      if(!perms)perms='<span style="color:var(--c-text-muted);font-size:11px">—</span>';
+      // ─── وضعیت فقط‌خواندن (badge) ───
+      var statusBadge=p.status==='active'?'<span class="badge badge-normal">✅ فعال</span>':p.status==='inactive'?'<span class="badge badge-overtime">⏸ غیرفعال</span>':'<span class="badge badge-canceled">📦 بایگانی</span>';
       h+='<tr><td>'+esc(p.first_name)+'</td><td>'+esc(p.last_name)+'</td><td>'+esc(p.personnel_id)+'</td>'+
-        '<td><select onchange="changeRole(\''+p.id+'\',this.value)"'+(canEdit?'':' disabled')+'>'+
-        '<option value="user"'+(p.role==='user'&&!p.can_approve_leaves&&!p.can_schedule_tasks?' selected':'')+'>کاربر</option>'+
-        '<option value="coordinator"'+(p.role==='user'&&(p.can_approve_leaves||p.can_schedule_tasks)?' selected':'')+'>👥 هماهنگ‌کننده</option>'+
-        '<option value="guest"'+(p.role==='guest'?' selected':'')+'>👁️ مهمان</option>'+
-        '<option value="admin"'+(p.role==='admin'?' selected':'')+'>مدیر</option>'+
-        (currentRole==='super_admin'?'<option value="super_admin"'+(p.role==='super_admin'?' selected':'')+'>سوپرادمین</option>':'')+
-        '</select>'+
-        (p.can_manage_users?' <span style="font-size:10px;background:#dcfce7;color:#166534;padding:2px 6px;border-radius:8px">🎫 تفویض‌شده</span>':'')+
-        '</td>'+
-        '<td><select onchange="changeParent(\''+p.id+'\',this.value)"'+(canEdit?'':' disabled')+'><option value="">—</option>'+
-        cachedPersons.filter(function(x){return x.id!==p.id&&x.role==='user';}).map(function(x){return'<option value="'+x.id+'"'+(p.parent_id===x.id?' selected':'')+'>'+esc(x.first_name+' '+x.last_name)+'</option>';}).join('')+
-        '</select></td>'+
-        '<td>'+
-        '<label><input type="checkbox" '+(p.can_approve_leaves?'checked':'')+' onchange="togglePermission(\''+p.id+'\',\'can_approve_leaves\',this.checked)"'+(canEdit?'':' disabled')+'> تأیید مرخصی</label> '+
-        '<label><input type="checkbox" '+(p.can_schedule_tasks?'checked':'')+' onchange="togglePermission(\''+p.id+'\',\'can_schedule_tasks\',this.checked)"'+(canEdit?'':' disabled')+'> تعریف وظیفه</label> '+
-        '<label><input type="checkbox" '+(p.can_create_programs?'checked':'')+' onchange="togglePermission(\''+p.id+'\',\'can_create_programs\',this.checked)"'+(canEdit?'':' disabled')+'> ساخت برنامه</label> '+
-        '<label><input type="checkbox" '+(p.can_manage_events?'checked':'')+' onchange="togglePermission(\''+p.id+'\',\'can_manage_events\',this.checked)"'+(canEdit?'':' disabled')+'> 📅 رویدادها</label> '+
-        (p.role==='guest'?'<label><input type="checkbox" '+(p.can_log?'checked':'')+' onchange="togglePermission(\''+p.id+'\',\'can_log\',this.checked)"'+(canEdit?'':' disabled')+'> 📝 ثبت کارکرد</label>':'')+
-        '</td>'+
-        '<td><select onchange="changeUserStatus(\''+p.id+'\',this.value)"'+(canEdit?'':' disabled')+' style="background:'+(p.status==='active'?'#d5f5e3':p.status==='inactive'?'#fef3c7':'#e2e8f0')+'">'+
-          '<option value="active"'+(p.status==='active'?' selected':'')+'>✅ فعال</option>'+
-          '<option value="inactive"'+(p.status==='inactive'?' selected':'')+'>⏸ غیرفعال</option>'+
-          '<option value="archived"'+(p.status==='archived'?' selected':'')+'>📦 بایگانی</option>'+
-        '</select></td>'+
-        '<td>'+
-        '<button class="btn btn-sm btn-warning" onclick="editUserDetails(\''+p.id+'\')" title="ویرایش اطلاعات">✏️</button>'+
+        '<td>'+roleBadge+'</td>'+
+        '<td style="font-size:12px">'+(p.parent_id?esc(coord):'<span style="color:var(--c-text-muted)">—</span>')+'</td>'+
+        '<td style="max-width:200px">'+perms+'</td>'+
+        '<td>'+statusBadge+'</td>'+
+        '<td style="white-space:nowrap">'+
+        '<button class="btn btn-sm btn-warning" onclick="editUserDetails(\''+p.id+'\')" title="ویرایش کامل">✏️ ویرایش</button>'+
         '<button class="btn btn-sm btn-info" onclick="viewUserHistory(\''+p.id+'\')" title="سوابق">📋</button>'+
         (canReset?' <button class="btn btn-sm btn-warning" onclick="openResetPwdModal(\''+p.id+'\')" title="بازنشانی رمز">🔑</button>':'')+
         (canDelegate?' <button class="btn btn-sm '+(p.can_manage_users?'btn-success':'btn-secondary')+'" onclick="toggleDelegate(\''+p.id+'\','+(p.can_manage_users?'false':'true')+')" title="'+(p.can_manage_users?'سلب اختیار':'تفویض اختیار')+'">'+(p.can_manage_users?'🎫✓':'🎫')+'</button>':'')+
-        (p.role==='guest'?' <button class="btn btn-sm btn-success" onclick="openGuestSettings(\''+p.id+'\')">⚙️</button>':'')+
         '</td>'+
         '</tr>';
     });
@@ -5334,6 +5330,27 @@ function editUserDetails(userId){
       '<div class="form-group" id="ed_parent_group"><label>هماهنگ‌کننده (والد):</label><select id="ed_parent"><option value="">— بدون هماهنگ‌کننده —</option></select><small style="display:block;margin-top:4px;color:var(--c-text-muted);font-size:11px">اگر این کاربر هماهنگ‌کننده دارد، اینجا انتخاب کنید. فقط کاربرانی که نقش هماهنگ‌کننده دارند نمایش داده می‌شوند.</small></div>'+
     '</div>'+
     // ─── تفویض کارکرد ───
+    // ─── دسترسی‌ها ───
+    '<div class="form-group" style="background:var(--c-info-light,#d6eaf8);border:1px solid var(--c-info,#3498db);border-radius:10px;padding:12px">'+
+      '<label style="color:var(--c-info,#1a5276)">🔑 دسترسی‌های کاربر</label>'+
+      '<small style="display:block;margin-bottom:8px;color:var(--c-text-muted);font-size:11px">دسترسی‌های قابل‌تفویض به این کاربر. تغییرات با ذخیره اعمال می‌شود.</small>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:6px 16px">'+
+        '<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer"><input type="checkbox" id="ed_can_approve_leaves" '+(p.can_approve_leaves?'checked':'')+'> تأیید مرخصی</label>'+
+        '<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer"><input type="checkbox" id="ed_can_schedule_tasks" '+(p.can_schedule_tasks?'checked':'')+'> تعریف وظیفه</label>'+
+        '<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer"><input type="checkbox" id="ed_can_create_programs" '+(p.can_create_programs?'checked':'')+'> ساخت برنامه</label>'+
+        '<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer"><input type="checkbox" id="ed_can_manage_events" '+(p.can_manage_events?'checked':'')+'> 📅 رویدادها</label>'+
+        (currentDisplayRole==='guest'?'<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer"><input type="checkbox" id="ed_can_log" '+(p.can_log?'checked':'')+'> 📝 ثبت کارکرد</label>':'')+
+      '</div>'+
+    '</div>'+
+    // ─── وضعیت ───
+    '<div class="form-row">'+
+      '<div class="form-group"><label>وضعیت حساب:</label><select id="ed_status">'+
+        '<option value="active"'+(p.status==='active'?' selected':'')+'>✅ فعال</option>'+
+        '<option value="inactive"'+(p.status==='inactive'?' selected':'')+'>⏸ غیرفعال</option>'+
+        '<option value="archived"'+(p.status==='archived'?' selected':'')+'>📦 بایگانی</option>'+
+      '</select></div>'+
+    '</div>'+
+    // ─── تفویض کارکرد ───
     '<div class="form-group" style="background:var(--c-warning-light,#fef3c7);border:1px solid var(--c-warning,#f59e0b);border-radius:10px;padding:12px">'+
       '<label style="color:var(--c-warning,#b45309)">📝 تفویض کارکرد</label>'+
       '<small style="display:block;margin-bottom:8px;color:var(--c-text-muted);font-size:11px">کاربرانی که اجازه دارند کارکرد روزانه را به‌نمایندگی از این کاربر ثبت کنند.</small>'+
@@ -5401,8 +5418,7 @@ function editUserDetails(userId){
       if(roleChanged){
         if(newRole==='coordinator'){
           updates.role='user';
-          updates.can_approve_leaves=true;
-          updates.can_schedule_tasks=true;
+          // دسترسی‌ها از چک‌باکس‌ها خوانده می‌شوند (در ادامه)
         }else if(newRole==='user'){
           updates.role='user';
           updates.can_approve_leaves=false;
@@ -5417,6 +5433,23 @@ function editUserDetails(userId){
           updates.can_approve_leaves=false;
           updates.can_schedule_tasks=false;
         }
+      }
+      // ─── دسترسی‌ها (از چک‌باکس‌ها) ───
+      // اگر نقش به coordinator تغییر کرده، can_approve_leaves/can_schedule_tasks از چک‌باکس (که auto-check شده)
+      // اگر نقش به user تغییر کرده، قبلاً false ست شده — override نشود
+      if(!roleChanged||newRole==='coordinator'){
+        updates.can_approve_leaves=$('ed_can_approve_leaves')?$('ed_can_approve_leaves').checked:false;
+        updates.can_schedule_tasks=$('ed_can_schedule_tasks')?$('ed_can_schedule_tasks').checked:false;
+      }
+      updates.can_create_programs=$('ed_can_create_programs')?$('ed_can_create_programs').checked:false;
+      updates.can_manage_events=$('ed_can_manage_events')?$('ed_can_manage_events').checked:false;
+      if($('ed_can_log')){
+        updates.can_log=$('ed_can_log').checked;
+      }
+      // ─── وضعیت ───
+      var newStatus=$('ed_status')?$('ed_status').value:'active';
+      if(newStatus!==(p.status||'active')){
+        updates.status=newStatus;
       }
       // ─── ذخیره هماهنگ‌کننده اگر تغییر کرده ───
       if(parentChanged){
@@ -5448,6 +5481,8 @@ function editUserDetails(userId){
       if(roleChanged)msg+=' نقش: '+roleLabel+'.';
       if(parentChanged)msg+=' هماهنگ‌کننده به‌روز شد.';
       if(delegatesChanged)msg+=' تفویض‌شوندگان به‌روز شد.';
+      if(updates.status)msg+=' وضعیت: '+updates.status+'.';
+      if(updates.can_create_programs!==undefined||updates.can_manage_events!==undefined)msg+=' دسترسی‌ها به‌روز شد.';
       showAlert(msg,'success');
       overlay.remove();
       await loadAllPersons();
@@ -5459,14 +5494,25 @@ function editUserDetails(userId){
   };
 }
 
-// نمایش/مخفی کردن فیلد هماهنگ‌کننده بر اساس نقش انتخاب‌شده در ویرایش
+// نمایش/مخفی کردن فیلد هماهنگ‌کننده + auto-check دسترسی‌ها بر اساس نقش
 function onEdRoleChange(){
   var role=$('ed_role')?$('ed_role').value:'user';
   var parentGroup=$('ed_parent_group');
   if(!parentGroup)return;
-  // هماهنگ‌کننده فقط برای نقش «کاربر» معنا دارد (نه مدیر/سوپرادمین/هماهنگ‌کننده خودش/مهمان)
-  // مهمان هم می‌تواند هماهنگ‌کننده داشته باشد
+  // هماهنگ‌کننده فقط برای نقش «کاربر» و «مهمان» معنا دارد
   parentGroup.style.display=(role==='user'||role==='guest')?'block':'none';
+  // با انتخاب «هماهنگ‌کننده»، دسترسی‌های تأیید مرخصی و تعریف وظیفه خودکار تیک بخورند
+  if(role==='coordinator'){
+    var cal=$('ed_can_approve_leaves'),cst=$('ed_can_schedule_tasks');
+    if(cal&&!cal.checked)cal.checked=true;
+    if(cst&&!cst.checked)cst.checked=true;
+  }
+  // با انتخاب «کاربر»، آن دو دسترسی خودکار برداشته شوند
+  if(role==='user'){
+    var cal2=$('ed_can_approve_leaves'),cst2=$('ed_can_schedule_tasks');
+    if(cal2)cal2.checked=false;
+    if(cst2)cst2.checked=false;
+  }
 }
 
 // پر کردن dropdown هماهنگ‌کننده در ویرایش
