@@ -743,6 +743,7 @@ button,.btn{-webkit-touch-callout:none}
     <div class="nav-group no-super-admin">
       <div class="nav-group-title">📝 کارکرد و حضور و غیاب</div>
       <button class="nav-item" data-target="daily_log"><span class="ico">📝</span><span class="lbl">خوداظهاری و مرخصی</span></button>
+      <button class="nav-item" data-target="leave_req"><span class="ico">✈️</span><span class="lbl">درخواست مرخصی</span></button>
       <button class="nav-item" data-target="records"><span class="ico">📊</span><span class="lbl">گزارش و سوابق کارکرد</span></button>
       <button class="nav-item" data-target="calendar"><span class="ico">📅</span><span class="lbl">تقویم ماهانه</span></button>
     </div>
@@ -757,6 +758,7 @@ button,.btn{-webkit-touch-callout:none}
     <div class="nav-group coordinator-admin-only">
       <div class="nav-group-title">🔧 تأیید و هماهنگی</div>
       <button class="nav-item" data-target="approvals"><span class="ico">✅</span><span class="lbl">تأیید درخواست‌ها</span><span class="nav-badge hidden" id="admin_approvals_badge">۰</span></button>
+      <button class="nav-item" data-target="coordinator_tasks"><span class="ico">📋</span><span class="lbl">مدیریت وظایف زیرمجموعه</span></button>
       <button class="nav-item admin-only hidden" data-target="send_notification"><span class="ico">📢</span><span class="lbl">ارسال پیام</span></button>
     </div>
     <!-- گروه ۵: مدیریت سامانه (فقط مدیر/سوپرادمین) -->
@@ -1047,6 +1049,7 @@ button,.btn{-webkit-touch-callout:none}
   <button class="btn btn-success" id="btn_create_program">ایجاد برنامه</button>
   <button class="btn btn-warning" id="btn_reset_program">پاک کردن فرم</button>
   <input type="hidden" id="prog_id">
+  <input type="hidden" id="prog_event_id">
   
   <hr style="margin:20px 0;border:0;border-top:1px solid #eee">
   <h3>فهرست برنامه‌ها</h3>
@@ -1594,7 +1597,7 @@ function formatMins(m){return Math.floor(m/60)+' ساعت و '+(m%60)+' دقیق
 
 /* ═════ Supabase Data Layer ═════ */
 async function loadAllPersons(){
-  try{const{data,error}=await sb.from('profiles').select('*').order('last_name').order('first_name');if(error)throw error;cachedPersons=data||[];if(typeof updateDelegateBox==='function')updateDelegateBox();if(typeof updateDelegationVisibility==='function')updateDelegationVisibility();return cachedPersons;}catch(e){console.error('loadAllPersons:',e);cachedPersons=[];return[];}
+  try{const{data,error}=await sb.from('profiles').select('id,first_name,last_name,personnel_id,email,role,parent_id,status,can_approve_leaves,can_schedule_tasks,can_create_programs,can_manage_events,can_manage_users,can_log,can_view_reports,guest_permissions,expires_at,log_delegates').order('last_name').order('first_name');if(error)throw error;cachedPersons=data||[];if(typeof updateDelegateBox==='function')updateDelegateBox();if(typeof updateDelegationVisibility==='function')updateDelegationVisibility();return cachedPersons;}catch(e){console.error('loadAllPersons:',e);cachedPersons=[];return[];}
 }
 async function loadLogs(personId,from,to){
   try{let q=sb.from('daily_logs').select('*');if(personId)q=q.eq('user_id',personId);if(from)q=q.gte('date',from);if(to)q=q.lte('date',to);const{data,error}=await q.order('date',{ascending:false});if(error)throw error;return data||[];}catch(e){console.error('loadLogs:',e);throw e;}
@@ -1642,7 +1645,7 @@ async function updateTaskInDB(id,updates){
   try{const{data,error}=await sb.from('tasks').update(updates).eq('id',id).select();if(error)throw error;return data[0];}catch(e){console.error('updateTaskInDB:',e);throw e;}
 }
 async function loadSubordinates(){
-  try{const{data,error}=await sb.from('profiles').select('*').eq('parent_id',currentUser.id).order('last_name').order('first_name');if(error)throw error;cachedSubordinates=data||[];return cachedSubordinates;}catch(e){console.error('loadSubordinates:',e);cachedSubordinates=[];return[];}
+  try{const{data,error}=await sb.from('profiles').select('id,first_name,last_name,personnel_id,email,role,parent_id,status,can_approve_leaves,can_schedule_tasks,can_create_programs,can_manage_events,can_manage_users,can_log,can_view_reports,guest_permissions,expires_at,log_delegates').eq('parent_id',currentUser.id).order('last_name').order('first_name');if(error)throw error;cachedSubordinates=data||[];return cachedSubordinates;}catch(e){console.error('loadSubordinates:',e);cachedSubordinates=[];return[];}
 }
 async function loadLeavesForCoordinator(){
   // درخواست‌های زیرمجموعه‌ها که در انتظار تأیید هماهنگ‌کننده هستند
@@ -2245,13 +2248,13 @@ async function saveReminder(){
     if(customInterval)customData.interval_days=parseInt(customInterval,10);
     if(!customDay&&!customInterval){showAlert('برای الگوی سفارشی، روز ماه یا بازه را وارد کنید.');return;}
   }
-  // تبدیل تاریخ شمسی به میلادی
+  // تبدیل تاریخ شمسی به میلادی — بدون timezone bug
   var pStart=parseJalali(startDate);var gStart=jalaliToGregorian(pStart.jy,pStart.jm,pStart.jd);
-  var startISO=new Date(gStart[0],gStart[1]-1,gStart[2]).toISOString().slice(0,10);
+  var startISO=gStart[0]+'-'+pad2(gStart[1])+'-'+pad2(gStart[2]);
   var endISO=null;
   if(endDate&&isValidJalaliDate(endDate)){
     var pEnd=parseJalali(endDate);var gEnd=jalaliToGregorian(pEnd.jy,pEnd.jm,pEnd.jd);
-    endISO=new Date(gEnd[0],gEnd[1]-1,gEnd[2]).toISOString().slice(0,10);
+    endISO=gEnd[0]+'-'+pad2(gEnd[1])+'-'+pad2(gEnd[2]);
   }
   // گیرندگان: خودم + کاربران انتخاب‌شده
   var recipients=rm_recipients.slice();
@@ -2943,10 +2946,12 @@ async function updateBadges(){
 /* ═════ Navigation ═════ */
 function showSection(id,skipHistory){
   closePopups();
+  // ─── ریدایرکت بخش‌های ادغام‌شده (قبل از تغییر visibility) ───
+  if(id==='my_activities')id='my_tasks';
+  if(id==='coordinator_approvals')id='approvals';
+  if(id==='reports')id='records';
   // ─── سوپرادمین: خوداظهاری و مرخصی ندارد ───
-  // سوپرادمین فقط مدیریت سامانه را بر عهده دارد و خوداظهاری/مرخصی ثبت نمی‌کند
   if(currentRole==='super_admin'&&(id==='daily_log'||id==='leave_req')){
-    // به داشبورد هدایت شود
     id='dashboard';
   }
   document.querySelectorAll('.container > div.card').forEach(function(c){c.classList.add('hidden');});
@@ -2978,12 +2983,6 @@ function showSection(id,skipHistory){
     if(canAccessEvents){adminBox.classList.remove('hidden');noAccess.classList.add('hidden');renderEventsList();}
     else{adminBox.classList.add('hidden');noAccess.classList.remove('hidden');}
   }
-  // ─── تغییر مسیر بخش‌های ادغام‌شده ───
-  // my_activities → my_tasks (ادغام‌شده)
-  if(id==='my_activities')id='my_tasks';
-  // coordinator_approvals → approvals (ادغام‌شده)
-  if(id==='coordinator_approvals')id='approvals';
-  // leave_req → daily_log (در همان بخش قابل دسترسی)
   if(id==='daily_log'){
     populatePersonDropdown('log_person_id',true);
     if(!currentLogPerson)$('log_person_id').value=currentUser.id;
@@ -3807,8 +3806,8 @@ async function loadEventActionsInModal(eventId,dateStr){
       var a=actions[ai];
       var st=a.status==='done'?'✅':a.status==='in_progress'?'🔄':'⬜';
       html+='<div style="padding:8px;border-radius:6px;background:rgba(255,255,255,.6);margin:4px 0;font-size:12px;border-right:2px solid var(--c-primary)">'+
-        '<div style="font-weight:600">'+st+' '+esc(a.title)+' <small style="color:var(--c-text-muted)">('+priorityLabel[a.priority||'medium']+'</small>)'+
-        (a.deadline?'<small style="color:var(--c-warning)"> | مهلت: '+normJ(new Date(a.deadline).toISOString().slice(0,10))||''+'</small>':'')+
+        '<div style="font-weight:600">'+st+' '+esc(a.title)+' <small style="color:var(--c-text-muted)">('+priorityLabel[a.priority||'medium']+')</small>'+
+        (a.deadline?'<small style="color:var(--c-warning)"> | مهلت: '+normJ(new Date(a.deadline).toISOString().slice(0,10))+'</small>':'')+
         '</div>';
       // بارگذاری فعالیت‌های زیرمجموعه
       try{
@@ -4245,7 +4244,7 @@ async function saveDailyLog(){
     var cleanupWarning='';
     if(fullDay){try{var existing=await loadLogs(actualPersonId,dateStr,dateStr);for(var i=0;i<existing.length;i++){if(existing[i].id!==savedLog.id&&existing[i].status==='absence'&&existing[i].data&&FULL_DAY.indexOf(existing[i].data.absence_type)!==-1){await deleteLogFromDB(existing[i].id);await recordAudit('delete','daily_logs',existing[i].id,{reason:'duplicate_full_day_log',date:dateStr});}}}catch(cleanupError){console.warn('cleanup:',cleanupError);cleanupWarning=' پاک‌سازی رکوردهای تکراری کامل نشد.';}}
     $('log_date').value=dateStr;
-    showAlert(submittedBy?'کارکرد برای '+getPersonName(actualPersonId)+' ثبت شد. شناسه شما در گزارش ذخیده شد.':'اظهار ثبت شد.'+cleanupWarning,cleanupWarning?'error':'success');
+    showAlert(submittedBy?'کارکرد برای '+getPersonName(actualPersonId)+' ثبت شد. شناسه شما در گزارش ذخیره شد.':'اظهار ثبت شد.'+cleanupWarning,cleanupWarning?'error':'success');
     resetDailyLogForm();
     await renderDailyLogsList();
     // به‌روزرسانی لیست سوابق اگر در حال نمایش است
@@ -4636,8 +4635,8 @@ async function renderMyTasks(){
     if(type==='all'||type==='tasks'){
       var tasks;
       if(supervisorMode&&subIds.length>0){
-        // مدیر/هماهنگ‌کننده: وظایف زیرمجموعه‌ها
-        tasks=[];
+        // مدیر/هماهنگ‌کننده: وظایف زیرمجموعه‌ها + وظایف خودش
+        tasks=await loadMyTasks('all'); // وظایف خودش
         for(var si=0;si<subIds.length;si++){
           try{
             const{data,error}=await sb.from('tasks').select('*').eq('assignee_id',subIds[si]);
@@ -4948,7 +4947,7 @@ async function renderApprovals(){
         // برای مرخصی روزانه چندروزه: چک‌باکس برای هر روز
         if(l.type==='daily'&&l.end_date&&l.start_date!==l.end_date){
           var days=jalaliDateRange(l.start_date,l.end_date);
-          var approved=l.approved_days||[];
+          var approved=l.approved_days?(typeof l.approved_days==='string'?JSON.parse(l.approved_days):l.approved_days):[];
           h+='<div style="background:var(--c-bg-alt,#f9f9f9);padding:8px;border-radius:4px;margin-bottom:6px"><b>انتخاب روزهای تأیید:</b><br>';
           days.forEach(function(d){
             var checked=approved.indexOf(d)!==-1||l.status==='approved'?'checked':'';
@@ -4964,7 +4963,8 @@ async function renderApprovals(){
             '<button class="btn btn-danger btn-sm" onclick="rejectLeave(\''+l.id+'\')">رد</button>';
         }
       }else{
-        h+='<small>تصمیم گرفته شده</small>'+(l.approved_days?'<br><small>روزهای تأییدشده: '+esc(JSON.parse(l.approved_days).join(', '))+'</small>':'')+(l.admin_note?'<br><small>یادداشت مدیر: '+esc(l.admin_note)+'</small>':'');
+        var apDays=l.approved_days?(typeof l.approved_days==='string'?JSON.parse(l.approved_days):l.approved_days):[];
+        h+='<small>تصمیم گرفته شده</small>'+(apDays.length?'<br><small>روزهای تأییدشده: '+esc(apDays.join(', '))+'</small>':'')+(l.admin_note?'<br><small>یادداشت مدیر: '+esc(l.admin_note)+'</small>':'');
       }
       h+='</td><td><button class="btn btn-sm btn-info" onclick="printLeave(\''+l.id+'\')" title="چاپ فرم">🖨️</button></td></tr>';
     }
@@ -5005,7 +5005,7 @@ async function printLeave(id){
     w.document.open();
     w.document.write('<!DOCTYPE html>\n<html dir="rtl" lang="fa">\n<head>\n<meta charset="UTF-8">\n');
     w.document.write('<meta name="viewport" content="width=device-width,initial-scale=1">\n');
-    w.document.write('<title>نامه درخواست مرخصی — '+fullName+'</title>\n');
+    w.document.write('<title>نامه درخواست مرخصی — '+esc(fullName)+'</title>\n');
     w.document.write('<style>\n');
     w.document.write('@page{size:A5 portrait;margin:15mm 18mm}\n');
     w.document.write('*{margin:0;padding:0;box-sizing:border-box}\n');
@@ -5845,7 +5845,7 @@ async function confirmResetPassword(){
 
 function viewUserHistory(userId){
   showSection('records');
-  $('rec_person').value=userId;
+  $('rep_person').value=userId;
   renderRecords();
 }
 
@@ -6549,11 +6549,9 @@ async function loadActiveActivitiesForCountdown(){
 }
 
 async function createProgram(){
-  var title=val('prog_title'),desc=val('prog_description'),priority=val('prog_priority'),id=$('prog_id').value;
+  var title=val('prog_title'),desc=val('prog_description'),priority=val('prog_priority'),id=$('prog_id').value,eventId=$('prog_event_id')?$('prog_event_id').value:'';
   if(!title){showAlert('عنوان برنامه الزامی است.');return;}
-  // بررسی دسترسی
   if(!(currentRole==='admin'||currentRole==='super_admin')&&!currentUser.profile.can_create_programs){showAlert('شما دسترسی ساخت برنامه ندارید.','error');return;}
-  // اگر اولویت force است، هشدار بده
   if(priority==='force'&&!confirm('⚠️ این برنامه به‌عنوان «فوری» ثبت می‌شود. هر کاربر نمی‌تواند بیش از ۲ فعالیت فوری همزمان داشته باشد. ادامه می‌دهید؟'))return;
   showLoading('ذخیره...');
   try{
@@ -6563,9 +6561,11 @@ async function createProgram(){
       await recordAudit('update','programs',id,{title:title,priority:priority});
       showAlert('برنامه به‌روزرسانی شد.','success');
     }else{
-      const{data,error}=await sb.from('programs').insert({creator_id:currentUser.id,title:title,description:desc,priority:priority}).select();
+      var insertObj={creator_id:currentUser.id,title:title,description:desc,priority:priority};
+      if(eventId)insertObj.event_id=eventId;
+      const{data,error}=await sb.from('programs').insert(insertObj).select();
       if(error)throw error;
-      await recordAudit('create','programs',data[0].id,{title:title,priority:priority});
+      await recordAudit('create','programs',data[0].id,{title:title,priority:priority,event_id:eventId||null});
       showAlert('برنامه ساخته شد. حالا فعالیت‌ها را اضافه کنید.','success');
       $('prog_id').value=data[0].id;
     }
@@ -6580,7 +6580,7 @@ async function createProgram(){
   hideLoading();
 }
 function resetProgramForm(){
-  $('prog_id').value='';$('prog_title').value='';$('prog_description').value='';$('prog_priority').value='medium';
+  $('prog_id').value='';$('prog_event_id').value='';$('prog_title').value='';$('prog_description').value='';$('prog_priority').value='medium';
   // بازگرداندن هدر و دکمه به حالت ساخت جدید
   var h3=document.querySelector('#section-programs h3');
   if(h3)h3.textContent='ساخت برنامه جدید';
@@ -7841,11 +7841,14 @@ async function saveScoringRules(){
         if(inputEl){
           var points=parseInt(inputEl.value,10);
           if(isNaN(points))points=0;
-          // آپدیت رکورد موجود
+          // آپدیت یا درج رکورد
           var existing=cachedScoringRules.filter(function(r){return r.priority===pr&&r.completion_status===st;})[0];
           if(existing){
             const{error}=await sb.from('scoring_rules').update({points:points,updated_by:currentUser.id}).eq('id',existing.id);
             if(error)console.error('Update scoring rule failed:',error);
+          }else{
+            const{error:insErr}=await sb.from('scoring_rules').insert({priority:pr,completion_status:st,points:points,updated_by:currentUser.id});
+            if(insErr)console.error('Insert scoring rule failed:',insErr);
           }
         }
       }
@@ -8371,6 +8374,10 @@ async function createProgramFromEvent(eventId){
     if(error)throw error;
     var ev=data;
     if(!ev)return;
+    // پاک‌کردن فرم قبل از پر کردن (جلوگیری از ویرایش برنامه قبلی)
+    resetProgramForm();
+    // ذخیره event_id در فیلد hidden
+    if($('prog_event_id')){$('prog_event_id').value=eventId;}
     // پر کردن فرم برنامه با اطلاعات رویداد
     showSection('programs');
     $('prog_title').value=ev.title;
@@ -8621,7 +8628,7 @@ function init(){
   // تم سوییچر
   // theme-toggle-icon already wired via onclick
   ['cal_person','cal_month','cal_year'].forEach(function(k){on(k,'change',renderCalendar);});
-  on('calendar_container','click',function(e){var c=e.target.closest('.day-cell');if(c){showSection('daily_log');$('log_person_id').value=c.dataset.person;$('log_date').value=c.dataset.date;resetDailyLogForm();syncLog();}});
+  // هندلر کلیک تقویم حذف شد — inline onclick در هر سلول مودال روز را باز می‌کند (جلوگیری از دوبار اجرا)
   on('log_status','change',toggleLogFields);
   on('absence_type','change',toggleAbsenceFields);
   on('log_person_id','change',syncLog);
