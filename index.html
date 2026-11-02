@@ -1597,7 +1597,10 @@ function formatMins(m){return Math.floor(m/60)+' ساعت و '+(m%60)+' دقیق
 
 /* ═════ Supabase Data Layer ═════ */
 async function loadAllPersons(){
-  try{const{data,error}=await sb.from('profiles').select('id,first_name,last_name,personnel_id,email,role,parent_id,status,can_approve_leaves,can_schedule_tasks,can_create_programs,can_manage_events,can_manage_users,can_log,can_view_reports,guest_permissions,expires_at,log_delegates').order('last_name').order('first_name');if(error)throw error;cachedPersons=data||[];if(typeof updateDelegateBox==='function')updateDelegateBox();if(typeof updateDelegationVisibility==='function')updateDelegationVisibility();return cachedPersons;}catch(e){console.error('loadAllPersons:',e);cachedPersons=[];return[];}
+  try{const{data,error}=await sb.from('profiles').select('*').order('last_name').order('first_name');if(error)throw error;cachedPersons=data||[];
+    // حذف فیلدهای حساس از حافظه مرورگر
+    cachedPersons.forEach(function(p){delete p.password_hash;delete p.password_salt;delete p.recovery_salt;});
+    if(typeof updateDelegateBox==='function')updateDelegateBox();if(typeof updateDelegationVisibility==='function')updateDelegationVisibility();return cachedPersons;}catch(e){console.error('loadAllPersons:',e);cachedPersons=[];return[];}
 }
 async function loadLogs(personId,from,to){
   try{let q=sb.from('daily_logs').select('*');if(personId)q=q.eq('user_id',personId);if(from)q=q.gte('date',from);if(to)q=q.lte('date',to);const{data,error}=await q.order('date',{ascending:false});if(error)throw error;return data||[];}catch(e){console.error('loadLogs:',e);throw e;}
@@ -1645,7 +1648,9 @@ async function updateTaskInDB(id,updates){
   try{const{data,error}=await sb.from('tasks').update(updates).eq('id',id).select();if(error)throw error;return data[0];}catch(e){console.error('updateTaskInDB:',e);throw e;}
 }
 async function loadSubordinates(){
-  try{const{data,error}=await sb.from('profiles').select('id,first_name,last_name,personnel_id,email,role,parent_id,status,can_approve_leaves,can_schedule_tasks,can_create_programs,can_manage_events,can_manage_users,can_log,can_view_reports,guest_permissions,expires_at,log_delegates').eq('parent_id',currentUser.id).order('last_name').order('first_name');if(error)throw error;cachedSubordinates=data||[];return cachedSubordinates;}catch(e){console.error('loadSubordinates:',e);cachedSubordinates=[];return[];}
+  try{const{data,error}=await sb.from('profiles').select('*').eq('parent_id',currentUser.id).order('last_name').order('first_name');if(error)throw error;cachedSubordinates=data||[];
+    cachedSubordinates.forEach(function(p){delete p.password_hash;delete p.password_salt;delete p.recovery_salt;});
+    return cachedSubordinates;}catch(e){console.error('loadSubordinates:',e);cachedSubordinates=[];return[];}
 }
 async function loadLeavesForCoordinator(){
   // درخواست‌های زیرمجموعه‌ها که در انتظار تأیید هماهنگ‌کننده هستند
