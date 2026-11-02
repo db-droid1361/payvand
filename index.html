@@ -950,8 +950,9 @@ button,.btn{-webkit-touch-callout:none}
     <div class="form-group"><label>موضوع فعالیت:</label><input type="text" id="ot_topic"></div>
     <div class="form-group"><label>شرح کار انجام‌شده:</label><textarea id="ot_description"></textarea></div>
   </div>
-  <div class="form-group" id="log_discrepancy_group">
-    <label>توضیح مغایرت یا اصلاح:</label>
+  <div class="form-group hidden" id="log_discrepancy_group">
+    <label>توضیح مغایرت یا اصلاح (فقط مدیر):</label>
+    <small style="display:block;margin-bottom:6px;color:var(--c-text-muted);font-size:11px">این بخش فقط وقتی دیده می‌شود که شما برای کاربر دیگری ثبت می‌کنید. یادداشت شما به کاربر اطلاع داده می‌شود.</small>
     <!-- دکمه‌های سریع برای موارد رایج فراموش‌شده -->
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px" id="quick_discrepancy">
       <small style="width:100%;color:var(--c-text-muted);font-size:11px;margin-bottom:2px">برچسب سریع (برای مواردی که کاربر فراموش کرده):</small>
@@ -1567,7 +1568,7 @@ var STATUS_LABEL={normal:'عادی',absence:'عدم حضور',overtime:'اضاف
 var ABS_LABEL={hourly_leave:'مرخصی ساعتی',daily_leave:'مرخصی روزانه','1day_mission':'مأموریت یک‌روزه',out_province_daily:'مأموریت خارج از استان (روزانه)',out_province_hourly:'مأموریت خارج از استان (ساعتی)',hourly_mission:'مأموریت ساعتی',other_absence:'سایر علل عدم حضور'};
 var FULL_DAY=['daily_leave','1day_mission','out_province_daily','other_absence'];
 var HOURLY=['hourly_leave','hourly_mission','out_province_hourly'];
-var LEAVE_STATUS={pending:'در انتظار مدیر',coordinator_pending:'در انتظار یادداشت هماهنگ‌کننده',manager_pending:'یادداشت‌شده — در انتظار مدیر',approved:'تأییدشده',partial:'جزئی',rejected:'ردشده',canceled:'لغوشده'};
+var LEAVE_STATUS={pending:'در انتظار مدیر',coordinator_pending:'در انتظار هماهنگ‌کننده',manager_pending:'در انتظار تصمیم مدیر',approved:'تأییدشده',partial:'جزئی',rejected:'ردشده',canceled:'لغوشده'};
 var ROLE_LABEL={user:'کاربر',admin:'مدیر',super_admin:'سوپرادمین',guest:'مهمان',coordinator:'هماهنگ‌کننده'};
 // بررسی آیا کاربر فعلی نقش هماهنگ‌کننده دارد (کاربر با دسترسی‌های هماهنگ‌کننده)
 function isCoordinatorRole(){
@@ -4034,7 +4035,7 @@ function summaryHtml(s){
 }
 
 /* ═════ Daily Log ═════ */
-async function syncLog(){currentLogPerson=$('log_person_id').value;currentLogDate=$('log_date').value;await renderDailyLogsList();}
+async function syncLog(){currentLogPerson=$('log_person_id').value;currentLogDate=$('log_date').value;updateDiscrepancyVisibility();await renderDailyLogsList();}
 async function renderDailyLogsList(){
   var c=$('daily_logs_list_container');
   if(!currentLogPerson||!currentLogDate){c.innerHTML='<p>پرسنل و تاریخ را انتخاب کنید.</p>';return;}
@@ -4086,6 +4087,7 @@ async function editLog(id){
       setTimepickerValue('ot_start',f.ot_start||'');setTimepickerValue('ot_end',f.ot_end||'');
     }
     toggleLogFields();
+    updateDiscrepancyVisibility(); // نمایش بخش مغایرت اگر مدیر برای کاربر دیگر ویرایش می‌کند
     // هدایت به بخش خوداظهاری برای ویرایش (کاربر ممکن است از بخش سوابق آمده باشد)
     showSection('daily_log');
     // اسکرول به بخش مغایرت (جایی که دکمه‌های سریع هستند)
@@ -4301,9 +4303,11 @@ function checkDelegateWarning(){
     }
     existing.textContent='⚠️ شما در حال ثبت برای «'+name+'» هستید. با ثبت، مسئولیت با شماست و شناسه پرسنلی شما در گزارش ثبت می‌شود.';
     $('log_person_id').value=sel.value;
+    updateDiscrepancyVisibility(); // بررسی نمایش بخش مغایرت
   }else{
     var alert=box.querySelector('.delegate-alert');
     if(alert)alert.remove();
+    updateDiscrepancyVisibility(); // بررسی نمایش بخش مغایرت
   }
 }
 // نمایش/مخفی کردن باکس تفویض بر اساس نقش
@@ -4347,6 +4351,23 @@ function resetDailyLogForm(){
   ['abs_start_time','abs_end_time','mout_h_start_time','mout_h_end_time','mh_start_time','mh_end_time','ot_start','ot_end'].forEach(function(k){setTimepickerValue(k,'');});
   window._editingLogOriginal=null; // پاک‌سازی ردیابی مغایرت
   toggleLogFields();
+  updateDiscrepancyVisibility(); // مخفی کردن بخش مغایرت (چون شخص = خودش)
+}
+// نمایش/مخفی کردن بخش مغایرت: فقط وقتی مدیر برای کاربر دیگر ثبت می‌کند
+function updateDiscrepancyVisibility(){
+  var dg=$('log_discrepancy_group');
+  if(!dg)return;
+  var personId=$('log_person_id')?$('log_person_id').value:'';
+  var isAdmin=currentRole==='admin'||currentRole==='super_admin';
+  // فقط مدیر وقتی برای کاربر دیگری ثبت می‌کند → بخش مغایرت نمایش داده شود
+  var isForOther=personId&&personId!==currentUser.id;
+  if(isAdmin&&isForOther){
+    dg.classList.remove('hidden');
+  }else{
+    dg.classList.add('hidden');
+    // پاک کردن متن مغایرت اگر مخفی شد
+    if($('log_discrepancy'))$('log_discrepancy').value='';
+  }
 }
 // تنظیم سریع متن مغایرت با دکمه‌های پیش‌فرض
 function setQuickDiscrepancy(text){
@@ -4514,20 +4535,30 @@ async function saveLeave(){
       return;
     }
   }
-  // تعیین وضعیت اولیه: اگر کاربر هماهنگ‌کننده با دسترسی تأیید دارد → coordinator_pending، در غیر این صورت pending
-  var initStatus='pending';
-  if(currentRole==='user'){
-    var p=cachedPersons.filter(function(x){return x.id===personId;})[0];
-    if(p&&p.parent_id){
-      var coord=cachedPersons.filter(function(x){return x.id===p.parent_id;})[0];
-      if(coord&&coord.can_approve_leaves)initStatus='coordinator_pending';
-    }
-  }
+  // درخواست مستقیم به مدیر می‌رود (manager_pending)
+  // هماهنگ‌کننده به‌صورت موازی می‌بیند و می‌تواند نظر بدهد
+  var initStatus='manager_pending';
   showLoading('ذخیره...');
   try{
     var leaveObj={id:id||('tmp-'+Date.now()),user_id:personId,type:type,start_date:normJ(startDate),end_date:endDate,start_time:sT,end_time:eT,reason:val('lv_reason'),reg_date:getTodayJalali(),status:initStatus};
     await saveLeaveToDB(leaveObj);
-    showAlert('درخواست ثبت شد. '+(initStatus==='coordinator_pending'?'به هماهنگ‌کننده ارسال شد.':'در انتظار ادمین است.'),'success');
+    // اعلان به مدیر
+    var admins=cachedPersons.filter(function(p){return p.role==='admin'||p.role==='super_admin';});
+    for(var ai=0;ai<admins.length;ai++){
+      if(admins[ai].id===currentUser.id)continue;
+      try{await sendNotificationDB({sender_id:currentUser.id,recipient_id:admins[ai].id,title:'📋 درخواست مرخصی جدید',body:'درخواست مرخصی '+getPersonName(personId)+' در انتظار تصمیم شما.',priority:'normal',related_type:'leave'});}catch(e){}
+    }
+    // اعلان به هماهنگ‌کننده (جهت اطلاع و نظر)
+    if(currentRole==='user'){
+      var p=cachedPersons.filter(function(x){return x.id===personId;})[0];
+      if(p&&p.parent_id){
+        var coord=cachedPersons.filter(function(x){return x.id===p.parent_id;})[0];
+        if(coord&&coord.can_approve_leaves&&coord.id!==currentUser.id){
+          try{await sendNotificationDB({sender_id:currentUser.id,recipient_id:coord.id,title:'📋 درخواست مرخصی (جهت اطلاع)',body:'درخواست مرخصی '+getPersonName(personId)+' ثبت شد. می‌توانید نظر بدهید (اختیاری).',priority:'normal',related_type:'leave'});}catch(e){}
+        }
+      }
+    }
+    showAlert('درخواست ثبت شد و به مدیر ارسال شد.','success');
     resetLeaveForm();await renderLeaves();
   }catch(e){showAlert('خطا: '+e.message);}
   hideLoading();
@@ -4760,29 +4791,29 @@ async function renderCoordinatorApprovals(){
   if(!currentUser.profile.can_approve_leaves&&currentRole!=='admin'&&currentRole!=='super_admin'){c.innerHTML='<p>شما دسترسی تأیید هماهنگ‌کننده ندارید.</p>';return;}
   try{
     var leaves=await loadLeavesForCoordinator();
-    var pending=leaves.filter(function(l){return l.status==='coordinator_pending';});
-    var decided=leaves.filter(function(l){return l.status!=='coordinator_pending';});
+    // درخواست‌های در انتظار مدیر که هماهنگ‌کننده هنوز نظر نداده
+    var pending=leaves.filter(function(l){return l.status==='manager_pending'&&!l.coordinator_note;});
+    // درخواست‌هایی که هماهنگ‌کننده نظر داده (برای نمایش در لیست قبلی)
+    var noted=leaves.filter(function(l){return l.coordinator_note;});
     var html='';
     if(pending.length){
-      html+='<h3>در انتظار یادداشت شما ('+pending.length+')</h3>';
-      html+='<p style="font-size:12px;color:var(--c-text-muted);margin-bottom:12px">📌 نقش شما: بررسی و یادداشت‌گذاری برای اطلاع مدیر. تأیید/رد نهایی فقط توسط مدیر انجام می‌شود.</p>';
+      html+='<h3>درخواست‌های دریافتی شما ('+pending.length+')</h3>';
+      html+='<p style="font-size:12px;color:var(--c-text-muted);margin-bottom:12px">📌 نقش شما: مشاوره و اطلاع. درخواست مستقیم به مدیر رفته ولی شما می‌توانید نظر بدهید (اختیاری). تأیید/رد فقط توسط مدیر انجام می‌شود.</p>';
       pending.forEach(function(l){
         html+='<div class="card" style="border-right:4px solid var(--warning);margin-bottom:10px">'+
           '<h4 style="margin:0 0 8px">'+esc(getPersonName(l.user_id))+' — '+leavePeriod(l)+'</h4>'+
           '<div style="font-size:13px;margin-bottom:8px">نوع: '+(l.type==='daily'?'روزانه':'ساعتی')+(l.reason?'<br>علت: '+esc(l.reason):'')+'</div>'+
-          '<div class="form-group"><label>یادداشت شما (الزامی قبل از تصمیم مدیر):</label><textarea id="coord_note_'+l.id+'" placeholder="نظر، توضیح یا توصیه شما برای مدیر..."></textarea></div>'+
-          '<button class="btn btn-info btn-sm" onclick="coordinatorAddNote(\''+l.id+'\')">📝 ثبت یادداشت و ارسال به مدیر</button>'+
+          '<div class="form-group"><label>یادداشت مشاوره (اختیاری):</label><textarea id="coord_note_'+l.id+'" placeholder="نظر، توضیح یا توصیه شما برای مدیر... (اختیاری)"></textarea></div>'+
+          '<button class="btn btn-info btn-sm" onclick="coordinatorAddNote(\''+l.id+'\')">📝 ثبت یادداشت</button>'+
         '</div>';
       });
     }else{
-      html+='<p>درخواستی در انتظار یادداشت شما نیست.</p>';
+      html+='<p>درخواست جدیدی برای نظردهی نیست.</p>';
     }
-    if(decided.length){
+    if(noted.length){
       html+='<hr><h3>یادداشت‌های قبلی شما</h3><table><tr><th>پرسنل</th><th>بازه</th><th>وضعیت</th><th>یادداشت شما</th></tr>';
-      decided.forEach(function(l){
-        if(l.coordinator_note||l.coordinator_decided_at){
-          html+='<tr><td>'+esc(getPersonName(l.user_id))+'</td><td>'+esc(leavePeriod(l))+'</td><td>'+statusBadge(l.status)+'</td><td>'+esc(l.coordinator_note||'-')+'</td></tr>';
-        }
+      noted.forEach(function(l){
+        html+='<tr><td>'+esc(getPersonName(l.user_id))+'</td><td>'+esc(leavePeriod(l))+'</td><td>'+statusBadge(l.status)+'</td><td>'+esc(l.coordinator_note||'-')+'</td></tr>';
       });
       html+='</table>';
     }
@@ -4790,12 +4821,14 @@ async function renderCoordinatorApprovals(){
   }catch(e){c.innerHTML='<p>خطا: '+esc(e.message)+'</p>';}
 }
 async function coordinatorAddNote(id){
-  var note=val('coord_note_'+id);
-  if(!note){showAlert('یادداشت الزامی است.','error');return;}
-  showLoading('ارسال یادداشت به مدیر...');
+  var note=val('coord_note_'+id); // یادداشت اختیاری است — می‌تواند خالی باشد
+  if(!note){showAlert('یادداشت خالی است. چیزی بنویسید.','error');return;}
+  showLoading('ثبت یادداشت...');
   try{
-    await saveLeaveToDB({id:id,status:'manager_pending',coordinator_note:note,coordinator_decided_at:new Date().toISOString()},true);
-    // ارسال اعلان به مدیر
+    // فقط یادداشت ذخیره می‌شود — وضعیت تغییر نمی‌کند (درخواست مستقیم به مدیر رفته)
+    var updates={id:id,coordinator_note:note,coordinator_decided_at:new Date().toISOString()};
+    await saveLeaveToDB(updates,true);
+    // اعلان به مدیر
     var leave=await loadLeaves();
     var lv=leave.filter(function(l){return l.id===id;})[0];
     if(lv){
@@ -4807,7 +4840,7 @@ async function coordinatorAddNote(id){
             sender_id:currentUser.id,
             recipient_id:admins[i].id,
             title:'📝 یادداشت هماهنگ‌کننده برای مرخصی',
-            body:'هماهنگ‌کننده ('+currentUser.profile.first_name+' '+currentUser.profile.last_name+') یادداشتی برای درخواست مرخصی '+getPersonName(lv.user_id)+' ثبت کرد.\n\nیادداشت: '+note+'\n\nدر انتظار تصمیم شما.',
+            body:'هماهنگ‌کننده ('+currentUser.profile.first_name+' '+currentUser.profile.last_name+') یادداشتی برای درخواست مرخصی '+getPersonName(lv.user_id)+' ثبت کرد.\n\nیادداشت: '+note,
             priority:'normal',
             related_type:'leave',
             related_id:id
@@ -4817,7 +4850,7 @@ async function coordinatorAddNote(id){
     }
     await renderCoordinatorApprovals();
     await updateBadges();
-    showAlert('یادداشت ثبت شد و به مدیر ارسال شد.','success');
+    showAlert('یادداشت ثبت شد و به مدیر اطلاع داده شد.','success');
   }catch(e){showAlert('خطا: '+e.message,'error');}
   hideLoading();
 }
@@ -4912,7 +4945,7 @@ async function renderApprovals(){
     else if(filter==='all')list=all;
     else list=all.filter(function(l){return l.status===filter;});
     if(!list.length){c.innerHTML='<p>درخواستی در انتظار تأیید نهایی نیست.</p>';return;}
-    var h='<table><tr><th>پرسنل</th><th>نوع</th><th>بازه</th><th>علت</th><th>وضعیت</th><th>یادداشت هماهنگ‌کننده</th><th>عملیات ادمین</th></tr>';
+    var h='<table><tr><th>پرسنل</th><th>نوع</th><th>بازه</th><th>علت</th><th>وضعیت</th><th>یادداشت هماهنگ‌کننده</th><th>عملیات ادمین</th><th>چاپ</th></tr>';
     for(var i=0;i<list.length;i++){
       var l=list[i];
       h+='<tr><td>'+esc(getPersonName(l.user_id))+'</td><td>'+(l.type==='daily'?'روزانه':'ساعتی')+'</td><td>'+esc(leavePeriod(l))+'</td><td>'+esc(l.reason||'-')+'</td><td>'+statusBadge(l.status)+'</td><td>'+(l.coordinator_note?esc(l.coordinator_note):'-')+'</td><td>';
@@ -4936,12 +4969,93 @@ async function renderApprovals(){
             '<button class="btn btn-danger btn-sm" onclick="rejectLeave(\''+l.id+'\')">رد</button>';
         }
       }else{
-        h+='<small>تصمیم گرفته شده</small>'+(l.approved_days?'<br><small>روزهای تأییدشده: '+esc(JSON.parse(l.approved_days).join(', '))+'</small>':'');
+        h+='<small>تصمیم گرفته شده</small>'+(l.approved_days?'<br><small>روزهای تأییدشده: '+esc(JSON.parse(l.approved_days).join(', '))+'</small>':'')+(l.admin_note?'<br><small>یادداشت مدیر: '+esc(l.admin_note)+'</small>':'');
       }
-      h+='</td></tr>';
+      h+='</td><td><button class="btn btn-sm btn-info" onclick="printLeave(\''+l.id+'\')" title="چاپ فرم">🖨️</button></td></tr>';
     }
     c.innerHTML=h+'</table>';
   }catch(e){c.innerHTML='<p>خطا: '+esc(e.message)+'</p>';}
+}
+// چاپ فرم مرخصی با تمام جزئیات و یادداشت‌ها
+async function printLeave(id){
+  try{
+    var all=await loadLeaves();
+    var lv=all.filter(function(l){return l.id===id;})[0];
+    if(!lv){showAlert('درخواست یافت نشد.','error');return;}
+    var userName=getPersonName(lv.user_id);
+    var coordName='—';
+    if(lv.user_id){
+      var u=cachedPersons.filter(function(p){return p.id===lv.user_id;})[0];
+      if(u&&u.parent_id){
+        var coord=cachedPersons.filter(function(p){return p.id===u.parent_id;})[0];
+        if(coord)coordName=coord.first_name+' '+coord.last_name;
+      }
+    }
+    var deciderName='—';
+    if(lv.decided_by)deciderName=getPersonName(lv.decided_by);
+    var w=window.open('','_blank');
+    w.document.write('<html dir="rtl"><head><title>فرم مرخصی — '+userName+'</title>');
+    w.document.write('<style>');
+    w.document.write('body{font-family:Tahoma,Arial,sans-serif;padding:30px;color:#000;line-height:1.8}');
+    w.document.write('h1{text-align:center;border-bottom:3px solid #000;padding-bottom:10px;margin-bottom:20px}');
+    w.document.write('h2{font-size:15px;margin-top:20px;border-bottom:1px solid #999;padding-bottom:5px}');
+    w.document.write('table{width:100%;border-collapse:collapse;margin:10px 0}');
+    w.document.write('td{padding:8px 12px;border:1px solid #999;font-size:13px}');
+    w.document.write('td:first-child{width:30%;background:#f5f5f5;font-weight:bold}');
+    w.document.write('.note-box{background:#fffde7;border:1px solid #f0e68c;padding:12px;margin:8px 0;border-radius:6px;font-size:13px}');
+    w.document.write('.reject-box{background:#fde8e8;border:1px solid #f5a8a8;padding:12px;margin:8px 0;border-radius:6px}');
+    w.document.write('.footer{margin-top:40px;display:flex;justify-content:space-between;font-size:12px}');
+    w.document.write('.sig{text-align:center;width:45%;border-top:1px solid #000;padding-top:8px}');
+    w.document.write('@media print{button{display:none}}');
+    w.document.write('</style></head><body>');
+    w.document.write('<h1>فرم درخواست مرخصی</h1>');
+    w.document.write('<table>');
+    w.document.write('<tr><td>نام و نام خانوادگی</td><td>'+userName+'</td></tr>');
+    w.document.write('<tr><td>شماره پرسنلی</td><td>'+(function(){var u=cachedPersons.filter(function(p){return p.id===lv.user_id;})[0];return u?u.personnel_id:'—';})()+'</td></tr>');
+    w.document.write('<tr><td>هماهنگ‌کننده</td><td>'+coordName+'</td></tr>');
+    w.document.write('<tr><td>نوع مرخصی</td><td>'+(lv.type==='daily'?'روزانه':'ساعتی')+'</td></tr>');
+    w.document.write('<tr><td>بازه</td><td>'+leavePeriod(lv)+'</td></tr>');
+    if(lv.reason)w.document.write('<tr><td>علت درخواست</td><td>'+lv.reason+'</td></tr>');
+    w.document.write('<tr><td>تاریخ ثبت</td><td>'+lv.reg_date+'</td></tr>');
+    w.document.write('<tr><td>وضعیت</td><td>'+(LEAVE_STATUS[lv.status]||lv.status)+'</td></tr>');
+    w.document.write('</table>');
+    // یادداشت هماهنگ‌کننده
+    w.document.write('<h2>یادداشت هماهنگ‌کننده (مشاوره)</h2>');
+    if(lv.coordinator_note){
+      w.document.write('<div class="note-box">📝 '+lv.coordinator_note+'</div>');
+      if(lv.coordinator_decided_at)w.document.write('<small>تاریخ یادداشت: '+new Date(lv.coordinator_decided_at).toLocaleDateString('fa-IR')+'</small>');
+    }else{
+      w.document.write('<p style="color:#999">— یادداشتی ثبت نشده —</p>');
+    }
+    // تصمیم مدیر
+    w.document.write('<h2>تصمیم مدیر</h2>');
+    if(lv.status==='approved'){
+      w.document.write('<p>✅ <b>تأیید شد</b></p>');
+    }else if(lv.status==='rejected'){
+      w.document.write('<div class="reject-box">❌ <b>رد شد</b>');
+      if(lv.admin_note)w.document.write('<br>دلیل: '+lv.admin_note);
+      w.document.write('</div>');
+    }else if(lv.status==='partial'){
+      w.document.write('<p>✅ <b>تأیید جزئی</b></p>');
+      if(lv.admin_note)w.document.write('<div class="note-box">'+lv.admin_note+'</div>');
+    }else{
+      w.document.write('<p style="color:#999">— در انتظار تصمیم —</p>');
+    }
+    if(lv.decided_at)w.document.write('<small>تصمیم‌گیرنده: '+deciderName+' | تاریخ: '+new Date(lv.decided_at).toLocaleDateString('fa-IR')+'</small>');
+    // یادداشت مدیر
+    if(lv.admin_note&&(lv.status==='approved'||lv.status==='partial')){
+      w.document.write('<h2>توضیحات مدیر</h2>');
+      w.document.write('<div class="note-box">'+lv.admin_note+'</div>');
+    }
+    // امضاها
+    w.document.write('<div class="footer">');
+    w.document.write('<div class="sig">امضا و مهر هماهنگ‌کننده<br><br><br></div>');
+    w.document.write('<div class="sig">امضا و مهر مدیر<br><br><br></div>');
+    w.document.write('</div>');
+    w.document.write('<button onclick="window.print()" style="margin-top:20px;padding:10px 20px;font-size:14px;cursor:pointer">🖨️ چاپ</button>');
+    w.document.write('</body></html>');
+    w.document.close();
+  }catch(e){showAlert('خطا در چاپ: '+e.message,'error');}
 }
 async function approveLeave(id){
   var note=val('admin_note_'+id);
@@ -4970,13 +5084,20 @@ async function approvePartialLeave(id){
   hideLoading();
 }
 async function rejectLeave(id){
-  if(!confirm('رد این درخواست؟'))return;
   var note=val('admin_note_'+id);
+  if(!note||!note.trim()){showAlert('⚠️ رد درخواست باید همراه با توضیح باشد. لطفاً دلیل رد را بنویسید.','error');return;}
+  if(!confirm('رد این درخواست؟\nتوضیح: '+note))return;
   showLoading('رد...');
   try{
     await saveLeaveToDB({id:id,status:'rejected',decided_by:currentUser.id,decided_at:new Date().toISOString(),admin_note:note},true);
+    // اعلان به کاربر درباره رد با توضیح
+    var leave=await loadLeaves();
+    var lv=leave.filter(function(l){return l.id===id;})[0];
+    if(lv&&lv.user_id!==currentUser.id){
+      try{await sendNotificationDB({sender_id:currentUser.id,recipient_id:lv.user_id,title:'❌ درخواست مرخصی رد شد',body:'درخواست مرخصی شما رد شد.\n\nدلیل: '+note,priority:'high',related_type:'leave',related_id:id});}catch(e){}
+    }
     await renderApprovals();await updateBadges();
-    showAlert('رد شد.','success');
+    showAlert('رد شد و به کاربر اطلاع داده شد.','success');
   }catch(e){showAlert('خطا: '+e.message);}
   hideLoading();
 }
