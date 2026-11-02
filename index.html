@@ -4976,25 +4976,19 @@ async function printLeave(id){
     var all=await loadLeaves();
     var lv=all.filter(function(l){return l.id===id;})[0];
     if(!lv){showAlert('درخواست یافت نشد.','error');return;}
-    // اطلاعات درخواست‌کننده
     var u=cachedPersons.filter(function(p){return p.id===lv.user_id;})[0];
     var fullName=u?(u.first_name+' '+u.last_name):getPersonName(lv.user_id);
     var personnelId=u?u.personnel_id:'—';
-    // اطلاعات مدیر (اولین مدیر)
     var admin=cachedPersons.filter(function(p){return p.role==='admin';})[0];
     var adminLastName=admin?admin.last_name:'[نام خانوادگی مدیر]';
-    // دلیل
     var reason=lv.reason||'—';
-    // تاریخ و تعداد روزها
     var dateStr=lv.start_date===lv.end_date?lv.start_date:(lv.start_date+' تا '+lv.end_date);
     var days=1;
     if(lv.type==='daily'&&lv.start_date&&lv.end_date){
       var range=jalaliDateRange(lv.start_date,lv.end_date);
       days=range.length;
     }
-    // یادداشت هماهنگ‌کننده
     var coordNote=lv.coordinator_note||'';
-    // تصمیم مدیر
     var deciderName=lv.decided_by?getPersonName(lv.decided_by):'';
     var adminNote=lv.admin_note||'';
     var decisionText='';
@@ -5002,71 +4996,81 @@ async function printLeave(id){
     else if(lv.status==='rejected')decisionText='عدم موافقت';
     else if(lv.status==='partial')decisionText='موافقت جزئی';
     else decisionText='در انتظار پاسخ';
+    var regDate=toPersianDigits(lv.reg_date||getTodayJalali());
+    var dateDisplay=toPersianDigits(dateStr);
+    var daysStr=toPersianDigits(String(days));
+    var pidStr=toPersianDigits(personnelId);
     var w=window.open('','_blank');
-    w.document.write('<!DOCTYPE html><html dir="rtl" lang="fa"><head><meta charset="UTF-8">');
-    w.document.write('<title>نامه درخواست مرخصی — '+fullName+'</title>');
-    w.document.write('<style>');
-    w.document.write('@page{size:A5 portrait;margin:15mm 18mm}');
-    w.document.write('*{margin:0;padding:0;box-sizing:border-box}');
-    w.document.write('body{font-family:Vazirmatn,"B Nazanin",Tahoma,sans-serif;font-size:12pt;line-height:1.3;color:#000;text-align:justify}');
-    w.document.write('.bismillah{text-align:center;font-size:11pt;margin-bottom:14pt}');
-    w.document.write('.header{display:flex;justify-content:space-between;margin-bottom:12pt}');
-    w.document.write('.date{font-size:11pt}');
-    w.document.write('.recipient{font-size:12pt;text-align:right}');
-    w.document.write('.subject{font-weight:bold;margin:10pt 0 6pt}');
-    w.document.write('.body{margin-bottom:10pt}');
-    w.document.write('.signature{margin-top:18pt;text-align:left;font-size:12pt;line-height:1.8}');
-    w.document.write('.sig-line{margin-top:8pt;border-bottom:1px solid #000;width:200px;display:inline-block;text-align:center}');
-    w.document.write('.coord-note{margin-top:12pt;border:1px dashed #999;padding:8pt;font-size:11pt;background:#fafafa}');
-    w.document.write('.coord-note-title{font-weight:bold;margin-bottom:4pt}');
-    w.document.write('.admin-decision{margin-top:10pt;border:1px solid #000;padding:8pt;font-size:11pt}');
-    w.document.write('.admin-decision-title{font-weight:bold;margin-bottom:4pt}');
-    w.document.write('.admin-sig{margin-top:14pt;text-align:right;font-size:12pt}');
-    w.document.write('.print-btn{margin-top:20px;padding:8px 20px;font-size:14px;cursor:pointer;display:block;margin-left:auto;margin-right:auto}');
-    w.document.write('@media print{.print-btn{display:none}@page{size:A5 portrait;margin:15mm 18mm}}');
-    w.document.write('</style></head><body>');
+    w.document.open();
+    w.document.write('<!DOCTYPE html>\n<html dir="rtl" lang="fa">\n<head>\n<meta charset="UTF-8">\n');
+    w.document.write('<meta name="viewport" content="width=device-width,initial-scale=1">\n');
+    w.document.write('<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">\n');
+    w.document.write('<title>نامه درخواست مرخصی — '+fullName+'</title>\n');
+    w.document.write('<style>\n');
+    w.document.write('@page{size:A5 portrait;margin:15mm 18mm}\n');
+    w.document.write('*{margin:0;padding:0;box-sizing:border-box}\n');
+    w.document.write('body{font-family:Vazirmatn,"B Nazanin",Tahoma,Arial,sans-serif;background:#e9ecef;padding:20px;display:flex;justify-content:center}\n');
+    w.document.write('.page{width:148mm;min-height:210mm;background:#fff;padding:15mm 18mm;box-shadow:0 4px 20px rgba(0,0,0,.15);font-size:12pt;line-height:1.3;color:#000;text-align:justify}\n');
+    w.document.write('.bismillah{text-align:center;font-size:11pt;margin-bottom:14pt}\n');
+    w.document.write('.header-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10pt;direction:rtl}\n');
+    w.document.write('.recipient{font-size:12pt;flex:1;text-align:right}\n');
+    w.document.write('.date{font-size:11pt;text-align:left;white-space:nowrap}\n');
+    w.document.write('.subject{font-weight:bold;font-size:12pt;margin:8pt 0 8pt;border-bottom:1px solid #ddd;padding-bottom:4pt}\n');
+    w.document.write('.para{margin-bottom:8pt;font-size:12pt;line-height:1.3;text-align:justify}\n');
+    w.document.write('.sig-block{margin-top:14pt;text-align:left;font-size:12pt;line-height:1.6}\n');
+    w.document.write('.sig-line{display:inline-block;border-bottom:1px solid #000;width:180px;text-align:center;margin-top:6pt}\n');
+    w.document.write('.coord-box{margin-top:10pt;border:1px dashed #aaa;padding:8pt;font-size:10.5pt;background:#f8f9fa;border-radius:4pt}\n');
+    w.document.write('.coord-title{font-weight:bold;margin-bottom:3pt}\n');
+    w.document.write('.admin-box{margin-top:8pt;border:1.5pt solid #000;padding:8pt;font-size:10.5pt;border-radius:4pt}\n');
+    w.document.write('.admin-title{font-weight:bold;margin-bottom:3pt}\n');
+    w.document.write('.admin-sig{margin-top:10pt;text-align:right;font-size:12pt;line-height:1.6}\n');
+    w.document.write('.toolbar{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:100}\n');
+    w.document.write('.toolbar button{padding:8px 24px;font-size:14px;cursor:pointer;border:none;border-radius:8px;background:#1769AA;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.2)}\n');
+    w.document.write('@media print{body{background:#fff;padding:0}.page{width:auto;min-height:auto;box-shadow:none;padding:0}.toolbar{display:none}}\n');
+    w.document.write('</style>\n</head>\n<body>\n');
+    w.document.write('<div class="toolbar"><button onclick="window.print()">🖨️ چاپ</button></div>\n');
+    w.document.write('<div class="page">\n');
     // بسمه تعالی
-    w.document.write('<div class="bismillah">بسمه تعالی</div>');
-    // هدر: تاریخ در چپ، گیرنده در راست
-    w.document.write('<div class="header">');
-    w.document.write('<div class="date">تاریخ: '+toPersianDigits(lv.reg_date||getTodayJalali())+'</div>');
-    w.document.write('<div class="recipient">جناب آقای '+esc(adminLastName)+'</div>');
-    w.document.write('</div>');
+    w.document.write('<div class="bismillah">بسمه تعالی</div>\n');
+    // هدر: گیرنده در راست، تاریخ در چپ
+    w.document.write('<div class="header-row">\n');
+    w.document.write('<div class="recipient">جناب آقای '+esc(adminLastName)+'</div>\n');
+    w.document.write('<div class="date">تاریخ: '+regDate+'</div>\n');
+    w.document.write('</div>\n');
     // موضوع
-    w.document.write('<div class="subject">موضوع: درخواست مرخصی روزانه</div>');
+    w.document.write('<div class="subject">موضوع: درخواست مرخصی روزانه</div>\n');
     // متن نامه
-    w.document.write('<div class="body">با سلام و احترام،</div>');
-    w.document.write('<div class="body">اینجانب '+esc(fullName)+' ، به شماره پرسنلی '+toPersianDigits(personnelId)+' ، به استحضار می‌رسانم که به دلیل '+esc(reason)+' ، مایل هستم در تاریخ '+toPersianDigits(dateStr)+' به تعداد '+toPersianDigits(String(days))+' روز از مرخصی روزانه استفاده کنم.</div>');
-    w.document.write('<div class="body">خواهشمند است دستور فرمایید پس از بررسی، موافقت جنابعالی با این درخواست اعلام شود. پیشاپیش از توجه و همکاری شما سپاسگزارم.</div>');
+    w.document.write('<div class="para">با سلام و احترام،</div>\n');
+    w.document.write('<div class="para">اینجانب '+esc(fullName)+' ، به شماره پرسنلی '+pidStr+' ، به استحضار می‌رسانم که به دلیل '+esc(reason)+' ، مایل هستم در تاریخ '+dateDisplay+' به تعداد '+daysStr+' روز از مرخصی روزانه استفاده کنم.</div>\n');
+    w.document.write('<div class="para">خواهشمند است دستور فرمایید پس از بررسی، موافقت جنابعالی با این درخواست اعلام شود. پیشاپیش از توجه و همکاری شما سپاسگزارم.</div>\n');
     // امضای درخواست‌کننده
-    w.document.write('<div class="signature">');
-    w.document.write('با تشکر و احترام<br>');
-    w.document.write(esc(fullName)+'<br>');
-    w.document.write('شماره پرسنلی: '+toPersianDigits(personnelId)+'<br>');
-    w.document.write('<span class="sig-line">امضا</span>');
-    w.document.write('</div>');
+    w.document.write('<div class="sig-block">\n');
+    w.document.write('با تشکر و احترام<br>\n');
+    w.document.write(esc(fullName)+'<br>\n');
+    w.document.write('شماره پرسنلی: '+pidStr+'<br>\n');
+    w.document.write('<span class="sig-line">امضا</span>\n');
+    w.document.write('</div>\n');
     // یادداشت هماهنگ‌کننده
     if(coordNote){
-      w.document.write('<div class="coord-note">');
-      w.document.write('<div class="coord-note-title">یادداشت هماهنگ‌کننده:</div>');
-      w.document.write(esc(coordNote));
-      w.document.write('</div>');
+      w.document.write('<div class="coord-box">\n');
+      w.document.write('<div class="coord-title">یادداشت هماهنگ‌کننده:</div>\n');
+      w.document.write(esc(coordNote)+'\n');
+      w.document.write('</div>\n');
     }
-    // بخش تصمیم مدیر
-    w.document.write('<div class="admin-decision">');
-    w.document.write('<div class="admin-decision-title">جوابیه مدیر:</div>');
+    // جوابیه مدیر
+    w.document.write('<div class="admin-box">\n');
+    w.document.write('<div class="admin-title">جوابیه مدیر:</div>\n');
     w.document.write(decisionText);
-    if(adminNote)w.document.write('<br>'+esc(adminNote));
-    if(deciderName)w.document.write('<br><small>تصمیم‌گیرنده: '+esc(deciderName)+'</small>');
-    w.document.write('</div>');
+    if(adminNote)w.document.write('<br>\n'+esc(adminNote));
+    if(deciderName)w.document.write('<br>\n<small>تصمیم‌گیرنده: '+esc(deciderName)+'</small>');
+    w.document.write('\n</div>\n');
     // امضای مدیر
-    w.document.write('<div class="admin-sig">');
-    w.document.write('مدیر محترم<br>');
-    w.document.write('<span class="sig-line">امضا و مهر</span>');
-    w.document.write('</div>');
-    // دکمه چاپ
-    w.document.write('<button class="print-btn" onclick="window.print()">🖨️ چاپ</button>');
-    w.document.write('</body></html>');
+    w.document.write('<div class="admin-sig">\n');
+    w.document.write('مدیر محترم<br>\n');
+    w.document.write('<span class="sig-line">امضا و مهر</span>\n');
+    w.document.write('</div>\n');
+    w.document.write('</div>\n'); // end .page
+    w.document.write('</body>\n</html>\n');
     w.document.close();
   }catch(e){showAlert('خطا در چاپ: '+e.message,'error');}
 }
