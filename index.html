@@ -1546,6 +1546,7 @@ function jalaliMonthLength(jy,jm){if(jm<=6)return 31;if(jm<=11)return 30;return 
 function getJalaliDayOfWeek(jy,jm,jd){var g=jalaliToGregorian(jy,jm,jd);return(new Date(g[0],g[1]-1,g[2]).getDay()+1)%7;}
 function isHolidayDow(d){return d===5||d===6;}
 function toEnglishDigits(str){if(str==null)return'';return String(str).replace(/[۰-۹]/g,function(c){return c.charCodeAt(0)-1776;}).replace(/[٠-٩]/g,function(c){return c.charCodeAt(0)-1632;});}
+function toPersianDigits(str){if(str==null)return'';var d=['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];return String(str).replace(/[0-9]/g,function(c){return d[c.charCodeAt(0)-48];});}
 function isValidJalaliDate(str){var p=toEnglishDigits(str).replace(/\s/g,'').split('/');if(p.length!==3)return false;var jy=parseInt(p[0],10),jm=parseInt(p[1],10),jd=parseInt(p[2],10);if(isNaN(jy)||isNaN(jm)||isNaN(jd))return false;if(jy<1300||jy>1500||jm<1||jm>12)return false;return jd>=1&&jd<=jalaliMonthLength(jy,jm);}
 function parseJalali(str){var p=toEnglishDigits(str).replace(/\s/g,'').split('/');return{jy:parseInt(p[0],10),jm:parseInt(p[1],10),jd:parseInt(p[2],10)};}
 function fmtJalali(jy,jm,jd){return jy+'/'+pad2(jm)+'/'+pad2(jd);}
