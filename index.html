@@ -4970,83 +4970,102 @@ async function renderApprovals(){
     c.innerHTML=h+'</table>';
   }catch(e){c.innerHTML='<p>خطا: '+esc(e.message)+'</p>';}
 }
-// چاپ فرم مرخصی با تمام جزئیات و یادداشت‌ها
+// چاپ نامه رسمی درخواست مرخصی — قالب A5
 async function printLeave(id){
   try{
     var all=await loadLeaves();
     var lv=all.filter(function(l){return l.id===id;})[0];
     if(!lv){showAlert('درخواست یافت نشد.','error');return;}
-    var userName=getPersonName(lv.user_id);
-    var coordName='—';
-    if(lv.user_id){
-      var u=cachedPersons.filter(function(p){return p.id===lv.user_id;})[0];
-      if(u&&u.parent_id){
-        var coord=cachedPersons.filter(function(p){return p.id===u.parent_id;})[0];
-        if(coord)coordName=coord.first_name+' '+coord.last_name;
-      }
+    // اطلاعات درخواست‌کننده
+    var u=cachedPersons.filter(function(p){return p.id===lv.user_id;})[0];
+    var fullName=u?(u.first_name+' '+u.last_name):getPersonName(lv.user_id);
+    var personnelId=u?u.personnel_id:'—';
+    // اطلاعات مدیر (اولین مدیر)
+    var admin=cachedPersons.filter(function(p){return p.role==='admin';})[0];
+    var adminLastName=admin?admin.last_name:'[نام خانوادگی مدیر]';
+    // دلیل
+    var reason=lv.reason||'—';
+    // تاریخ و تعداد روزها
+    var dateStr=lv.start_date===lv.end_date?lv.start_date:(lv.start_date+' تا '+lv.end_date);
+    var days=1;
+    if(lv.type==='daily'&&lv.start_date&&lv.end_date){
+      var range=jalaliDateRange(lv.start_date,lv.end_date);
+      days=range.length;
     }
-    var deciderName='—';
-    if(lv.decided_by)deciderName=getPersonName(lv.decided_by);
-    var w=window.open('','_blank');
-    w.document.write('<html dir="rtl"><head><title>فرم مرخصی — '+userName+'</title>');
-    w.document.write('<style>');
-    w.document.write('body{font-family:Tahoma,Arial,sans-serif;padding:30px;color:#000;line-height:1.8}');
-    w.document.write('h1{text-align:center;border-bottom:3px solid #000;padding-bottom:10px;margin-bottom:20px}');
-    w.document.write('h2{font-size:15px;margin-top:20px;border-bottom:1px solid #999;padding-bottom:5px}');
-    w.document.write('table{width:100%;border-collapse:collapse;margin:10px 0}');
-    w.document.write('td{padding:8px 12px;border:1px solid #999;font-size:13px}');
-    w.document.write('td:first-child{width:30%;background:#f5f5f5;font-weight:bold}');
-    w.document.write('.note-box{background:#fffde7;border:1px solid #f0e68c;padding:12px;margin:8px 0;border-radius:6px;font-size:13px}');
-    w.document.write('.reject-box{background:#fde8e8;border:1px solid #f5a8a8;padding:12px;margin:8px 0;border-radius:6px}');
-    w.document.write('.footer{margin-top:40px;display:flex;justify-content:space-between;font-size:12px}');
-    w.document.write('.sig{text-align:center;width:45%;border-top:1px solid #000;padding-top:8px}');
-    w.document.write('@media print{button{display:none}}');
-    w.document.write('</style></head><body>');
-    w.document.write('<h1>فرم درخواست مرخصی</h1>');
-    w.document.write('<table>');
-    w.document.write('<tr><td>نام و نام خانوادگی</td><td>'+userName+'</td></tr>');
-    w.document.write('<tr><td>شماره پرسنلی</td><td>'+(function(){var u=cachedPersons.filter(function(p){return p.id===lv.user_id;})[0];return u?u.personnel_id:'—';})()+'</td></tr>');
-    w.document.write('<tr><td>هماهنگ‌کننده</td><td>'+coordName+'</td></tr>');
-    w.document.write('<tr><td>نوع مرخصی</td><td>'+(lv.type==='daily'?'روزانه':'ساعتی')+'</td></tr>');
-    w.document.write('<tr><td>بازه</td><td>'+leavePeriod(lv)+'</td></tr>');
-    if(lv.reason)w.document.write('<tr><td>علت درخواست</td><td>'+lv.reason+'</td></tr>');
-    w.document.write('<tr><td>تاریخ ثبت</td><td>'+lv.reg_date+'</td></tr>');
-    w.document.write('<tr><td>وضعیت</td><td>'+(LEAVE_STATUS[lv.status]||lv.status)+'</td></tr>');
-    w.document.write('</table>');
     // یادداشت هماهنگ‌کننده
-    w.document.write('<h2>یادداشت هماهنگ‌کننده (مشاوره)</h2>');
-    if(lv.coordinator_note){
-      w.document.write('<div class="note-box">📝 '+lv.coordinator_note+'</div>');
-      if(lv.coordinator_decided_at)w.document.write('<small>تاریخ یادداشت: '+new Date(lv.coordinator_decided_at).toLocaleDateString('fa-IR')+'</small>');
-    }else{
-      w.document.write('<p style="color:#999">— یادداشتی ثبت نشده —</p>');
-    }
+    var coordNote=lv.coordinator_note||'';
     // تصمیم مدیر
-    w.document.write('<h2>تصمیم مدیر</h2>');
-    if(lv.status==='approved'){
-      w.document.write('<p>✅ <b>تأیید شد</b></p>');
-    }else if(lv.status==='rejected'){
-      w.document.write('<div class="reject-box">❌ <b>رد شد</b>');
-      if(lv.admin_note)w.document.write('<br>دلیل: '+lv.admin_note);
-      w.document.write('</div>');
-    }else if(lv.status==='partial'){
-      w.document.write('<p>✅ <b>تأیید جزئی</b></p>');
-      if(lv.admin_note)w.document.write('<div class="note-box">'+lv.admin_note+'</div>');
-    }else{
-      w.document.write('<p style="color:#999">— در انتظار تصمیم —</p>');
-    }
-    if(lv.decided_at)w.document.write('<small>تصمیم‌گیرنده: '+deciderName+' | تاریخ: '+new Date(lv.decided_at).toLocaleDateString('fa-IR')+'</small>');
-    // یادداشت مدیر
-    if(lv.admin_note&&(lv.status==='approved'||lv.status==='partial')){
-      w.document.write('<h2>توضیحات مدیر</h2>');
-      w.document.write('<div class="note-box">'+lv.admin_note+'</div>');
-    }
-    // امضاها
-    w.document.write('<div class="footer">');
-    w.document.write('<div class="sig">امضا و مهر هماهنگ‌کننده<br><br><br></div>');
-    w.document.write('<div class="sig">امضا و مهر مدیر<br><br><br></div>');
+    var deciderName=lv.decided_by?getPersonName(lv.decided_by):'';
+    var adminNote=lv.admin_note||'';
+    var decisionText='';
+    if(lv.status==='approved')decisionText='موافقت شد';
+    else if(lv.status==='rejected')decisionText='عدم موافقت';
+    else if(lv.status==='partial')decisionText='موافقت جزئی';
+    else decisionText='در انتظار پاسخ';
+    var w=window.open('','_blank');
+    w.document.write('<!DOCTYPE html><html dir="rtl" lang="fa"><head><meta charset="UTF-8">');
+    w.document.write('<title>نامه درخواست مرخصی — '+fullName+'</title>');
+    w.document.write('<style>');
+    w.document.write('@page{size:A5 portrait;margin:15mm 18mm}');
+    w.document.write('*{margin:0;padding:0;box-sizing:border-box}');
+    w.document.write('body{font-family:Vazirmatn,"B Nazanin",Tahoma,sans-serif;font-size:12pt;line-height:1.3;color:#000;text-align:justify}');
+    w.document.write('.bismillah{text-align:center;font-size:11pt;margin-bottom:14pt}');
+    w.document.write('.header{display:flex;justify-content:space-between;margin-bottom:12pt}');
+    w.document.write('.date{font-size:11pt}');
+    w.document.write('.recipient{font-size:12pt;text-align:right}');
+    w.document.write('.subject{font-weight:bold;margin:10pt 0 6pt}');
+    w.document.write('.body{margin-bottom:10pt}');
+    w.document.write('.signature{margin-top:18pt;text-align:left;font-size:12pt;line-height:1.8}');
+    w.document.write('.sig-line{margin-top:8pt;border-bottom:1px solid #000;width:200px;display:inline-block;text-align:center}');
+    w.document.write('.coord-note{margin-top:12pt;border:1px dashed #999;padding:8pt;font-size:11pt;background:#fafafa}');
+    w.document.write('.coord-note-title{font-weight:bold;margin-bottom:4pt}');
+    w.document.write('.admin-decision{margin-top:10pt;border:1px solid #000;padding:8pt;font-size:11pt}');
+    w.document.write('.admin-decision-title{font-weight:bold;margin-bottom:4pt}');
+    w.document.write('.admin-sig{margin-top:14pt;text-align:right;font-size:12pt}');
+    w.document.write('.print-btn{margin-top:20px;padding:8px 20px;font-size:14px;cursor:pointer;display:block;margin-left:auto;margin-right:auto}');
+    w.document.write('@media print{.print-btn{display:none}@page{size:A5 portrait;margin:15mm 18mm}}');
+    w.document.write('</style></head><body>');
+    // بسمه تعالی
+    w.document.write('<div class="bismillah">بسمه تعالی</div>');
+    // هدر: تاریخ در چپ، گیرنده در راست
+    w.document.write('<div class="header">');
+    w.document.write('<div class="date">تاریخ: '+toPersianDigits(lv.reg_date||getTodayJalali())+'</div>');
+    w.document.write('<div class="recipient">جناب آقای '+esc(adminLastName)+'</div>');
     w.document.write('</div>');
-    w.document.write('<button onclick="window.print()" style="margin-top:20px;padding:10px 20px;font-size:14px;cursor:pointer">🖨️ چاپ</button>');
+    // موضوع
+    w.document.write('<div class="subject">موضوع: درخواست مرخصی روزانه</div>');
+    // متن نامه
+    w.document.write('<div class="body">با سلام و احترام،</div>');
+    w.document.write('<div class="body">اینجانب '+esc(fullName)+' ، به شماره پرسنلی '+toPersianDigits(personnelId)+' ، به استحضار می‌رسانم که به دلیل '+esc(reason)+' ، مایل هستم در تاریخ '+toPersianDigits(dateStr)+' به تعداد '+toPersianDigits(String(days))+' روز از مرخصی روزانه استفاده کنم.</div>');
+    w.document.write('<div class="body">خواهشمند است دستور فرمایید پس از بررسی، موافقت جنابعالی با این درخواست اعلام شود. پیشاپیش از توجه و همکاری شما سپاسگزارم.</div>');
+    // امضای درخواست‌کننده
+    w.document.write('<div class="signature">');
+    w.document.write('با تشکر و احترام<br>');
+    w.document.write(esc(fullName)+'<br>');
+    w.document.write('شماره پرسنلی: '+toPersianDigits(personnelId)+'<br>');
+    w.document.write('<span class="sig-line">امضا</span>');
+    w.document.write('</div>');
+    // یادداشت هماهنگ‌کننده
+    if(coordNote){
+      w.document.write('<div class="coord-note">');
+      w.document.write('<div class="coord-note-title">یادداشت هماهنگ‌کننده:</div>');
+      w.document.write(esc(coordNote));
+      w.document.write('</div>');
+    }
+    // بخش تصمیم مدیر
+    w.document.write('<div class="admin-decision">');
+    w.document.write('<div class="admin-decision-title">جوابیه مدیر:</div>');
+    w.document.write(decisionText);
+    if(adminNote)w.document.write('<br>'+esc(adminNote));
+    if(deciderName)w.document.write('<br><small>تصمیم‌گیرنده: '+esc(deciderName)+'</small>');
+    w.document.write('</div>');
+    // امضای مدیر
+    w.document.write('<div class="admin-sig">');
+    w.document.write('مدیر محترم<br>');
+    w.document.write('<span class="sig-line">امضا و مهر</span>');
+    w.document.write('</div>');
+    // دکمه چاپ
+    w.document.write('<button class="print-btn" onclick="window.print()">🖨️ چاپ</button>');
     w.document.write('</body></html>');
     w.document.close();
   }catch(e){showAlert('خطا در چاپ: '+e.message,'error');}
