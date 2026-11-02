@@ -1147,19 +1147,19 @@ button,.btn{-webkit-touch-callout:none}
     </select></div>
     <div class="form-group"><label>نقش نمایش:</label><select id="approval_role_view" onchange="renderApprovals()">
       <option value="auto">خودکار (بر اساس نقش من)</option>
-      <option value="coordinator">نمای هماهنگ‌کننده (تأیید اولیه)</option>
+      <option value="coordinator">نمای هماهنگ‌کننده (مشاوره)</option>
       <option value="admin">نمای مدیر (تأیید نهایی)</option>
     </select></div>
   </div>
-  <!-- بخش تأیید اولیه (هماهنگ‌کننده) -->
+  <!-- بخش هماهنگ‌کننده (مشاوره و یادداشت) -->
   <div id="coordinator_approvals_section" class="hidden" style="margin-bottom:20px">
-    <h3 style="margin:0 0 10px">👥 درخواست‌های در انتظار تأیید اولیه شما</h3>
-    <p style="font-size:12px;color:var(--c-text-muted);margin-bottom:10px">این درخواست‌ها از زیرمجموعه‌های شما رسیده. پس از تأیید اولیه، به مدیر ارسال می‌شود.</p>
+    <h3 style="margin:0 0 10px">👥 درخواست‌های دریافتی شما (مشاوره)</h3>
+    <p style="font-size:12px;color:var(--c-text-muted);margin-bottom:10px">این درخواست‌ها مستقیم به مدیر رفته‌اند. شما می‌توانید نظر بدهید (اختیاری). تأیید/رد فقط توسط مدیر انجام می‌شود.</p>
     <div id="coordinator_approvals_container"></div>
   </div>
-  <!-- بخش تأیید نهایی (مدیر) -->
+  <!-- بخش مدیر (تأیید نهایی) -->
   <div id="admin_approvals_section">
-    <h3 style="margin:0 0 10px">🔑 درخواست‌های در انتظار تأیید نهایی</h3>
+    <h3 style="margin:0 0 10px">🔑 درخواست‌های در انتظار تصمیم شما</h3>
     <p style="font-size:12px;color:var(--c-text-muted);margin-bottom:10px">برای مرخصی‌های روزانه چندروزه، می‌توانید هر روز را جداگانه تأیید/رد کنید.</p>
     <div id="approvals_list_container" class="table-wrap"></div>
   </div>
@@ -1189,15 +1189,7 @@ button,.btn{-webkit-touch-callout:none}
   <div id="coordinator_tasks_container"></div>
 </div>
 
-<!-- تأیید مرخصی‌ها (ادمین) -->
-<div id="section-approvals" class="card hidden">
-  <h2>تأیید نهایی درخواست‌های مرخصی</h2>
-  <p>درخواست‌های در انتظار تأیید نهایی. برای مرخصی‌های روزانه چندروزه، می‌توانید هر روز را جداگانه تأیید/رد کنید (تأیید جزئی).</p>
-  <div class="form-row">
-    <div class="form-group"><label>فیلتر وضعیت:</label><select id="approval_filter"><option value="pending">در انتظار ادمین</option><option value="manager_pending">تأیید اولیه شده توسط هماهنگ‌کننده</option><option value="all">همه</option><option value="approved">تأییدشده</option><option value="rejected">ردشده</option><option value="partial">جزئی</option></select></div>
-  </div>
-  <div id="approvals_list_container" class="table-wrap"></div>
-</div>
+<!-- تأیید مرخصی‌ها (ادمین) — حذف شد: در section-approvals بالا ادغام شده -->
 
 <!-- ارسال پیام + آرشیو -->
 <div id="section-send_notification" class="card hidden">
