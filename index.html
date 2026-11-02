@@ -954,7 +954,19 @@ button,.btn{-webkit-touch-callout:none}
     <div class="form-group"><label>موضوع فعالیت:</label><input type="text" id="ot_topic"></div>
     <div class="form-group"><label>شرح کار انجام‌شده:</label><textarea id="ot_description"></textarea></div>
   </div>
-  <div class="form-group"><label>توضیح مغایرت یا اصلاح:</label><textarea id="log_discrepancy"></textarea></div>
+  <div class="form-group" id="log_discrepancy_group">
+    <label>توضیح مغایرت یا اصلاح:</label>
+    <!-- دکمه‌های سریع برای موارد رایج فراموش‌شده -->
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px" id="quick_discrepancy">
+      <small style="width:100%;color:var(--c-text-muted);font-size:11px;margin-bottom:2px">برچسب سریع (برای مواردی که کاربر فراموش کرده):</small>
+      <button type="button" class="btn btn-sm btn-warning" onclick="setQuickDiscrepancy('عدم حضور ساعتی داشته — ثبت نشده')">⏰ عدم حضور ساعتی</button>
+      <button type="button" class="btn btn-sm btn-warning" onclick="setQuickDiscrepancy('عدم حضور روزانه داشته — ثبت نشده')">📅 عدم حضور روزانه</button>
+      <button type="button" class="btn btn-sm btn-warning" onclick="setQuickDiscrepancy('ساعت ورود نزده')">🟢 ساعت ورود نزده</button>
+      <button type="button" class="btn btn-sm btn-warning" onclick="setQuickDiscrepancy('ساعت خروج نزده')">🔴 ساعت خروج نزده</button>
+      <button type="button" class="btn btn-sm btn-secondary" onclick="clearDiscrepancy()">✕ پاک کردن</button>
+    </div>
+    <textarea id="log_discrepancy" placeholder="مغایرتی که کاربر فراموش کرده ثبت کند..."></textarea>
+  </div>
   <input type="hidden" id="log_id">
   <button class="btn btn-success" id="btn_save_log">ثبت اظهار</button>
   <button class="btn btn-warning" id="btn_reset_log">ثبت جدید</button>
@@ -2758,6 +2770,7 @@ function showNotificationsModal(){
         (n.related_type==='task'?'<button class="btn btn-info btn-sm" onclick="location.hash=\'#my_tasks\';dismissNotification(\''+n.id+'\')">رفتن به وظیفه</button>':'')+
         (n.related_type==='program_activity'?'<button class="btn btn-info btn-sm" onclick="showSection(\'my_activities\');dismissNotification(\''+n.id+'\')">رفتن به فعالیت</button>':'')+
         (n.related_type==='leave'?'<button class="btn btn-info btn-sm" onclick="showSection(\'leave_req\');dismissNotification(\''+n.id+'\')">مشاهده درخواست</button>':'')+
+        (n.related_type==='log_discrepancy'?'<button class="btn btn-warning btn-sm" onclick="dismissNotification(\''+n.id+'\');editLog(\''+(n.related_id||'')+'\')">✏️ بررسی و اصلاح کارکرد</button>':'')+
       '</div>'+
       // باکس پاسخ
       '<div id="reply_box_'+n.id+'" class="hidden" style="margin-top:10px">'+
@@ -4055,6 +4068,8 @@ async function editLog(id){
     $('log_date').value=log.date;
     $('log_status').value=log.status;
     $('log_discrepancy').value=(log.data&&log.data.discrepancy)||'';
+    // ذخیره وضعیت اصلی برای تشخیص تغییر مغایرت (برای اعلان خودکار)
+    window._editingLogOriginal={id:log.id,discrepancy:(log.data&&log.data.discrepancy)||'',user_id:log.user_id};
     if(log.status==='absence'){
       var t=log.data.absence_type;
       $('absence_type').value=t;
@@ -4230,6 +4245,33 @@ async function saveDailyLog(){
     // به‌روزرسانی لیست سوابق اگر در حال نمایش است
     var recSec=$('section-records');
     if(recSec&&!recSec.classList.contains('hidden'))renderRecords();
+    // ─── اعلان خودکار مغایرت: اگر مدیر برای کاربر دیگر مغایرتی ثبت/اصلاح کرده ───
+    if(disc&&actualPersonId!==currentUser.id){
+      var orig=window._editingLogOriginal;
+      var isNewDisc=!orig||!orig.id||orig.id!==savedLog.id;
+      var discChanged=isNewDisc||(orig.discrepancy!==disc);
+      if(discChanged){
+        try{
+          var managerName=(currentUser.profile.first_name||'')+' '+(currentUser.profile.last_name||'');
+          var dateDisplay=dateStr+' ('+dayName(dateStr)+')';
+          var notifTitle='⚠️ مغایرت کارکرد — '+dateDisplay;
+          var notifBody='مدیر سامانه ('+managerName+') مغایرتی برای کارکرد شما در تاریخ '+dateDisplay+' ثبت کرده است.\n\n';
+          notifBody+='وضعیت ثبت‌شده: '+(STATUS_LABEL[status]||status)+'\n';
+          notifBody+='توضیح مغایرت: '+disc+'\n\n';
+          notifBody+='لطفاً کارکرد خود را بررسی و در صورت نیاز اصلاح کنید.';
+          await sendNotificationDB({
+            sender_id:currentUser.id,
+            recipient_id:actualPersonId,
+            title:notifTitle,
+            body:notifBody,
+            priority:'normal',
+            related_type:'log_discrepancy',
+            related_id:savedLog.id
+          });
+          showAlert('اعلان مغایرت به کاربر ارسال شد.','info');
+        }catch(e){console.warn('Failed to send discrepancy notification:',e);}
+      }
+    }
   }catch(e){showAlert('خطا در ذخیره: '+e.message);}
   hideLoading();
 }
@@ -4294,7 +4336,24 @@ function resetDailyLogForm(){
   $('log_id').value='';$('log_status').value='normal';$('absence_type').value='hourly_leave';
   ['log_discrepancy','abs_reason','leave_type','m1_location','mout_daily_province','mout_daily_location','mout_h_province','mout_h_location','mout_h_activity','mh_location','mh_activity','other_reason','abs_general_desc','ot_reason','ot_location','ot_topic','ot_description'].forEach(function(k){if($(k))$(k).value='';});
   ['abs_start_time','abs_end_time','mout_h_start_time','mout_h_end_time','mh_start_time','mh_end_time','ot_start','ot_end'].forEach(function(k){setTimepickerValue(k,'');});
+  window._editingLogOriginal=null; // پاک‌سازی ردیابی مغایرت
   toggleLogFields();
+}
+// تنظیم سریع متن مغایرت با دکمه‌های پیش‌فرض
+function setQuickDiscrepancy(text){
+  var ta=$('log_discrepancy');
+  if(!ta)return;
+  if(!ta.value.trim()){
+    ta.value=text;
+  }else{
+    // اگر متن قبلی وجود دارد، با "|" اضافه کن
+    ta.value=ta.value.trim()+' | '+text;
+  }
+  ta.focus();
+}
+function clearDiscrepancy(){
+  var ta=$('log_discrepancy');
+  if(ta)ta.value='';
 }
 
 /* ═════ Date/Time pickers — سبک سامسونگ ═════ */
