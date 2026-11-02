@@ -6454,19 +6454,7 @@ async function generateReport(){
     
     if(!h)h='<p>اظهاری در این بازه یافت نشد.</p>';
     else{
-      // ─── بخش خلاصه مغایرت‌ها ───
-      var discHtml='';
-      var discLogs=all.filter(function(l){return l.data&&l.data.discrepancy&&l.data.discrepancy.trim();});
-      if(discLogs.length){
-        discHtml='<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:10px;padding:14px;margin-bottom:16px">'+
-          '<h3 style="margin:0 0 8px;color:#856404">⚠️ مغایرت‌های ثبت‌شده در این دوره ('+discLogs.length+' مورد)</h3>'+
-          '<table style="margin:0;background:transparent"><thead><tr><th style="width:15%">پرسنل</th><th style="width:12%">تاریخ</th><th style="width:12%">وضعیت</th><th style="width:61%">مغایرت</th></tr></thead><tbody>';
-        discLogs.forEach(function(l){
-          discHtml+='<tr><td>'+esc(getPersonName(l.user_id))+'</td><td>'+esc(l.date)+'</td><td>'+statusBadge(l.status)+'</td><td style="color:#856404;font-weight:600">'+esc(l.data.discrepancy)+'</td></tr>';
-        });
-        discHtml+='</tbody></table></div>';
-      }
-      h='<div style="background:var(--c-primary-light);padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:13px"><b>📊 گزارش کارکرد</b> — دوره: '+esc(period)+' | '+personsWithLogs+' نفر | '+(includeGuests?'شامل مهمان‌ها':'بدون مهمان‌ها')+' | '+(repMode==='percategory'?'حالت دسته‌بندی':'حالت نفر به نفر')+'</div>'+discHtml+h;
+      h='<div style="background:var(--c-primary-light);padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:13px"><b>📊 گزارش کارکرد</b> — دوره: '+esc(period)+' | '+personsWithLogs+' نفر | '+(includeGuests?'شامل مهمان‌ها':'بدون مهمان‌ها')+' | '+(repMode==='percategory'?'حالت دسته‌بندی':'حالت نفر به نفر')+'</div>'+h;
     }
     $('report_area').innerHTML=h;
     
