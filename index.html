@@ -5977,14 +5977,92 @@ async function renderRecords(){
       var canEdit=canEditLog(l.user_id);
       var isDelegated=l.user_id!==currentUser.id;
       var personName=esc(getPersonName(l.user_id))+(isDelegated&&!isAdmin?' <span style="font-size:10px;color:var(--c-info)">🔄 تفویض</span>':'');
+      var existingDisc=(l.data&&l.data.discrepancy)||'';
+      // دکمه اطلاع مغایرت سریع (فقط مدیر برای کاربر دیگر)
+      var discBtn='';
+      if(isAdmin&&isDelegated){
+        discBtn=' <button class="btn btn-sm btn-warning" onclick="quickDiscrepancyNotify(\''+esc(l.id)+'\')" title="اطلاع مغایرت به کاربر">⚠️</button>';
+      }
       var actions=canEdit?
         '<button class="btn btn-sm btn-warning" onclick="editLog(\''+esc(l.id)+'\')" title="ویرایش">✏️</button> '+
-        '<button class="btn btn-sm btn-danger" onclick="deleteLog(\''+esc(l.id)+'\')" title="حذف">🗑</button>'
-        :'—';
-      h+='<tr><td>'+personName+'</td><td>'+esc(l.date)+'</td><td>'+statusBadge(l.status)+'</td><td>'+esc(describeLog(l))+'</td><td>'+esc((l.data&&l.data.discrepancy)||'-')+'</td><td style="white-space:nowrap">'+actions+'</td></tr>';
+        '<button class="btn btn-sm btn-danger" onclick="deleteLog(\''+esc(l.id)+'\')" title="حذف">🗑</button>'+discBtn
+        :(discBtn||'—');
+      var discCell=existingDisc?'<span style="color:#856404;font-weight:600">'+esc(existingDisc)+'</span>':'-';
+      h+='<tr><td>'+personName+'</td><td>'+esc(l.date)+'</td><td>'+statusBadge(l.status)+'</td><td>'+esc(describeLog(l))+'</td><td>'+discCell+'</td><td style="white-space:nowrap">'+actions+'</td></tr>';
     });
     c.innerHTML=h+'</table>';
   }catch(e){c.innerHTML='<p>خطا: '+esc(e.message)+'</p>';}
+}
+// اطلاع سریع مغایرت از جدول گزارش (بدون رفتن به فرم ویرایش)
+async function quickDiscrepancyNotify(logId){
+  // یافتن لاگ
+  var all=await loadLogs(null,null,null);
+  var log=all.filter(function(l){return l.id===logId;})[0];
+  if(!log){showAlert('رکورد یافت نشد.','error');return;}
+  if(log.user_id===currentUser.id){showAlert('نمی‌توانید برای خودتان مغایرت ثبت کنید.','error');return;}
+  var userName=getPersonName(log.user_id);
+  var existingDisc=(log.data&&log.data.discrepancy)||'';
+  // ساخت پنجره سریع
+  var old=$('quick_disc_overlay');
+  if(old)old.remove();
+  var overlay=document.createElement('div');
+  overlay.id='quick_disc_overlay';
+  overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML='<div style="background:var(--c-modal-bg,#fff);border-radius:14px;padding:20px;max-width:420px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.3);color:var(--c-text)">'+
+    '<h3 style="margin:0 0 8px;color:var(--c-warning,#b45309)">⚠️ اطلاع مغایرت به کاربر</h3>'+
+    '<p style="font-size:13px;margin:0 0 12px;color:var(--c-text-muted)">کاربر: <b>'+esc(userName)+'</b> | تاریخ: <b>'+esc(log.date)+'</b></p>'+
+    (existingDisc?'<p style="font-size:12px;background:#fff3cd;padding:8px;border-radius:6px;margin-bottom:10px">مغایرت فعلی: '+esc(existingDisc)+'</p>':'')+
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">'+
+      '<button type="button" class="btn btn-sm btn-warning" onclick="setQuickDiscText(\'عدم حضور ساعتی داشته — ثبت نشده\')">⏰ عدم حضور ساعتی</button>'+
+      '<button type="button" class="btn btn-sm btn-warning" onclick="setQuickDiscText(\'عدم حضور روزانه داشته — ثبت نشده\')">📅 عدم حضور روزانه</button>'+
+      '<button type="button" class="btn btn-sm btn-warning" onclick="setQuickDiscText(\'ساعت ورود نزده\')">🟢 ساعت ورود نزده</button>'+
+      '<button type="button" class="btn btn-sm btn-warning" onclick="setQuickDiscText(\'ساعت خروج نزده\')">🔴 ساعت خروج نزده</button>'+
+    '</div>'+
+    '<div class="form-group"><label>متن مغایرت:</label><textarea id="quick_disc_text" placeholder="متن مغایرت...">'+esc(existingDisc)+'</textarea></div>'+
+    '<div style="display:flex;gap:8px">'+
+      '<button type="button" class="btn btn-success" id="quick_disc_send">📤 ثبت و اطلاع به کاربر</button>'+
+      '<button type="button" class="btn btn-secondary" id="quick_disc_cancel">انصراف</button>'+
+    '</div>'+
+  '</div>';
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove();});
+  $('quick_disc_cancel').onclick=function(){overlay.remove();};
+  $('quick_disc_send').onclick=async function(){
+    var text=$('quick_disc_text').value.trim();
+    if(!text){showAlert('متن مغایرت خالی است.','error');return;}
+    showLoading('ثبت و ارسال اعلان...');
+    try{
+      // ذخیره مغایرت در لاگ
+      var logData=log.data||{};
+      logData.discrepancy=text;
+      await saveLogToDB({id:logId,user_id:log.user_id,date:log.date,status:log.status,data:logData});
+      await recordAudit('update','daily_logs',logId,{discrepancy:text});
+      // ارسال اعلان به کاربر
+      var managerName=currentUser.profile.first_name+' '+currentUser.profile.last_name;
+      var dateDisplay=log.date+' ('+dayName(log.date)+')';
+      await sendNotificationDB({
+        sender_id:currentUser.id,
+        recipient_id:log.user_id,
+        title:'⚠️ مغایرت کارکرد — '+dateDisplay,
+        body:'مدیر سامانه ('+managerName+') مغایرتی برای کارکرد شما در تاریخ '+dateDisplay+' ثبت کرده است.\n\nوضعیت: '+(STATUS_LABEL[log.status]||log.status)+'\nمغایرت: '+text+'\n\nلطفاً کارکرد خود را بررسی و اصلاح کنید.',
+        priority:'normal',
+        related_type:'log_discrepancy',
+        related_id:logId
+      });
+      showAlert('مغایرت ثبت شد و به کاربر اطلاع داده شد.','success');
+      overlay.remove();
+      renderRecords(); // به‌روزرسانی جدول
+    }catch(e){showAlert('خطا: '+e.message,'error');}
+    hideLoading();
+  };
+}
+// تابع کمکی برای دکمه‌های سریع در پنجره اطلاع مغایرت
+function setQuickDiscText(text){
+  var ta=$('quick_disc_text');
+  if(!ta)return;
+  if(!ta.value.trim()){ta.value=text;}
+  else{ta.value=ta.value.trim()+' | '+text;}
+  ta.focus();
 }
 // تعویض حالت نمایش: جدول زنده (با ویرایش) یا گزارش رسمی
 function onRepModeChange(){
@@ -6272,7 +6350,21 @@ async function generateReport(){
     }
     
     if(!h)h='<p>اظهاری در این بازه یافت نشد.</p>';
-    else h='<div style="background:var(--c-primary-light);padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:13px"><b>📊 گزارش کارکرد</b> — دوره: '+esc(period)+' | '+personsWithLogs+' نفر | '+(includeGuests?'شامل مهمان‌ها':'بدون مهمان‌ها')+' | '+(repMode==='percategory'?'حالت دسته‌بندی':'حالت نفر به نفر')+'</div>'+h;
+    else{
+      // ─── بخش خلاصه مغایرت‌ها ───
+      var discHtml='';
+      var discLogs=all.filter(function(l){return l.data&&l.data.discrepancy&&l.data.discrepancy.trim();});
+      if(discLogs.length){
+        discHtml='<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:10px;padding:14px;margin-bottom:16px">'+
+          '<h3 style="margin:0 0 8px;color:#856404">⚠️ مغایرت‌های ثبت‌شده در این دوره ('+discLogs.length+' مورد)</h3>'+
+          '<table style="margin:0;background:transparent"><thead><tr><th style="width:15%">پرسنل</th><th style="width:12%">تاریخ</th><th style="width:12%">وضعیت</th><th style="width:61%">مغایرت</th></tr></thead><tbody>';
+        discLogs.forEach(function(l){
+          discHtml+='<tr><td>'+esc(getPersonName(l.user_id))+'</td><td>'+esc(l.date)+'</td><td>'+statusBadge(l.status)+'</td><td style="color:#856404;font-weight:600">'+esc(l.data.discrepancy)+'</td></tr>';
+        });
+        discHtml+='</tbody></table></div>';
+      }
+      h='<div style="background:var(--c-primary-light);padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:13px"><b>📊 گزارش کارکرد</b> — دوره: '+esc(period)+' | '+personsWithLogs+' نفر | '+(includeGuests?'شامل مهمان‌ها':'بدون مهمان‌ها')+' | '+(repMode==='percategory'?'حالت دسته‌بندی':'حالت نفر به نفر')+'</div>'+discHtml+h;
+    }
     $('report_area').innerHTML=h;
     
     // ─── اطلاع به کاربران ───
