@@ -1567,7 +1567,7 @@ var STATUS_LABEL={normal:'عادی',absence:'عدم حضور',overtime:'اضاف
 var ABS_LABEL={hourly_leave:'مرخصی ساعتی',daily_leave:'مرخصی روزانه','1day_mission':'مأموریت یک‌روزه',out_province_daily:'مأموریت خارج از استان (روزانه)',out_province_hourly:'مأموریت خارج از استان (ساعتی)',hourly_mission:'مأموریت ساعتی',other_absence:'سایر علل عدم حضور'};
 var FULL_DAY=['daily_leave','1day_mission','out_province_daily','other_absence'];
 var HOURLY=['hourly_leave','hourly_mission','out_province_hourly'];
-var LEAVE_STATUS={pending:'در انتظار ادمین',coordinator_pending:'در انتظار هماهنگ‌کننده',manager_pending:'تأیید اولیه شده',approved:'تأیید نهایی',partial:'جزئی',rejected:'ردشده',canceled:'لغوشده'};
+var LEAVE_STATUS={pending:'در انتظار مدیر',coordinator_pending:'در انتظار یادداشت هماهنگ‌کننده',manager_pending:'یادداشت‌شده — در انتظار مدیر',approved:'تأییدشده',partial:'جزئی',rejected:'ردشده',canceled:'لغوشده'};
 var ROLE_LABEL={user:'کاربر',admin:'مدیر',super_admin:'سوپرادمین',guest:'مهمان',coordinator:'هماهنگ‌کننده'};
 // بررسی آیا کاربر فعلی نقش هماهنگ‌کننده دارد (کاربر با دسترسی‌های هماهنگ‌کننده)
 function isCoordinatorRole(){
@@ -4088,7 +4088,20 @@ async function editLog(id){
     toggleLogFields();
     // هدایت به بخش خوداظهاری برای ویرایش (کاربر ممکن است از بخش سوابق آمده باشد)
     showSection('daily_log');
-    setTimeout(function(){var sec=$('section-daily_log');if(sec)sec.scrollIntoView({behavior:'smooth'});},100);
+    // اسکرول به بخش مغایرت (جایی که دکمه‌های سریع هستند)
+    setTimeout(function(){
+      var dg=$('log_discrepancy_group');
+      if(dg){
+        dg.scrollIntoView({behavior:'smooth',block:'center'});
+        // هایلایت موقت برای جلب توجه
+        dg.style.transition='background .3s';
+        dg.style.background='var(--c-warning-light,#fef3c7)';
+        setTimeout(function(){dg.style.background='';},2000);
+      }else{
+        var sec=$('section-daily_log');
+        if(sec)sec.scrollIntoView({behavior:'smooth'});
+      }
+    },200);
   }catch(e){showAlert('خطا: '+e.message);}
 }
 async function deleteLog(id){
@@ -4751,21 +4764,21 @@ async function renderCoordinatorApprovals(){
     var decided=leaves.filter(function(l){return l.status!=='coordinator_pending';});
     var html='';
     if(pending.length){
-      html+='<h3>در انتظار تأیید اولیه شما ('+pending.length+')</h3>';
+      html+='<h3>در انتظار یادداشت شما ('+pending.length+')</h3>';
+      html+='<p style="font-size:12px;color:var(--c-text-muted);margin-bottom:12px">📌 نقش شما: بررسی و یادداشت‌گذاری برای اطلاع مدیر. تأیید/رد نهایی فقط توسط مدیر انجام می‌شود.</p>';
       pending.forEach(function(l){
         html+='<div class="card" style="border-right:4px solid var(--warning);margin-bottom:10px">'+
           '<h4 style="margin:0 0 8px">'+esc(getPersonName(l.user_id))+' — '+leavePeriod(l)+'</h4>'+
           '<div style="font-size:13px;margin-bottom:8px">نوع: '+(l.type==='daily'?'روزانه':'ساعتی')+(l.reason?'<br>علت: '+esc(l.reason):'')+'</div>'+
-          '<div class="form-group"><label>یادداشت شما (الزامی):</label><textarea id="coord_note_'+l.id+'"></textarea></div>'+
-          '<button class="btn btn-success btn-sm" onclick="coordinatorApprove(\''+l.id+'\')">تأیید اولیه (ارسال به ادمین)</button> '+
-          '<button class="btn btn-danger btn-sm" onclick="coordinatorReject(\''+l.id+'\')">رد</button>'+
+          '<div class="form-group"><label>یادداشت شما (الزامی قبل از تصمیم مدیر):</label><textarea id="coord_note_'+l.id+'" placeholder="نظر، توضیح یا توصیه شما برای مدیر..."></textarea></div>'+
+          '<button class="btn btn-info btn-sm" onclick="coordinatorAddNote(\''+l.id+'\')">📝 ثبت یادداشت و ارسال به مدیر</button>'+
         '</div>';
       });
     }else{
-      html+='<p>درخواستی در انتظار تأیید اولیه شما نیست.</p>';
+      html+='<p>درخواستی در انتظار یادداشت شما نیست.</p>';
     }
     if(decided.length){
-      html+='<hr><h3>تصمیم‌های قبلی شما</h3><table><tr><th>پرسنل</th><th>بازه</th><th>وضعیت</th><th>یادداشت شما</th></tr>';
+      html+='<hr><h3>یادداشت‌های قبلی شما</h3><table><tr><th>پرسنل</th><th>بازه</th><th>وضعیت</th><th>یادداشت شما</th></tr>';
       decided.forEach(function(l){
         if(l.coordinator_note||l.coordinator_decided_at){
           html+='<tr><td>'+esc(getPersonName(l.user_id))+'</td><td>'+esc(leavePeriod(l))+'</td><td>'+statusBadge(l.status)+'</td><td>'+esc(l.coordinator_note||'-')+'</td></tr>';
@@ -4776,31 +4789,39 @@ async function renderCoordinatorApprovals(){
     c.innerHTML=html;
   }catch(e){c.innerHTML='<p>خطا: '+esc(e.message)+'</p>';}
 }
-async function coordinatorApprove(id){
+async function coordinatorAddNote(id){
   var note=val('coord_note_'+id);
-  if(!note){showAlert('یادداشت برای تأیید اولیه الزامی است.');return;}
-  showLoading('ارسال به ادمین...');
+  if(!note){showAlert('یادداشت الزامی است.','error');return;}
+  showLoading('ارسال یادداشت به مدیر...');
   try{
     await saveLeaveToDB({id:id,status:'manager_pending',coordinator_note:note,coordinator_decided_at:new Date().toISOString()},true);
+    // ارسال اعلان به مدیر
+    var leave=await loadLeaves();
+    var lv=leave.filter(function(l){return l.id===id;})[0];
+    if(lv){
+      var admins=cachedPersons.filter(function(p){return p.role==='admin'||p.role==='super_admin';});
+      for(var i=0;i<admins.length;i++){
+        if(admins[i].id===currentUser.id)continue;
+        try{
+          await sendNotificationDB({
+            sender_id:currentUser.id,
+            recipient_id:admins[i].id,
+            title:'📝 یادداشت هماهنگ‌کننده برای مرخصی',
+            body:'هماهنگ‌کننده ('+currentUser.profile.first_name+' '+currentUser.profile.last_name+') یادداشتی برای درخواست مرخصی '+getPersonName(lv.user_id)+' ثبت کرد.\n\nیادداشت: '+note+'\n\nدر انتظار تصمیم شما.',
+            priority:'normal',
+            related_type:'leave',
+            related_id:id
+          });
+        }catch(e){}
+      }
+    }
     await renderCoordinatorApprovals();
     await updateBadges();
-    showAlert('تأیید اولیه ثبت شد. در انتظار تأیید نهایی ادمین.','success');
-  }catch(e){showAlert('خطا: '+e.message);}
+    showAlert('یادداشت ثبت شد و به مدیر ارسال شد.','success');
+  }catch(e){showAlert('خطا: '+e.message,'error');}
   hideLoading();
 }
-async function coordinatorReject(id){
-  var note=val('coord_note_'+id);
-  if(!note){showAlert('یادداشت برای رد الزامی است.');return;}
-  if(!confirm('رد این درخواست؟'))return;
-  showLoading('رد...');
-  try{
-    await saveLeaveToDB({id:id,status:'rejected',coordinator_note:note,coordinator_decided_at:new Date().toISOString()},true);
-    await renderCoordinatorApprovals();
-    await updateBadges();
-    showAlert('درخواست رد شد.','success');
-  }catch(e){showAlert('خطا: '+e.message);}
-  hideLoading();
-}
+// coordinatorApprove و coordinatorReject حذف شدند — هماهنگ‌کننده فقط یادداشت می‌گذارد
 
 /* ═════ Coordinator: مدیریت وظایف زیرمجموعه ═════ */
 async function createTask(){
@@ -5418,6 +5439,7 @@ function editUserDetails(userId){
   $('ed_cancel').onclick=function(){overlay.remove();};
   // ابتدا onclick ذخیره را ست کن (تا حتی اگر خطایی در مقداردهی اولیه رخ دهد، دکمه کار کند)
   $('ed_save').onclick=async function(){
+   try{
     var firstName=val('ed_first_name'),lastName=val('ed_last_name'),pid=toEnglishDigits(val('ed_personnel_id')),email=val('ed_email');
     var newRole=$('ed_role').value;
     var newParent=val('ed_parent');
@@ -5447,71 +5469,76 @@ function editUserDetails(userId){
       if(!confirm('تغییر هماهنگ‌کننده؟\nهماهنگ‌کننده جدید: '+coordName))return;
     }
     showLoading('ذخیره...');
-    try{
-      var updates={first_name:firstName,last_name:lastName,personnel_id:pid,email:email||null};
-      if(roleChanged){
-        if(newRole==='coordinator'){
-          updates.role='user';
-        }else if(newRole==='user'){
-          updates.role='user';
-          updates.can_approve_leaves=false;
-          updates.can_schedule_tasks=false;
-          var subs=cachedPersons.filter(function(s){return s.parent_id===userId;});
-          for(var i=0;i<subs.length;i++){
-            await updateUserProfileDB(subs[i].id,{parent_id:null});
-          }
-        }else{
-          updates.role=newRole;
-          updates.can_approve_leaves=false;
-          updates.can_schedule_tasks=false;
+    var updates={first_name:firstName,last_name:lastName,personnel_id:pid,email:email||null};
+    if(roleChanged){
+      if(newRole==='coordinator'){
+        updates.role='user';
+      }else if(newRole==='user'){
+        updates.role='user';
+        updates.can_approve_leaves=false;
+        updates.can_schedule_tasks=false;
+        var subs=cachedPersons.filter(function(s){return s.parent_id===userId;});
+        for(var i=0;i<subs.length;i++){
+          await updateUserProfileDB(subs[i].id,{parent_id:null});
         }
+      }else{
+        updates.role=newRole;
+        updates.can_approve_leaves=false;
+        updates.can_schedule_tasks=false;
       }
-      if(!roleChanged||newRole==='coordinator'){
-        updates.can_approve_leaves=$('ed_can_approve_leaves')?$('ed_can_approve_leaves').checked:false;
-        updates.can_schedule_tasks=$('ed_can_schedule_tasks')?$('ed_can_schedule_tasks').checked:false;
-      }
-      updates.can_create_programs=$('ed_can_create_programs')?$('ed_can_create_programs').checked:false;
-      updates.can_manage_events=$('ed_can_manage_events')?$('ed_can_manage_events').checked:false;
+    }
+    if(!roleChanged||newRole==='coordinator'){
+      updates.can_approve_leaves=$('ed_can_approve_leaves')?$('ed_can_approve_leaves').checked:false;
+      updates.can_schedule_tasks=$('ed_can_schedule_tasks')?$('ed_can_schedule_tasks').checked:false;
+    }
+    updates.can_create_programs=$('ed_can_create_programs')?$('ed_can_create_programs').checked:false;
+    updates.can_manage_events=$('ed_can_manage_events')?$('ed_can_manage_events').checked:false;
+    // can_view_reports فقط اگر ستون در DB وجود داشته باشد (p.can_view_reports تعریف‌شده باشد)
+    if(p.can_view_reports!==undefined){
       updates.can_view_reports=$('ed_can_view_reports')?$('ed_can_view_reports').checked:false;
-      if($('ed_can_log')){
-        updates.can_log=$('ed_can_log').checked;
-      }
-      var newStatus=$('ed_status')?$('ed_status').value:'active';
-      if(newStatus!==(p.status||'active')){
-        updates.status=newStatus;
-      }
-      if(parentChanged){
-        updates.parent_id=newParent||null;
-        if(newParent){
-          var coord=cachedPersons.filter(function(x){return x.id===newParent;})[0];
-          if(coord&&coord.role==='user'&&!coord.can_approve_leaves&&!coord.can_schedule_tasks){
-            await updateUserProfileDB(newParent,{can_approve_leaves:true,can_schedule_tasks:true});
-          }
+    }
+    if($('ed_can_log')&&p.can_log!==undefined){
+      updates.can_log=$('ed_can_log').checked;
+    }
+    var newStatus=$('ed_status')?$('ed_status').value:'active';
+    if(newStatus!==(p.status||'active')){
+      updates.status=newStatus;
+    }
+    if(parentChanged){
+      updates.parent_id=newParent||null;
+      if(newParent){
+        var coord=cachedPersons.filter(function(x){return x.id===newParent;})[0];
+        if(coord&&coord.role==='user'&&!coord.can_approve_leaves&&!coord.can_schedule_tasks){
+          await updateUserProfileDB(newParent,{can_approve_leaves:true,can_schedule_tasks:true});
         }
       }
-      await updateUserProfileDB(userId,updates);
-      await recordAudit('update','profiles',userId,{first_name:firstName,last_name:lastName,personnel_id:pid,role:newRole,parent:newParent||null,perms_updated:true});
-      if(userId===currentUser.id&&roleChanged){
-        currentUser.profile.role=updates.role||newRole;
-        currentUser.profile.can_approve_leaves=updates.can_approve_leaves||false;
-        currentUser.profile.can_schedule_tasks=updates.can_schedule_tasks||false;
-        currentRole=updates.role||newRole;
-        updateUserBox();
-        applyRoleBasedUI();
-      }
-      var msg='اطلاعات کاربر به‌روزرسانی شد.';
-      if(roleChanged)msg+=' نقش: '+roleLabel+'.';
-      if(parentChanged)msg+=' هماهنگ‌کننده به‌روز شد.';
-      if(updates.status)msg+=' وضعیت: '+updates.status+'.';
-      if(updates.can_create_programs!==undefined||updates.can_manage_events!==undefined||updates.can_view_reports!==undefined)msg+=' دسترسی‌ها به‌روز شد.';
-      showAlert(msg,'success');
-      overlay.remove();
-      await loadAllPersons();
-      await loadSubordinates();
-      await renderUsers();
+    }
+    await updateUserProfileDB(userId,updates);
+    await recordAudit('update','profiles',userId,{first_name:firstName,last_name:lastName,personnel_id:pid,role:newRole,parent:newParent||null,perms_updated:true});
+    if(userId===currentUser.id&&roleChanged){
+      currentUser.profile.role=updates.role||newRole;
+      currentUser.profile.can_approve_leaves=updates.can_approve_leaves||false;
+      currentUser.profile.can_schedule_tasks=updates.can_schedule_tasks||false;
+      currentRole=updates.role||newRole;
+      updateUserBox();
       applyRoleBasedUI();
-    }catch(e){showAlert('خطا: '+e.message,'error');}
-    hideLoading();
+    }
+    var msg='اطلاعات کاربر به‌روزرسانی شد.';
+    if(roleChanged)msg+=' نقش: '+roleLabel+'.';
+    if(parentChanged)msg+=' هماهنگ‌کننده به‌روز شد.';
+    if(updates.status)msg+=' وضعیت: '+updates.status+'.';
+    if(updates.can_create_programs!==undefined||updates.can_manage_events!==undefined)msg+=' دسترسی‌ها به‌روز شد.';
+    showAlert(msg,'success');
+    overlay.remove();
+    await loadAllPersons();
+    await loadSubordinates();
+    await renderUsers();
+    applyRoleBasedUI();
+   }catch(e){
+    console.error('editUser save error:',e);
+    showAlert('خطا در ذخیره: '+e.message,'error');
+   }
+   hideLoading();
   };
   // مقداردهی dropdown هماهنگ‌کننده (در try-catch تا از کار انداختن دکمه ذخیره جلوگیری کند)
   try{renderEdCoordinatorDropdown(p);}catch(e){console.warn('renderEdCoordinatorDropdown:',e);}
