@@ -735,46 +735,42 @@ button,.btn{-webkit-touch-callout:none}
   <nav class="sidebar-nav" id="main_nav">
     <!-- گروه ۱: میزکار -->
     <div class="nav-group">
-      <div class="nav-group-title">میزکار</div>
+      <div class="nav-group-title">🏠 میزکار</div>
       <button class="nav-item active" data-target="dashboard"><span class="ico">🏠</span><span class="lbl">داشبورد</span></button>
       <button class="nav-item" data-target="announcements"><span class="ico">📌</span><span class="lbl">تابلوی اعلانات</span><span class="nav-badge hidden" id="announcements_badge">۰</span></button>
-      <button class="nav-item" data-target="calendar"><span class="ico">📅</span><span class="lbl">تقویم ماهانه</span></button>
     </div>
-    <!-- گروه ۲: کارکرد فردی (مخفی برای سوپرادمین) -->
+    <!-- گروه ۲: کارکرد و حضور و غیاب (مخفی برای سوپرادمین) -->
     <div class="nav-group no-super-admin">
-      <div class="nav-group-title">کارکرد فردی</div>
+      <div class="nav-group-title">📝 کارکرد و حضور و غیاب</div>
       <button class="nav-item" data-target="daily_log"><span class="ico">📝</span><span class="lbl">خوداظهاری و مرخصی</span></button>
+      <button class="nav-item" data-target="records"><span class="ico">📊</span><span class="lbl">گزارش و سوابق کارکرد</span></button>
+      <button class="nav-item" data-target="calendar"><span class="ico">📅</span><span class="lbl">تقویم ماهانه</span></button>
     </div>
     <!-- گروه ۳: وظایف و برنامه‌ها -->
     <div class="nav-group">
-      <div class="nav-group-title">وظایف و برنامه‌ها</div>
+      <div class="nav-group-title">✅ وظایف و برنامه‌ها</div>
       <button class="nav-item" data-target="my_tasks"><span class="ico">✅</span><span class="lbl">وظایف و فعالیت‌های من</span><span class="nav-badge hidden" id="tasks_badge">۰</span></button>
       <button class="nav-item" data-target="programs"><span class="ico">🗂</span><span class="lbl">مدیریت برنامه‌ها</span><span class="nav-badge hidden" id="programs_badge">۰</span></button>
+      <button class="nav-item" data-target="program_reports"><span class="ico">📋</span><span class="lbl">گزارش و تاریخچه برنامه‌ها</span></button>
     </div>
-    <!-- گروه ۴: هماهنگی و تأیید (هماهنگ‌کننده + مدیر) -->
+    <!-- گروه ۴: تأیید و هماهنگی (هماهنگ‌کننده + مدیر) -->
     <div class="nav-group coordinator-admin-only">
-      <div class="nav-group-title">هماهنگی و تأیید</div>
+      <div class="nav-group-title">🔧 تأیید و هماهنگی</div>
       <button class="nav-item" data-target="approvals"><span class="ico">✅</span><span class="lbl">تأیید درخواست‌ها</span><span class="nav-badge hidden" id="admin_approvals_badge">۰</span></button>
       <button class="nav-item admin-only hidden" data-target="send_notification"><span class="ico">📢</span><span class="lbl">ارسال پیام</span></button>
     </div>
-    <!-- گروه ۵: گزارش‌ها -->
-    <div class="nav-group">
-      <div class="nav-group-title">گزارش‌ها</div>
-      <button class="nav-item" data-target="records"><span class="ico">📊</span><span class="lbl">گزارش و سوابق کارکرد</span></button>
-      <button class="nav-item" data-target="program_reports"><span class="ico">📋</span><span class="lbl">گزارش و تاریخچه برنامه‌ها</span></button>
-      <button class="nav-item admin-only hidden" data-target="categorized_reports"><span class="ico">📈</span><span class="lbl">گزارش تحلیلی امتیازات</span></button>
-    </div>
-    <!-- گروه ۶: مدیریت سامانه (فقط مدیر/سوپرادمین) -->
+    <!-- گروه ۵: مدیریت سامانه (فقط مدیر/سوپرادمین) -->
     <div class="nav-group admin-only">
-      <div class="nav-group-title">مدیریت سامانه</div>
-      <button class="nav-item events-access hidden" data-target="events"><span class="ico">📅</span><span class="lbl">رویدادها و تعطیلات</span></button>
+      <div class="nav-group-title">⚙️ مدیریت سامانه</div>
       <button class="nav-item" data-target="users"><span class="ico">👥</span><span class="lbl">مدیریت کاربران و نقش‌ها</span></button>
+      <button class="nav-item events-access hidden" data-target="events"><span class="ico">📅</span><span class="lbl">رویدادها و تعطیلات</span></button>
       <button class="nav-item admin-only hidden" data-target="scoring_config"><span class="ico">⭐</span><span class="lbl">تنظیمات امتیازدهی</span></button>
       <button class="nav-item admin-only hidden" data-target="audit_log"><span class="ico">📜</span><span class="lbl">تاریخچه تغییرات</span></button>
+      <button class="nav-item admin-only hidden" data-target="categorized_reports"><span class="ico">📈</span><span class="lbl">گزارش تحلیلی امتیازات</span></button>
     </div>
-    <!-- گروه ۷: شخصی -->
+    <!-- گروه ۶: شخصی -->
     <div class="nav-group">
-      <div class="nav-group-title">شخصی</div>
+      <div class="nav-group-title">👤 شخصی</div>
       <button class="nav-item no-super-admin" data-target="delegations"><span class="ico">🔁</span><span class="lbl">تفویض‌ها</span><span class="nav-badge hidden" id="delegations_badge">۰</span></button>
       <button class="nav-item" data-target="reminders"><span class="ico">🔔</span><span class="lbl">یادآورها</span><span class="nav-badge hidden" id="reminders_badge">۰</span></button>
       <button class="nav-item" data-target="settings"><span class="ico">⚙</span><span class="lbl">تنظیمات</span></button>
@@ -5413,17 +5409,14 @@ function editUserDetails(userId){
       '</select></div>'+
     '</div>'+
     '<div style="display:flex;gap:8px;margin-top:16px">'+
-      '<button class="btn btn-success" id="ed_save">💾 ذخیره تغییرات</button>'+
-      '<button class="btn btn-secondary" id="ed_cancel">انصراف</button>'+
+      '<button type="button" class="btn btn-success" id="ed_save">💾 ذخیره تغییرات</button>'+
+      '<button type="button" class="btn btn-secondary" id="ed_cancel">انصراف</button>'+
     '</div>'+
   '</div>';
   document.body.appendChild(overlay);
   overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove();});
   $('ed_cancel').onclick=function(){overlay.remove();};
-  // مقداردهی dropdown هماهنگ‌کننده
-  renderEdCoordinatorDropdown(p);
-  // نمایش/مخفی کردن فیلد هماهنگ‌کننده بر اساس نقش
-  onEdRoleChange();
+  // ابتدا onclick ذخیره را ست کن (تا حتی اگر خطایی در مقداردهی اولیه رخ دهد، دکمه کار کند)
   $('ed_save').onclick=async function(){
     var firstName=val('ed_first_name'),lastName=val('ed_last_name'),pid=toEnglishDigits(val('ed_personnel_id')),email=val('ed_email');
     var newRole=$('ed_role').value;
@@ -5455,18 +5448,14 @@ function editUserDetails(userId){
     }
     showLoading('ذخیره...');
     try{
-      // ─── ذخیره اطلاعات پایه ───
       var updates={first_name:firstName,last_name:lastName,personnel_id:pid,email:email||null};
-      // ─── ذخیره نقش اگر تغییر کرده ───
       if(roleChanged){
         if(newRole==='coordinator'){
           updates.role='user';
-          // دسترسی‌ها از چک‌باکس‌ها خوانده می‌شوند (در ادامه)
         }else if(newRole==='user'){
           updates.role='user';
           updates.can_approve_leaves=false;
           updates.can_schedule_tasks=false;
-          // زیرمجموعه‌ها را بدون هماهنگ‌کننده کن
           var subs=cachedPersons.filter(function(s){return s.parent_id===userId;});
           for(var i=0;i<subs.length;i++){
             await updateUserProfileDB(subs[i].id,{parent_id:null});
@@ -5477,9 +5466,6 @@ function editUserDetails(userId){
           updates.can_schedule_tasks=false;
         }
       }
-      // ─── دسترسی‌ها (از چک‌باکس‌ها) ───
-      // اگر نقش به coordinator تغییر کرده، can_approve_leaves/can_schedule_tasks از چک‌باکس (که auto-check شده)
-      // اگر نقش به user تغییر کرده، قبلاً false ست شده — override نشود
       if(!roleChanged||newRole==='coordinator'){
         updates.can_approve_leaves=$('ed_can_approve_leaves')?$('ed_can_approve_leaves').checked:false;
         updates.can_schedule_tasks=$('ed_can_schedule_tasks')?$('ed_can_schedule_tasks').checked:false;
@@ -5490,15 +5476,12 @@ function editUserDetails(userId){
       if($('ed_can_log')){
         updates.can_log=$('ed_can_log').checked;
       }
-      // ─── وضعیت ───
       var newStatus=$('ed_status')?$('ed_status').value:'active';
       if(newStatus!==(p.status||'active')){
         updates.status=newStatus;
       }
-      // ─── ذخیره هماهنگ‌کننده اگر تغییر کرده ───
       if(parentChanged){
         updates.parent_id=newParent||null;
-        // اگر هماهنگ‌کننده جدید تعریف شد و خودش هماهنگ‌کننده نیست، تبدیلش کن
         if(newParent){
           var coord=cachedPersons.filter(function(x){return x.id===newParent;})[0];
           if(coord&&coord.role==='user'&&!coord.can_approve_leaves&&!coord.can_schedule_tasks){
@@ -5508,7 +5491,6 @@ function editUserDetails(userId){
       }
       await updateUserProfileDB(userId,updates);
       await recordAudit('update','profiles',userId,{first_name:firstName,last_name:lastName,personnel_id:pid,role:newRole,parent:newParent||null,perms_updated:true});
-      // اگر نقش خودش تغییر کرد
       if(userId===currentUser.id&&roleChanged){
         currentUser.profile.role=updates.role||newRole;
         currentUser.profile.can_approve_leaves=updates.can_approve_leaves||false;
@@ -5531,6 +5513,9 @@ function editUserDetails(userId){
     }catch(e){showAlert('خطا: '+e.message,'error');}
     hideLoading();
   };
+  // مقداردهی dropdown هماهنگ‌کننده (در try-catch تا از کار انداختن دکمه ذخیره جلوگیری کند)
+  try{renderEdCoordinatorDropdown(p);}catch(e){console.warn('renderEdCoordinatorDropdown:',e);}
+  try{onEdRoleChange();}catch(e){console.warn('onEdRoleChange:',e);}
 }
 
 // نمایش/مخفی کردن فیلد هماهنگ‌کننده + auto-check دسترسی‌ها بر اساس نقش
