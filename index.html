@@ -3610,16 +3610,18 @@ function createEventAction(eventId,dateStr){
     '<hr style="margin:12px 0;border:0;border-top:1px solid var(--c-border)">'+
     '<h4 style="margin:0 0 8px;font-size:14px">📋 فعالیت‌های زیرمجموعه</h4>'+
     '<div id="act_subtasks" style="margin-bottom:8px"></div>'+
-    '<button class="btn btn-sm btn-secondary" id="btn_add_subtask">➕ افزودن فعالیت</button>'+
+    '<button type="button" class="btn btn-sm btn-secondary" id="btn_add_subtask">➕ افزودن فعالیت</button>'+
     '<div style="display:flex;gap:8px;margin-top:14px">'+
-      '<button class="btn btn-success" id="btn_save_event_action">ثبت اقدام</button>'+
-      '<button class="btn btn-secondary" id="btn_cancel_event_action">انصراف</button>'+
+      '<button type="button" class="btn btn-success" id="btn_save_event_action">ثبت اقدام</button>'+
+      '<button type="button" class="btn btn-secondary" id="btn_cancel_event_action">انصراف</button>'+
     '</div>'+
   '</div>';
   document.body.appendChild(overlay);
   // اتصال رویدادها به‌جای onclick inline
   $('btn_add_subtask').onclick=function(){addSubTask();};
-  $('btn_save_event_action').onclick=function(){saveEventAction(eventId,dateStr);};
+  $('btn_save_event_action').onclick=async function(){
+    try{await saveEventAction(eventId,dateStr);}catch(e){hideLoading();showAlert('خطا: '+e.message,'error');}
+  };
   $('btn_cancel_event_action').onclick=function(){overlay.remove();};
   overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove();});
   act_subTaskList=[];
@@ -5966,7 +5968,14 @@ async function renderRecords(){
       if(search&&(JSON.stringify(l.data)+describeLog(l)).toLowerCase().indexOf(search)===-1)return false;
       return true;
     });
-    if(!list.length){c.innerHTML='<p>رکوردی یافت نشد.</p>';return;}
+    if(!list.length){
+      var emptyHtml='<p>رکوردی یافت نشد.</p>';
+      // دکمه ثبت مغایرت برای روز بدون اظهار (فقط مدیر)
+      if(isAdmin){
+        emptyHtml+='<button class="btn btn-warning" onclick="openMissingDayDiscrepancy()" style="margin-top:10px">⚠️ ثبت مغایرت برای روز ثبت‌نشده</button>';
+      }
+      c.innerHTML=emptyHtml;return;
+    }
     // تابع کمکی برای بررسی اجازه ویرایش/حذف یک لاگ
     function canEditLog(userId){
       if(isAdmin)return true;
@@ -5990,12 +5999,107 @@ async function renderRecords(){
       var discCell=existingDisc?'<span style="color:#856404;font-weight:600">'+esc(existingDisc)+'</span>':'-';
       h+='<tr><td>'+personName+'</td><td>'+esc(l.date)+'</td><td>'+statusBadge(l.status)+'</td><td>'+esc(describeLog(l))+'</td><td>'+discCell+'</td><td style="white-space:nowrap">'+actions+'</td></tr>';
     });
-    c.innerHTML=h+'</table>';
+    // دکمه ثبت مغایرت برای روز ثبت‌نشده (فقط مدیر، در پایین جدول)
+    if(isAdmin){
+      h+='</table><div style="margin-top:12px"><button class="btn btn-warning" onclick="openMissingDayDiscrepancy()">⚠️ ثبت مغایرت برای روز ثبت‌نشده</button></div>';
+    }else{
+      h+='</table>';
+    }
+    c.innerHTML=h;
   }catch(e){c.innerHTML='<p>خطا: '+esc(e.message)+'</p>';}
+}
+// ثبت مغایرت برای روزی که کاربر اصلاً اظهاری ثبت نکرده
+function openMissingDayDiscrepancy(){
+  var old=$('missing_disc_overlay');
+  if(old)old.remove();
+  // ساخت dropdown کاربران
+  var userOpts='<option value="">— انتخاب کاربر —</option>';
+  cachedPersons.forEach(function(p){
+    if(p.id===currentUser.id)return;
+    if(p.role==='super_admin')return;
+    var tag='';
+    if(p.role==='admin')tag=' [مدیر]';
+    else if(p.role==='guest')tag=' [مهمان]';
+    else if(p.can_approve_leaves||p.can_schedule_tasks)tag=' [هماهنگ‌کننده]';
+    userOpts+='<option value="'+esc(p.id)+'">'+esc(p.first_name+' '+p.last_name+' - '+p.personnel_id)+tag+'</option>';
+  });
+  var overlay=document.createElement('div');
+  overlay.id='missing_disc_overlay';
+  overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML='<div style="background:var(--c-modal-bg,#fff);border-radius:14px;padding:20px;max-width:460px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.3);color:var(--c-text)">'+
+    '<h3 style="margin:0 0 8px;color:var(--c-warning,#b45309)">⚠️ ثبت مغایرت برای روز ثبت‌نشده</h3>'+
+    '<p style="font-size:12px;color:var(--c-text-muted);margin:0 0 14px">برای روزی که کاربر اظهاری ثبت نکرده، مغایرت ثبت کنید. رکورد ساخته می‌شود و به کاربر اعلان می‌رود.</p>'+
+    '<div class="form-row">'+
+      '<div class="form-group"><label>کاربر:</label><select id="md_user">'+userOpts+'</select></div>'+
+      '<div class="form-group"><label>تاریخ (شمسی):</label><input type="text" id="md_date" class="date-picker" placeholder="انتخاب تاریخ" readonly></div>'+
+    '</div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">'+
+      '<small style="width:100%;color:var(--c-text-muted);font-size:11px">برچسب سریع:</small>'+
+      '<button type="button" class="btn btn-sm btn-warning" onclick="setMdText(\'عدم حضور ساعتی داشته — ثبت نشده\')">⏰ عدم حضور ساعتی</button>'+
+      '<button type="button" class="btn btn-sm btn-warning" onclick="setMdText(\'عدم حضور روزانه داشته — ثبت نشده\')">📅 عدم حضور روزانه</button>'+
+      '<button type="button" class="btn btn-sm btn-warning" onclick="setMdText(\'ساعت ورود نزده\')">🟢 ساعت ورود نزده</button>'+
+      '<button type="button" class="btn btn-sm btn-warning" onclick="setMdText(\'ساعت خروج نزده\')">🔴 ساعت خروج نزده</button>'+
+      '<button type="button" class="btn btn-sm btn-warning" onclick="setMdText(\'کامل روز عدم حضور — ثبت نشده\')">📋 کامل روز غیبت</button>'+
+    '</div>'+
+    '<div class="form-group"><label>متن مغایرت:</label><textarea id="md_text" placeholder="توضیح مغایرت..."></textarea></div>'+
+    '<div style="display:flex;gap:8px">'+
+      '<button type="button" class="btn btn-success" id="md_save">📤 ثبت و اطلاع به کاربر</button>'+
+      '<button type="button" class="btn btn-secondary" id="md_cancel">انصراف</button>'+
+    '</div>'+
+  '</div>';
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove();});
+  $('md_cancel').onclick=function(){overlay.remove();};
+  initDatepickers();
+  $('md_save').onclick=async function(){
+    var userId=$('md_user').value,dateStr=$('md_date').value,text=$('md_text').value.trim();
+    if(!userId){showAlert('کاربر را انتخاب کنید.','error');return;}
+    if(!isValidJalaliDate(dateStr)){showAlert('تاریخ نامعتبر است.','error');return;}
+    if(!text){showAlert('متن مغایرت خالی است.','error');return;}
+    showLoading('ثبت مغایرت...');
+    try{
+      // بررسی: آیا برای این روز رکوردی وجود دارد؟
+      var existing=await loadLogs(userId,dateStr,dateStr);
+      if(existing&&existing.length>0){
+        // رکورد موجود است → فقط مغایرت را اضافه کن
+        var log=existing[0];
+        var logData=log.data||{};
+        logData.discrepancy=text;
+        await saveLogToDB({id:log.id,user_id:log.user_id,date:log.date,status:log.status,data:logData});
+        await recordAudit('update','daily_logs',log.id,{discrepancy:text,reason:'missing_day_discrepancy'});
+      }else{
+        // رکورد وجود ندارد → رکورد جدید با وضعیت normal و مغایرت بساز
+        var newLog={id:'tmp-'+Date.now(),user_id:userId,date:normJ(dateStr),status:'normal',data:{discrepancy:text,fields:{}},submitted_by:currentUser.id,submitted_by_name:currentUser.profile.first_name+' '+currentUser.profile.last_name};
+        var saved=await saveLogToDB(newLog);
+        await recordAudit('create','daily_logs',saved?saved.id:'unknown',{user_id:userId,date:dateStr,discrepancy:text,reason:'missing_day_discrepancy'});
+      }
+      // ارسال اعلان به کاربر
+      var managerName=currentUser.profile.first_name+' '+currentUser.profile.last_name;
+      var dateDisplay=dateStr+' ('+dayName(dateStr)+')';
+      await sendNotificationDB({
+        sender_id:currentUser.id,
+        recipient_id:userId,
+        title:'⚠️ مغایرت کارکرد — '+dateDisplay,
+        body:'مدیر سامانه ('+managerName+') مغایرتی برای کارکرد شما در تاریخ '+dateDisplay+' ثبت کرده است.\n\nمغایرت: '+text+'\n\nلطفاً کارکرد خود را بررسی و در صورت نیاز اصلاح کنید.',
+        priority:'normal',
+        related_type:'log_discrepancy'
+      });
+      showAlert('مغایرت ثبت شد و به کاربر اطلاع داده شد.','success');
+      overlay.remove();
+      renderRecords();
+    }catch(e){showAlert('خطا: '+e.message,'error');}
+    hideLoading();
+  };
+}
+function setMdText(text){
+  var ta=$('md_text');
+  if(!ta)return;
+  if(!ta.value.trim()){ta.value=text;}
+  else{ta.value=ta.value.trim()+' | '+text;}
+  ta.focus();
 }
 // اطلاع سریع مغایرت از جدول گزارش (بدون رفتن به فرم ویرایش)
 async function quickDiscrepancyNotify(logId){
-  // یافتن لاگ
   var all=await loadLogs(null,null,null);
   var log=all.filter(function(l){return l.id===logId;})[0];
   if(!log){showAlert('رکورد یافت نشد.','error');return;}
