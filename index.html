@@ -360,8 +360,35 @@ body{background:var(--c-bg);color:var(--c-text);font-size:14px;line-height:1.6;f
 .sidebar.collapsed .brand-text{display:none}
 
 .sidebar-nav{flex:1;padding:8px 0;overflow-y:auto}
-.nav-group{margin-bottom:0}
-/* تیتر گروه‌ها حذف شدند — منوی فلت سبک اسنپ */
+.nav-section{margin-bottom:0}
+.nav-section+.nav-section{margin-top:4px}
+/* تیتر گروه‌ها */
+.nav-group-title{
+  font-size:10px;font-weight:700;color:var(--c-sidebar-text);opacity:.55;
+  padding:12px 20px 4px;letter-spacing:.5px;text-transform:uppercase;
+  user-select:none;white-space:nowrap;display:flex;align-items:center;gap:6px;
+}
+.toggle-title{cursor:pointer;transition:opacity .2s}
+.toggle-title:hover{opacity:.85}
+.toggle-title .nav-chevron{font-size:12px;margin-right:auto;opacity:.6;transition:transform .2s}
+.nav-section.collapsed .toggle-title .nav-chevron{transform:rotate(-90deg)}
+.nav-section.collapsed .nav-section-body{display:none}
+/* گروه اصلی همیشه باز */
+.nav-section[data-open="1"] .toggle-title{cursor:default}
+.nav-section[data-open="1"] .nav-chevron{display:none}
+.nav-section[data-open="1"].collapsed .nav-section-body{display:block}
+/* جداکننده نازک بین گروه‌ها */
+.nav-section+.nav-section::before{
+  content:'';display:block;height:1px;background:var(--c-sidebar-border);
+  margin:6px 14px;opacity:.4;
+}
+/* ناحیه مدیریتی متمایز */
+.nav-section.admin-zone{
+  background:rgba(231,76,60,.08);border-radius:10px;margin:8px;padding-bottom:6px;
+}
+.nav-section.admin-zone .nav-group-title{color:#e74c3c;opacity:.8}
+.nav-section.admin-zone+.nav-section::before,.nav-section+.nav-section.admin-zone::before{display:none}
+.sidebar.collapsed .nav-group-title{display:none}
 
 .sidebar .nav-item{
   display:flex;align-items:center;gap:12px;padding:13px 20px;
@@ -549,7 +576,9 @@ body.guest-mode .admin-only,body.guest-mode .coordinator-only{display:none!impor
   .sidebar.collapsed{width:min(300px,85vw)!important;transform:translateX(100%)}
   .sidebar.collapsed .brand-text,.sidebar.collapsed .nav-item .lbl{display:inline!important}
   .sidebar.collapsed .nav-item{justify-content:flex-start!important;padding:11px 20px!important}
-  /* تیتر گروه حذف شد — منوی فلت */
+  /* تیتر گروه‌ها در موبایل همیشه visible */
+  .sidebar .nav-group-title{display:flex!important}
+  .sidebar.collapsed .nav-group-title{display:flex!important}
 
   /* اورلری تیره پشت دراور */
   .sidebar-overlay{background:rgba(0,0,0,.5);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
@@ -726,38 +755,62 @@ button,.btn{-webkit-touch-callout:none}
     <span class="brand-text">پیوند</span>
   </div>
   <nav class="sidebar-nav" id="main_nav">
-    <!-- منوی فلت (بدون تیتر گروه) — سبک اسنپ -->
-    <div class="nav-group">
-      <button class="nav-item active" data-target="dashboard"><span class="ico">🏠</span><span class="lbl">داشبورد</span></button>
-      <button class="nav-item" data-target="announcements"><span class="ico">📌</span><span class="lbl">تابلوی اعلانات</span><span class="nav-badge hidden" id="announcements_badge">۰</span></button>
+    <!-- ۱. اصلی — همیشه باز -->
+    <div class="nav-section" data-open="1">
+      <div class="nav-group-title">🏠 اصلی</div>
+      <div class="nav-section-body">
+        <button class="nav-item active" data-target="dashboard"><span class="ico">🏠</span><span class="lbl">داشبورد</span></button>
+        <button class="nav-item" data-target="announcements"><span class="ico">📌</span><span class="lbl">تابلوی اعلانات</span><span class="nav-badge hidden" id="announcements_badge">۰</span></button>
+        <button class="nav-item" data-target="reminders"><span class="ico">🔔</span><span class="lbl">یادآورها</span><span class="nav-badge hidden" id="reminders_badge">۰</span></button>
+      </div>
     </div>
-    <div class="nav-group no-super-admin">
-      <button class="nav-item" data-target="daily_log"><span class="ico">📝</span><span class="lbl">خوداظهاری و مرخصی</span></button>
-      <button class="nav-item" data-target="leave_req"><span class="ico">✈️</span><span class="lbl">درخواست مرخصی</span></button>
-      <button class="nav-item" data-target="records"><span class="ico">📊</span><span class="lbl">گزارش و سوابق کارکرد</span></button>
-      <button class="nav-item" data-target="calendar"><span class="ico">📅</span><span class="lbl">تقویم ماهانه</span></button>
+    <!-- ۲. کارتابل من -->
+    <div class="nav-section no-super-admin">
+      <div class="nav-group-title toggle-title" onclick="toggleNavSection2(this)">📝 کارتابل من <span class="nav-chevron">▾</span></div>
+      <div class="nav-section-body">
+        <button class="nav-item" data-target="daily_log"><span class="ico">📝</span><span class="lbl">خوداظهاری و مرخصی</span></button>
+        <button class="nav-item" data-target="leave_req"><span class="ico">✈️</span><span class="lbl">درخواست مرخصی</span></button>
+        <button class="nav-item" data-target="calendar"><span class="ico">📅</span><span class="lbl">تقویم ماهانه</span></button>
+        <button class="nav-item" data-target="records"><span class="ico">📊</span><span class="lbl">گزارش و سوابق کارکرد</span></button>
+        <button class="nav-item" data-target="delegations"><span class="ico">🔁</span><span class="lbl">تفویض‌ها</span><span class="nav-badge hidden" id="delegations_badge">۰</span></button>
+      </div>
     </div>
-    <div class="nav-group">
-      <button class="nav-item" data-target="my_tasks"><span class="ico">✅</span><span class="lbl">وظایف و فعالیت‌های من</span><span class="nav-badge hidden" id="tasks_badge">۰</span></button>
-      <button class="nav-item" data-target="programs"><span class="ico">🗂</span><span class="lbl">مدیریت برنامه‌ها</span><span class="nav-badge hidden" id="programs_badge">۰</span></button>
-      <button class="nav-item" data-target="program_reports"><span class="ico">📋</span><span class="lbl">گزارش و تاریخچه برنامه‌ها</span></button>
+    <!-- ۳. وظایف و برنامه‌ها -->
+    <div class="nav-section">
+      <div class="nav-group-title toggle-title" onclick="toggleNavSection2(this)">🎯 وظایف و برنامه‌ها <span class="nav-chevron">▾</span></div>
+      <div class="nav-section-body">
+        <button class="nav-item" data-target="my_tasks"><span class="ico">✅</span><span class="lbl">وظایف و فعالیت‌های من</span><span class="nav-badge hidden" id="tasks_badge">۰</span></button>
+        <button class="nav-item" data-target="programs"><span class="ico">🗂</span><span class="lbl">مدیریت برنامه‌ها</span><span class="nav-badge hidden" id="programs_badge">۰</span></button>
+        <button class="nav-item" data-target="program_reports"><span class="ico">📋</span><span class="lbl">گزارش و تاریخچه برنامه‌ها</span></button>
+      </div>
     </div>
-    <div class="nav-group coordinator-admin-only">
-      <button class="nav-item" data-target="approvals"><span class="ico">✅</span><span class="lbl">تأیید درخواست‌ها</span><span class="nav-badge hidden" id="admin_approvals_badge">۰</span></button>
-      <button class="nav-item" data-target="coordinator_tasks"><span class="ico">📋</span><span class="lbl">مدیریت وظایف زیرمجموعه</span></button>
-      <button class="nav-item admin-only hidden" data-target="send_notification"><span class="ico">📢</span><span class="lbl">ارسال پیام</span></button>
+    <!-- ۴. هماهنگی و تأیید -->
+    <div class="nav-section coordinator-admin-only">
+      <div class="nav-group-title toggle-title" onclick="toggleNavSection2(this)">👥 هماهنگی و تأیید <span class="nav-chevron">▾</span></div>
+      <div class="nav-section-body">
+        <button class="nav-item" data-target="approvals"><span class="ico">✅</span><span class="lbl">تأیید درخواست‌ها</span><span class="nav-badge hidden" id="admin_approvals_badge">۰</span></button>
+        <button class="nav-item" data-target="coordinator_tasks"><span class="ico">📋</span><span class="lbl">مدیریت وظایف زیرمجموعه</span></button>
+      </div>
     </div>
-    <div class="nav-group admin-only">
-      <button class="nav-item" data-target="users"><span class="ico">👥</span><span class="lbl">مدیریت کاربران و نقش‌ها</span></button>
-      <button class="nav-item events-access hidden" data-target="events"><span class="ico">📅</span><span class="lbl">رویدادها و تعطیلات</span></button>
-      <button class="nav-item admin-only hidden" data-target="scoring_config"><span class="ico">⭐</span><span class="lbl">تنظیمات امتیازدهی</span></button>
-      <button class="nav-item admin-only hidden" data-target="audit_log"><span class="ico">📜</span><span class="lbl">تاریخچه تغییرات</span></button>
-      <button class="nav-item admin-only hidden" data-target="categorized_reports"><span class="ico">📈</span><span class="lbl">گزارش تحلیلی امتیازات</span></button>
+    <!-- ۵. ارتباطات -->
+    <div class="nav-section admin-only">
+      <div class="nav-group-title toggle-title" onclick="toggleNavSection2(this)">📢 ارتباطات <span class="nav-chevron">▾</span></div>
+      <div class="nav-section-body">
+        <button class="nav-item" data-target="send_notification"><span class="ico">📢</span><span class="lbl">ارسال پیام</span></button>
+      </div>
     </div>
-    <div class="nav-group">
-      <button class="nav-item no-super-admin" data-target="delegations"><span class="ico">🔁</span><span class="lbl">تفویض‌ها</span><span class="nav-badge hidden" id="delegations_badge">۰</span></button>
-      <button class="nav-item" data-target="reminders"><span class="ico">🔔</span><span class="lbl">یادآورها</span><span class="nav-badge hidden" id="reminders_badge">۰</span></button>
-      <button class="nav-item" data-target="settings"><span class="ico">⚙</span><span class="lbl">تنظیمات</span></button>
+    <!-- ۶. مدیریت سامانه -->
+    <div class="nav-section admin-only admin-zone">
+      <div class="nav-group-title toggle-title" onclick="toggleNavSection2(this)">⚙️ مدیریت سامانه <span class="nav-chevron">▾</span></div>
+      <div class="nav-section-body">
+        <button class="nav-item" data-target="users"><span class="ico">👥</span><span class="lbl">مدیریت کاربران و نقش‌ها</span></button>
+        <button class="nav-item events-access hidden" data-target="events"><span class="ico">📅</span><span class="lbl">رویدادها و تعطیلات</span></button>
+        <button class="nav-item" data-target="scoring_config"><span class="ico">⭐</span><span class="lbl">تنظیمات امتیازدهی</span></button>
+        <button class="nav-item" data-target="categorized_reports"><span class="ico">📈</span><span class="lbl">گزارش تحلیلی امتیازات</span></button>
+        <button class="nav-item" data-target="audit_log"><span class="ico">📜</span><span class="lbl">تاریخچه تغییرات</span></button>
+        <button class="nav-item" data-target="settings"><span class="ico">⚙</span><span class="lbl">تنظیمات</span></button>
+        <button class="nav-item" onclick="toggleTheme()"><span class="ico" id="sidebar_theme_icon">☾</span><span class="lbl">تغییر تم (روز/شب)</span></button>
+      </div>
     </div>
   </nav>
 </aside>
@@ -2076,17 +2129,14 @@ function refreshThemeVars(){
 function setTheme(theme){
   var html=document.documentElement;
   html.setAttribute('data-theme',theme);
-  // ─── به‌روزرسانی آیکون تک‌تغییر ───
+  // ─── به‌روزرسانی آیکون‌های تم (نوار بالا + سایدبار) ───
   var toggleBtn=document.querySelector('.theme-toggle-icon');
   if(toggleBtn){
-    if(theme==='night'){
-      toggleBtn.textContent='☀';
-      toggleBtn.title='تغییر به تم روز';
-    }else{
-      toggleBtn.textContent='☾';
-      toggleBtn.title='تغییر به تم شب';
-    }
+    if(theme==='night'){toggleBtn.textContent='☀';toggleBtn.title='تغییر به تم روز';}
+    else{toggleBtn.textContent='☾';toggleBtn.title='تغییر به تم شب';}
   }
+  var sidebarIcon=$('sidebar_theme_icon');
+  if(sidebarIcon){sidebarIcon.textContent=theme==='night'?'☀':'☾';}
   try{localStorage.setItem('payvand_theme',theme);}catch(e){}
   setTimeout(refreshThemeVars,50);
 }
@@ -2094,6 +2144,18 @@ function setTheme(theme){
 function toggleTheme(){
   var current=document.documentElement.getAttribute('data-theme')||'day';
   setTheme(current==='day'?'night':'day');
+}
+// ─── منوی کشویی: باز/بسته کردن دسته‌بندی ───
+function toggleNavSection(headerBtn){
+  var section=headerBtn.closest('.nav-section');
+  if(!section)return;
+  section.classList.toggle('collapsed');
+}
+function toggleNavSection2(titleEl){
+  var section=titleEl.closest('.nav-section');
+  if(!section)return;
+  if(section.getAttribute('data-open')==='1')return; // گروه اصلی همیشه باز
+  section.classList.toggle('collapsed');
 }
 function restoreTheme(){
   var t='day';
@@ -5362,7 +5424,7 @@ async function renderUsers(){
         '<td style="white-space:nowrap">'+
         '<button class="btn btn-sm btn-warning" onclick="editUserDetails(\''+p.id+'\')" title="ویرایش کامل">✏️ ویرایش</button>'+
         '<button class="btn btn-sm btn-info" onclick="viewUserHistory(\''+p.id+'\')" title="سوابق">📋</button>'+
-        (canReset?' <button class="btn btn-sm btn-warning" onclick="openResetPwdModal(\''+p.id+'\')" title="بازنشانی رمز">🔑</button>':'')+
+        (canReset?' <button class="btn btn-sm btn-warning" onclick="openResetPwdModal(\''+p.id+'\')" title="تغییر رمز کاربر">🔑 تغییر رمز</button>':'')+
         (canDelegate?' <button class="btn btn-sm '+(p.can_manage_users?'btn-success':'btn-secondary')+'" onclick="toggleDelegate(\''+p.id+'\','+(p.can_manage_users?'false':'true')+')" title="'+(p.can_manage_users?'سلب اختیار':'تفویض اختیار')+'">'+(p.can_manage_users?'🎫✓':'🎫')+'</button>':'')+
         '</td>'+
         '</tr>';
