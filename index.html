@@ -1594,7 +1594,7 @@ function formatMins(m){return Math.floor(m/60)+' ساعت و '+(m%60)+' دقیق
 
 /* ═════ Supabase Data Layer ═════ */
 async function loadAllPersons(){
-  try{const{data,error}=await sb.from('profiles').select('*').order('last_name').order('first_name');if(error)throw error;cachedPersons=data||[];if(typeof updateDelegateBox==='function')updateDelegateBox();if(typeof updateDelegationVisibility==='function')updateDelegationVisibility();return cachedPersons;}catch(e){console.error('loadAllPersons:',e);cachedPersons=[];return[];}
+  try{const{data,error}=await sb.from('profiles').select('id,first_name,last_name,personnel_id,email,role,parent_id,status,can_approve_leaves,can_schedule_tasks,can_create_programs,can_manage_events,can_manage_users,can_log,can_view_reports,guest_permissions,expires_at,log_delegates').order('last_name').order('first_name');if(error)throw error;cachedPersons=data||[];if(typeof updateDelegateBox==='function')updateDelegateBox();if(typeof updateDelegationVisibility==='function')updateDelegationVisibility();return cachedPersons;}catch(e){console.error('loadAllPersons:',e);cachedPersons=[];return[];}
 }
 async function loadLogs(personId,from,to){
   try{let q=sb.from('daily_logs').select('*');if(personId)q=q.eq('user_id',personId);if(from)q=q.gte('date',from);if(to)q=q.lte('date',to);const{data,error}=await q.order('date',{ascending:false});if(error)throw error;return data||[];}catch(e){console.error('loadLogs:',e);throw e;}
@@ -1642,7 +1642,7 @@ async function updateTaskInDB(id,updates){
   try{const{data,error}=await sb.from('tasks').update(updates).eq('id',id).select();if(error)throw error;return data[0];}catch(e){console.error('updateTaskInDB:',e);throw e;}
 }
 async function loadSubordinates(){
-  try{const{data,error}=await sb.from('profiles').select('*').eq('parent_id',currentUser.id).order('last_name').order('first_name');if(error)throw error;cachedSubordinates=data||[];return cachedSubordinates;}catch(e){console.error('loadSubordinates:',e);cachedSubordinates=[];return[];}
+  try{const{data,error}=await sb.from('profiles').select('id,first_name,last_name,personnel_id,email,role,parent_id,status,can_approve_leaves,can_schedule_tasks,can_create_programs,can_manage_events,can_manage_users,can_log,can_view_reports,guest_permissions,expires_at,log_delegates').eq('parent_id',currentUser.id).order('last_name').order('first_name');if(error)throw error;cachedSubordinates=data||[];return cachedSubordinates;}catch(e){console.error('loadSubordinates:',e);cachedSubordinates=[];return[];}
 }
 async function loadLeavesForCoordinator(){
   // درخواست‌های زیرمجموعه‌ها که در انتظار تأیید هماهنگ‌کننده هستند
@@ -2245,13 +2245,13 @@ async function saveReminder(){
     if(customInterval)customData.interval_days=parseInt(customInterval,10);
     if(!customDay&&!customInterval){showAlert('برای الگوی سفارشی، روز ماه یا بازه را وارد کنید.');return;}
   }
-  // تبدیل تاریخ شمسی به میلادی
+  // تبدیل تاریخ شمسی به میلادی — بدون timezone bug
   var pStart=parseJalali(startDate);var gStart=jalaliToGregorian(pStart.jy,pStart.jm,pStart.jd);
-  var startISO=new Date(gStart[0],gStart[1]-1,gStart[2]).toISOString().slice(0,10);
+  var startISO=gStart[0]+'-'+pad2(gStart[1])+'-'+pad2(gStart[2]);
   var endISO=null;
   if(endDate&&isValidJalaliDate(endDate)){
     var pEnd=parseJalali(endDate);var gEnd=jalaliToGregorian(pEnd.jy,pEnd.jm,pEnd.jd);
-    endISO=new Date(gEnd[0],gEnd[1]-1,gEnd[2]).toISOString().slice(0,10);
+    endISO=gEnd[0]+'-'+pad2(gEnd[1])+'-'+pad2(gEnd[2]);
   }
   // گیرندگان: خودم + کاربران انتخاب‌شده
   var recipients=rm_recipients.slice();
@@ -3807,8 +3807,8 @@ async function loadEventActionsInModal(eventId,dateStr){
       var a=actions[ai];
       var st=a.status==='done'?'✅':a.status==='in_progress'?'🔄':'⬜';
       html+='<div style="padding:8px;border-radius:6px;background:rgba(255,255,255,.6);margin:4px 0;font-size:12px;border-right:2px solid var(--c-primary)">'+
-        '<div style="font-weight:600">'+st+' '+esc(a.title)+' <small style="color:var(--c-text-muted)">('+priorityLabel[a.priority||'medium']+'</small>)'+
-        (a.deadline?'<small style="color:var(--c-warning)"> | مهلت: '+normJ(new Date(a.deadline).toISOString().slice(0,10))||''+'</small>':'')+
+        '<div style="font-weight:600">'+st+' '+esc(a.title)+' <small style="color:var(--c-text-muted)">('+priorityLabel[a.priority||'medium']+')</small>'+
+        (a.deadline?'<small style="color:var(--c-warning)"> | مهلت: '+normJ(new Date(a.deadline).toISOString().slice(0,10))+'</small>':'')+
         '</div>';
       // بارگذاری فعالیت‌های زیرمجموعه
       try{
@@ -5005,7 +5005,7 @@ async function printLeave(id){
     w.document.open();
     w.document.write('<!DOCTYPE html>\n<html dir="rtl" lang="fa">\n<head>\n<meta charset="UTF-8">\n');
     w.document.write('<meta name="viewport" content="width=device-width,initial-scale=1">\n');
-    w.document.write('<title>نامه درخواست مرخصی — '+fullName+'</title>\n');
+    w.document.write('<title>نامه درخواست مرخصی — '+esc(fullName)+'</title>\n');
     w.document.write('<style>\n');
     w.document.write('@page{size:A5 portrait;margin:15mm 18mm}\n');
     w.document.write('*{margin:0;padding:0;box-sizing:border-box}\n');
@@ -5845,7 +5845,7 @@ async function confirmResetPassword(){
 
 function viewUserHistory(userId){
   showSection('records');
-  $('rec_person').value=userId;
+  $('rep_person').value=userId;
   renderRecords();
 }
 
