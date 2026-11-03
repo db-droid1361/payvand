@@ -5410,7 +5410,8 @@ async function renderUsers(){
       var coord=p.parent_id?getPersonName(p.parent_id):'—';
       var isSelf=(p.id===currentUser.id);
       var canEdit=!isSelf&&(canManageAll||p.role==='user');
-      var canReset=!isSelf&&(canManageAll||(currentUser.profile&&currentUser.profile.can_manage_users&&p.role==='user'));
+      // مدیر/سوپرادمین می‌تواند رمز همه را تغییر دهد (مدیر نمی‌تواند رمز سوپرادمین را)
+      var canReset=!isSelf&&isAdmin&&(currentRole==='super_admin'||p.role!=='super_admin');
       var canDelegate=currentRole==='super_admin'&&p.role==='admin';
       // ─── نقش فقط‌خواندن (badge) ───
       var roleBadge='';
@@ -5880,29 +5881,34 @@ async function confirmResetPassword(){
   var p1=val('reset_pwd_new'),p2=val('reset_pwd_new2');
   if(p1!==p2){showAlert('رمز و تکرار آن یکسان نیستند.');return;}
   if(!isPasswordStrong(p1)){showAlert('رمز خیلی کوتاه است. حداقل ۴ کاراکتر وارد کنید.');return;}
-  showLoading('بازنشانی رمز...');
+  showLoading('تغییر رمز...');
   try{
     var newSalt=genSalt();
     var newHash=hashSecret(p1,newSalt);
-    // به‌روزرسانی hash در profiles
-    const{data,error}=await sb.rpc('rpc_reset_password',{
-      p_requester_id:currentUser.id,
-      p_target_id:resetPwdTargetId,
-      p_new_hash:newHash,
-      p_new_salt:newSalt
-    });
-    if(error)throw error;
-    if(data&&data.error)throw new Error(data.error);
-    // به‌روزرسانی hash در profiles — این کافی است زیرا ورود از طریق rpc_login انجام می‌شود
-    // که مستقیماً password_hash در جدول profiles را بررسی می‌کند، نه Supabase Auth را.
-    // سیستم از session محلی استفاده می‌کند (persistSession:false) و وابستگی به Supabase Auth ندارد.
-    // نکته امنیتی: برای محافظت اضافی، توصیه می‌شود RLS روی جدول profiles فعال باشد
-    // و فقط rpc_reset_password دسترسی به به‌روزرسانی hash داشته باشد.
-    showAlert('✅ رمز کاربر با موفقیت بازنشانی شد.\n\nکاربر می‌تواند با رمز جدید وارد شود. قفل brute-force نیز برداشته شد.','success');
+    // روش ۱: تلاش با RPC
+    var rpcSuccess=false;
+    try{
+      const{data,error}=await sb.rpc('rpc_reset_password',{
+        p_requester_id:currentUser.id,
+        p_target_id:resetPwdTargetId,
+        p_new_hash:newHash,
+        p_new_salt:newSalt
+      });
+      if(!error&&!(data&&data.error))rpcSuccess=true;
+    }catch(e){console.warn('RPC reset failed, trying direct:',e);}
+    // روش ۲: اگر RPC کار نکرد، آپدیت مستقیم
+    if(!rpcSuccess){
+      const{error:updateError}=await sb.from('profiles')
+        .update({password_hash:newHash,password_salt:newSalt})
+        .eq('id',resetPwdTargetId);
+      if(updateError)throw updateError;
+    }
+    await recordAudit('update','profiles',resetPwdTargetId,{action:'password_reset'});
+    showAlert('✅ رمز کاربر با موفقیت تغییر کرد.','success');
     closeResetPwdModal();
     await loadAllPersons();
     await renderUsers();
-  }catch(e){showAlert('خطا: '+e.message);}
+  }catch(e){showAlert('خطا در تغییر رمز: '+e.message,'error');}
   finally{hideLoading();}
 }
 
@@ -6567,7 +6573,12 @@ function exportReportCSV(){
 function printReport(){
   var c=$('report_area');
   if(!c.querySelector('.rep')){showAlert('ابتدا گزارش را تولید کنید.','error');return;}
-  $('print_area').innerHTML=c.innerHTML;
+  var today=getTodayJalali();
+  var todayDisplay=toPersianDigits(today)+' ('+dayName(today)+')';
+  $('print_area').innerHTML='<div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:16px">'+
+    '<h2 style="margin:0">📊 گزارش کارکرد</h2>'+
+    '<p style="margin:4px 0 0;font-size:12px;color:#666">تاریخ تولید گزارش: '+todayDisplay+'</p>'+
+    '</div>'+c.innerHTML;
   window.print();
 }
 
@@ -8711,7 +8722,7 @@ function init(){
   ['rec_type_filter'].forEach(function(k){on(k,'change',function(){if($('rep_mode').value==='table')renderRecords();});});
   on('rec_search','input',function(){if($('rep_mode').value==='table')renderRecords();});
   on('btn_clear_rec_dates','click',function(){$('rep_start_date').value='';$('rep_end_date').value='';if($('rep_mode').value==='table')renderRecords();});
-  on('btn_print_records','click',function(){var c=$('report_area');if(!c.querySelector('table')){showAlert('موردی برای چاپ نیست.');return;}$('print_area').innerHTML='<div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:20px"><h2>گزارش کارکرد</h2></div><div>'+c.innerHTML+'</div>';window.print();});
+  on('btn_print_records','click',function(){var c=$('report_area');if(!c.querySelector('table')){showAlert('موردی برای چاپ نیست.');return;}var today=getTodayJalali();var td=toPersianDigits(today)+' ('+dayName(today)+')';$('print_area').innerHTML='<div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:20px"><h2 style="margin:0">📋 فهرست کارکرد</h2><p style="margin:4px 0 0;font-size:12px;color:#666">تاریخ تولید: '+td+'</p></div><div>'+c.innerHTML+'</div>';window.print();});
   on('rep_type','change',toggleReportDates);
   on('btn_gen_report','click',function(){if($('rep_mode').value==='table')renderRecords();else generateReport();});
   on('btn_print_report','click',printReport);
