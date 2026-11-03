@@ -3121,10 +3121,15 @@ function populateAssigneeDropdown(dropdownId){
 function populatePersonDropdown(dropdownId,autoFirst){
   var select=$(dropdownId),cur=select.value;
   var isAdmin=currentRole==='admin'||currentRole==='super_admin';
-  // کاربر با دسترسی can_view_reports هم مثل مدیر در rep_person همه را می‌بیند
+  // کاربر با دسترسی can_view_reports هم مثل مدیر در rep_person/rec_person همه را می‌بیند
   var canViewAllReports=isAdmin||(currentUser.profile&&currentUser.profile.can_view_reports);
-  // rec_person / rep_person: کاربر عادی خودش + تفویض‌شوندگانش را می‌بیند (کسانی که به او تفویض کرده‌اند)
-  var all=(canViewAllReports||dropdownId==='cal_person');
+  // ⚠️ مهم: log_person_id (فرم خوداظهاری) فقط مدیر/سوپرادمین همه را می‌بیند
+  // can_view_reports فقط برای مشاهده گزارش‌ها است، نه برای ثبت کارکرد دیگران
+  if(dropdownId==='log_person_id'){
+    var all=isAdmin; // فقط مدیر
+  }else{
+    var all=(canViewAllReports||dropdownId==='cal_person');
+  }
   // برای rec_person / rep_person: مدیر یا کسی با can_view_reports همه را می‌بیند؛ کاربر عادی فقط خودش + تفویض‌شوندگان
   // برای تقویم: کاربر عادی هم خودش را می‌بیند هم تفویض‌شده‌ها
   var persons;
@@ -4172,6 +4177,15 @@ async function saveDailyLog(){
   var id=$('log_id').value,personId=$('log_person_id').value,dateStr=$('log_date').value,status=$('log_status').value,disc=val('log_discrepancy');
   if(!personId){showAlert('پرسنل را انتخاب کنید.','error');return;}
   if(!isValidJalaliDate(dateStr)){showAlert('تاریخ نامعتبر است.','error');return;}
+  // ─── بررسی امنیتی: کاربر عادی فقط برای خودش یا تفویض‌شونده‌اش ثبت می‌کند ───
+  var _isAdmin=currentRole==='admin'||currentRole==='super_admin';
+  if(!_isAdmin&&personId!==currentUser.id){
+    var _delegators=getUsersWhoDelegatedToMe();
+    var _allowedIds=[currentUser.id].concat(_delegators.map(function(p){return p.id;}));
+    if(_allowedIds.indexOf(personId)===-1){
+      showAlert('دسترسی غیرمجاز: نمی‌توانید برای این کاربر ثبت کنید.','error');return;
+    }
+  }
   // ─── تعریف ساعات کارکرد استاندارد ───
   var WORK_START='07:30',WORK_END='16:30';
   var WORK_START_MIN=timeToMinutes(WORK_START),WORK_END_MIN=timeToMinutes(WORK_END);
