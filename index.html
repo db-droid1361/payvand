@@ -5400,8 +5400,8 @@ async function renderUsers(){
       // هماهنگ‌کننده: فقط زیرمجموعه‌های خودش
       visibleUsers=cachedSubordinates;
     }else if(!canManageAll){
-      // مدیر بدون تفویض: فقط کاربران عادی
-      visibleUsers=cachedPersons.filter(function(p){return p.role==='user';});
+      // مدیر بدون تفویض: همه کاربران به‌جز سوپرادمین
+      visibleUsers=cachedPersons.filter(function(p){return p.role!=='super_admin';});
     }else{
       visibleUsers=cachedPersons;
     }
